@@ -18,13 +18,13 @@ public class GameWebSocket {
     @OnOpen
     public Uni<String> onOpen(WebSocketConnection connection) {
         logger.infof("Client connected: %s", connection.id());
-        return Uni.createFrom().item(connection.id());
+        return Uni.createFrom().item("Connection successful");
     }
 
     @OnClose
     public void onClose(WebSocketConnection connection) {
         logger.infof("Client closed connection: %s", connection.id());
-        connection.broadcast().sendTextAndAwait("User %s left".formatted(connection.id()));
+        connection.broadcast().sendTextAndAwait("Client disconnected");
     }
 
     @OnTextMessage
