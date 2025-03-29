@@ -19,6 +19,8 @@ dependencies {
     implementation("io.quarkus:quarkus-websockets-next")
     implementation("io.quarkus:quarkus-arc")
     testImplementation("io.quarkus:quarkus-junit5")
+    testImplementation("io.quarkus:quarkus-junit5-mockito")
+    testImplementation("io.rest-assured:rest-assured")
 }
 
 group = "org.catutd"
@@ -56,5 +58,6 @@ tasks.jacocoTestReport {
 
     reports {
         xml.required.set(true)
+        html.required.set(true)
     }
 }
