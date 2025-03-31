@@ -1,5 +1,8 @@
 package com.example.cataniaunited.api;
 
+import com.example.cataniaunited.dto.MessageDTO;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quarkus.test.common.http.TestHTTPResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.websockets.next.BasicWebSocketConnector;
@@ -50,8 +53,13 @@ public class GameWebSocketTest {
     }
 
     @Test
-    void testWebSocketSendMessage() throws InterruptedException {
-        String sentMessage = "Hello World!";
+    void testWebSocketSendMessage() throws InterruptedException, JsonProcessingException {
+        var objectMapper = new ObjectMapper();
+        var messageDto = new MessageDTO();
+        messageDto.setPlayer("Player 1");
+        messageDto.setType("LOBBY");
+        messageDto.setLobbyId("1");
+
         List<String> receivedMessages = new ArrayList<>();
         // Expecting 2 messages
         CountDownLatch messageLatch = new CountDownLatch(2);
@@ -66,6 +74,7 @@ public class GameWebSocketTest {
                 .connectAndAwait();
 
         // Send message
+        String sentMessage = objectMapper.writeValueAsString(messageDto);
         webSocketClientConnection.sendTextAndAwait(sentMessage);
 
         // Wait up to 5 seconds for both messages to arrive

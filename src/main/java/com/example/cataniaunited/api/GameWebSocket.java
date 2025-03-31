@@ -2,6 +2,9 @@ package com.example.cataniaunited.api;
 
 import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.service.LobbyService;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quarkus.websockets.next.OnClose;
 import io.quarkus.websockets.next.OnOpen;
 import io.quarkus.websockets.next.OnTextMessage;
@@ -34,7 +37,8 @@ public class GameWebSocket {
     }
 
     @OnTextMessage
-    public Uni<String> onTextMessage(String message, WebSocketConnection connection) {
+    public Uni<MessageDTO> onTextMessage(MessageDTO message, WebSocketConnection connection) throws JsonProcessingException {
+        var mapper = new ObjectMapper();
         logger.infof("Received message from client %s: %s", connection.id(), message);
         return Uni.createFrom().item(message);
     }
@@ -49,5 +53,4 @@ public class GameWebSocket {
 
         return Uni.createFrom().item(new MessageDTO("ERROR", "Server", "Unknown command"));
     }
-
 }
