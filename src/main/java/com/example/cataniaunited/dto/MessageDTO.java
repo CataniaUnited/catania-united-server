@@ -1,23 +1,23 @@
 package com.example.cataniaunited.dto;
 
 public class MessageDTO {
-    private String type;
+    private MessageType type;
     private String player;
     private String lobbyId;
 
     public MessageDTO() {}
 
-    public MessageDTO(String type, String player, String lobbyId) {
+    public MessageDTO(MessageType type, String player, String lobbyId) {
         this.type = type;
         this.player = player;
         this.lobbyId = lobbyId;
     }
 
-    public String getType() {
+    public MessageType getType() {
         return type;
     }
 
-    public void setType(String type) {
+    public void setType(MessageType type) {
         this.type = type;
     }
 
