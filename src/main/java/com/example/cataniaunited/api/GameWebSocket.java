@@ -1,5 +1,6 @@
 package com.example.cataniaunited.api;
 
+import game.activeGame.board.GameBoard;
 import io.quarkus.websockets.next.OnClose;
 import io.quarkus.websockets.next.OnOpen;
 import io.quarkus.websockets.next.OnTextMessage;
@@ -29,7 +30,16 @@ public class GameWebSocket {
 
     @OnTextMessage
     public Uni<String> onTextMessage(String message, WebSocketConnection connection) {
-        logger.infof("Received message from client %s: %s", connection.id(), message);
+        logger.infof("Received message from client %s: %s\n", connection.id(), message);
+        if(message.startsWith("generateBoard")){
+            logger.infof("Generating Board");
+            try {
+                int boardSize = Integer.parseInt(message.substring("generateBoard".length()).trim());
+                new GameBoard(boardSize);
+            } catch (NumberFormatException e){
+                logger.error("Cant Generate Board, cant extract numberOfLayers");
+            }
+        }
         return Uni.createFrom().item(message);
     }
 
