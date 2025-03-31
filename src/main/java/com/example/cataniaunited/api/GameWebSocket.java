@@ -1,6 +1,7 @@
 package com.example.cataniaunited.api;
 
 import com.example.cataniaunited.dto.MessageDTO;
+import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.service.LobbyService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -37,20 +38,14 @@ public class GameWebSocket {
     }
 
     @OnTextMessage
-    public Uni<MessageDTO> onTextMessage(MessageDTO message, WebSocketConnection connection) throws JsonProcessingException {
-        var mapper = new ObjectMapper();
-        logger.infof("Received message from client %s: %s", connection.id(), message);
-        return Uni.createFrom().item(message);
-    }
-
-    private Uni<MessageDTO> handleMessageDTO(MessageDTO message, WebSocketConnection connection) {
+    public Uni<MessageDTO> onTextMessage(MessageDTO message, WebSocketConnection connection) {
         logger.infof("Received message from client %s: %s", connection.id(), message.getType());
 
-        if ("CREATE_LOBBY".equals(message.getType())) {
+        if (message.getType() == MessageType.CREATE_LOBBY) {
             String lobbyId = lobbyService.createLobby(message.getPlayer());
-            return Uni.createFrom().item(new MessageDTO("LOBBY_CREATED", message.getPlayer(), lobbyId));
+            return Uni.createFrom().item(new MessageDTO(MessageType.LOBBY_CREATED, message.getPlayer(), lobbyId));
         }
 
-        return Uni.createFrom().item(new MessageDTO("ERROR", "Server", "Unknown command"));
+        return Uni.createFrom().item(new MessageDTO(MessageType.ERROR, "Server", "Unknown command"));
     }
 }
