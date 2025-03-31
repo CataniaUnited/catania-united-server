@@ -3,6 +3,7 @@ package com.example.cataniaunited.service;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -11,6 +12,10 @@ import java.util.List;
 @QuarkusTest
 class LobbyServiceImplTest {
 
+    @BeforeEach
+    void setUp() {
+        lobbyService.clearLobbies();
+    }
     private static final Logger logger = Logger.getLogger(LobbyServiceImplTest.class);
 
     @Inject
@@ -18,7 +23,7 @@ class LobbyServiceImplTest {
 
     @Test
     void testCreateLobby() {
-        String lobbyId = lobbyService.createLobby("Alice");
+        String lobbyId = lobbyService.createLobby("Player 1");
 
         assertNotNull(lobbyId, "Lobby ID should not be null");
 
@@ -27,8 +32,8 @@ class LobbyServiceImplTest {
 
     @Test
     void testGetOpenLobbies() {
-        String lobbyId1 = lobbyService.createLobby("Alice");
-        String lobbyId2 = lobbyService.createLobby("Bob");
+        String lobbyId1 = lobbyService.createLobby("Player 1");
+        String lobbyId2 = lobbyService.createLobby("Player 2");
 
         List<String> openLobbies = lobbyService.getOpenLobbies();
 
