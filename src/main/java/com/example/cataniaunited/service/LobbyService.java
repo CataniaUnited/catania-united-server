@@ -5,4 +5,5 @@ import java.util.List;
 public interface LobbyService {
     String createLobby(String hostPlayer);
     List<String> getOpenLobbies();
+    void clearLobbies();
 }

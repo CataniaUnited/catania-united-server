@@ -30,4 +30,10 @@ public class LobbyServiceImpl implements LobbyService {
 
         return openLobbies;
     }
+
+    @Override
+    public void clearLobbies() {
+        lobbies.clear();
+        logger.info("All lobbies have been cleared.");
+    }
 }
