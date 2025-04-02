@@ -1,6 +1,7 @@
 package game.activeGame.board;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 
@@ -20,27 +21,49 @@ public class GameBoard {
 
     public GameBoard(int sizeOfBoard){
         long starttime = System.nanoTime();
-        List<SettlementPosition> settlementPositionGraph =  generateGraph(sizeOfBoard);
+        List<SettlementPosition> settlementPositionGraph =  generateBoard(sizeOfBoard);
         long endtime = System.nanoTime();
         printMainLoop(settlementPositionGraph);
         System.out.printf("Generated Board with %d Levels in %fs\n", sizeOfBoard,(endtime-starttime)*10e-9);
     }
 
+    public List<SettlementPosition> generateBoard(int sizeOfBoard){
+        List<Tile> tileList = generateShuffledTileList(sizeOfBoard);
+        return generateGraph(sizeOfBoard, tileList);
+    }
+
+    public List<Tile> generateShuffledTileList(int sizeOfBoard){
+        int rings = sizeOfBoard-1;
+        int amountOfTilesOnBoard = (int) (3*Math.pow(rings, 2) + 3 * rings + 1);
+        TileType[] tileTypes = TileType.values();
+
+        List<Tile> tileList = new ArrayList<>(amountOfTilesOnBoard);
+        tileList.add(new Tile(TileType.WASTE));
+
+        for(int i = 1; i < amountOfTilesOnBoard; i++){
+            TileType currentTileType = tileTypes[i % (tileTypes.length -1)];
+            tileList.add(new Tile(currentTileType));
+        }
+
+        Collections.shuffle(tileList);
+        return tileList;
+    }
+
     /**
      * @param sizeOfBoard specifies the amount of hexes next do each other on the row with the most amount of hexes
      */
-    public List<SettlementPosition> generateGraph(int sizeOfBoard){
+    public List<SettlementPosition> generateGraph(int sizeOfBoard, List<Tile> tileList){
         int totalAmountOfSettlementPositions = (int) (6*Math.pow(sizeOfBoard, 2)); // the total amount of nodes in our Settlementposition Graph will be 6 * k^2
         List<SettlementPosition> nodeList = new ArrayList<>(totalAmountOfSettlementPositions);
 
 
         for (int level = 1; level <= sizeOfBoard; level++){ // for each level create the subgraph and snd continuously interconnect it with the inner layer
-            createInterconnectedSubgraphOfLevelk(nodeList, level);
+            createInterconnectedSubgraphOfLevelk(nodeList, tileList, level);
         }
         return nodeList;
     }
 
-    public void createInterconnectedSubgraphOfLevelk(List<SettlementPosition> nodeList, int level){
+    public void createInterconnectedSubgraphOfLevelk(List<SettlementPosition> nodeList, List<Tile> tileList, int level){
         // amount new vertices for level k = 6(2*(k-1) + 3)
         Function<Integer, Integer> calculateEndIndexForLayerK = (k) -> 6 * (2 * (k-2) + 3);
 
@@ -81,9 +104,10 @@ public class GameBoard {
 
 
             // Do some black magic to connect the right nodes with the nodes from the inner layers
-            // In the first layer, there are no inner layers; in all other layer we check if we created the same amount of nodes as needed until a new connection
+            // In the first layer, there are no inner layers; in all other layer we check if we created the same amount
+            // of nodes as needed until a new connection
             if (level != 1 && currentNodesUntilCompletionOfNextHex == ++nodesAfterCompletionOfPreviousHex){
-                // if yes, create a road between them and log a new connectino
+                // if yes, create a road between them and log a new connection
                 createRoadBetweenTwoSettlements(nodeList.get((id-1) - offsetBetweenIndicesOfHexesToInterConnect), currentSettlement);
                 connectionCount++;
 
