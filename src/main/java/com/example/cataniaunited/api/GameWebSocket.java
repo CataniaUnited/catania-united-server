@@ -2,10 +2,8 @@ package com.example.cataniaunited.api;
 
 import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.dto.MessageType;
+import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.service.LobbyService;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quarkus.websockets.next.OnClose;
 import io.quarkus.websockets.next.OnOpen;
 import io.quarkus.websockets.next.OnTextMessage;
@@ -28,18 +26,26 @@ public class GameWebSocket {
     @OnOpen
     public Uni<String> onOpen(WebSocketConnection connection) {
         logger.infof("Client connected: %s", connection.id());
+        new Player(connection);
         return Uni.createFrom().item("Connection successful");
     }
 
     @OnClose
     public void onClose(WebSocketConnection connection) {
         logger.infof("Client closed connection: %s", connection.id());
+        Player.removePlayer(connection);
         connection.broadcast().sendTextAndAwait("Client disconnected");
     }
 
     @OnTextMessage
     public Uni<MessageDTO> onTextMessage(MessageDTO message, WebSocketConnection connection) {
         logger.infof("Received message from client %s: %s", connection.id(), message.getType());
+        if (message.getPlayer() == null || message.getPlayer().isEmpty()) {
+            Player player = Player.getPlayerByConnection(connection);
+            if (player != null) {
+                message.setPlayer(player.getUsername());
+            }
+        }
 
         if (message.getType() == MessageType.CREATE_LOBBY) {
             String lobbyId = lobbyService.createLobby(message.getPlayer());
