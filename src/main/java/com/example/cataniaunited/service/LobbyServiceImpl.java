@@ -23,6 +23,11 @@ public class LobbyServiceImpl implements LobbyService {
     }
 
     @Override
+    public String generateLobbyID() {
+        return null;
+    }
+
+    @Override
     public List<String> getOpenLobbies() {
         List<String> openLobbies = new ArrayList<>(lobbies.keySet());
 
