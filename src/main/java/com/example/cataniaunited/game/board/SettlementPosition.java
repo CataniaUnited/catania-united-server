@@ -2,7 +2,6 @@ package com.example.cataniaunited.game.board;
 import com.example.cataniaunited.game.buildings.Building;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class SettlementPosition {
@@ -34,6 +33,10 @@ public class SettlementPosition {
     public void addTile(Tile tileToAdd){
         tiles.add(tileToAdd);
         assert tiles.size() <= 3: "Cant assign 4 Tiles to a single settlement Position";
+    }
+
+    public List<SettlementPosition> getNeighbours(){
+        return roads.stream().map(r -> r.getNeighbour(this)).toList();
     }
 
     public ArrayList<Tile> getTiles() {

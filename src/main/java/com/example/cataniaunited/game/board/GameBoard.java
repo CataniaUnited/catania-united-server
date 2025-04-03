@@ -58,14 +58,15 @@ public class GameBoard {
 
 
         for (int level = 1; level <= sizeOfBoard; level++){ // for each level create the subgraph and snd continuously interconnect it with the inner layer
-            createInterconnectedSubgraphOfLevelk(nodeList, tileList, level);
+            createInterconnectedSubgraphOfLevelK(nodeList, tileList, level);
         }
-        
-        //TODO: Update Nodes with only one (or two) connections by Checking all Neighbours and adding Tile where two of the three neighbours connect to and you don't
+
+        // Update Nodes with only two connections by Checking all Neighbours and adding Tile where two of the three neighbours connect to and you don't
+        insertTilesIntoNodesThatHaveLessThan3Connections(nodeList, sizeOfBoard);
         return nodeList;
     }
 
-    public void createInterconnectedSubgraphOfLevelk(List<SettlementPosition> nodeList, List<Tile> tileList, int level){
+    public void createInterconnectedSubgraphOfLevelK(List<SettlementPosition> nodeList, List<Tile> tileList, int level){
         // amount new vertices for level k = 6(2*(k-1) + 3)
         Function<Integer, Integer> calculateEndIndexForLayerK = (k) -> 6 * (2 * (k-2) + 3);
         Function<Integer, Integer> calculateAmountOfTilesForLayerK = (k) -> (k > 0) ? (int) (3*Math.pow((k-1), 2) + 3 * (k-1) + 1) : 0;
@@ -73,7 +74,7 @@ public class GameBoard {
 
         int amountOfTilesOnBoardBefore = calculateAmountOfTilesForLayerK.apply(level-1); // amount of tiles placed before
         int indexOfLastTileOfThisLayer =calculateAmountOfTilesForLayerK.apply(level)-1; // amount of tiles that will be placed after this method is done -1 to get index
-        int currentTileIndex = amountOfTilesOnBoardBefore; // index of current Tile in regards to tileList
+        int currentTileIndex = amountOfTilesOnBoardBefore; // index of current Tile regarding tileList
 
         int endIndex = calculateEndIndexForLayerK.apply(level); // calculate the amount of new Nodes for this level
         int id = nodeList.size();
@@ -106,7 +107,7 @@ public class GameBoard {
         }
 
         // Generate nodes of current layer
-        for(int i = 2;i <= endIndex; i++){ // i represents the i'th node of this layer
+        for(int i = 2;i <= endIndex; i++){ // 'i' represent the ith node of this layer
             // New Node
             SettlementPosition currentSettlement = new SettlementPosition(++id);
             nodeList.add(currentSettlement);
@@ -115,7 +116,7 @@ public class GameBoard {
             // create connection with previous node of the same layer
             createRoadBetweenTwoSettlements(lastSettlement, currentSettlement);
 
-            // set previous settlement to this to setup the loop for the next node
+            // set previous settlement to this to set up the loop for the next node
             lastSettlement = currentSettlement;
 
 
@@ -147,7 +148,66 @@ public class GameBoard {
 
         // Connect first and last node of current layer
         createRoadBetweenTwoSettlements(nodeList.get((id)-endIndex), nodeList.get(nodeList.size()-1));
-        // No Tile Adding since its done by creation
+        // No Tile Adding since it's done by creation
+    }
+
+    public void insertTilesIntoNodesThatHaveLessThan3Connections(List<SettlementPosition> nodeList, int layers){
+        // Since we insert tiles of the outer layer into nodes of the inner layers, we don't need to check the last layer
+        SettlementPosition currentNode;
+        List<SettlementPosition> neighbours;
+        List<Tile> currentTiles, neighbourTiles = new ArrayList<>();
+
+        int amountOfNodesToCheck = (int) (6*Math.pow((layers-1), 2));
+        for(int i = 0; i < amountOfNodesToCheck; i++){
+            currentNode = nodeList.get(i);
+            currentTiles = currentNode.getTiles(); // get amount of tiles of this node
+            if (currentTiles.size() == 3){
+                continue; // if == 3 continue
+            }
+            assert currentTiles.size() < 3; // if > 3 exception
+            // else < 3
+            // get tiles of All Connected Nodes (3) if 2 outer layer or something went wrong -> exception
+            assert currentNode.roads.size() == 3; // TODO: create setter and test in SettlementPosition class
+            neighbours = currentNode.getNeighbours();
+            assert neighbours.size() == 3;
+
+            for(SettlementPosition neighbour: neighbours){
+                neighbourTiles.addAll(neighbour.getTiles()); // add all Possible Tiles !!!including duplicates!!!
+            }
+
+            // add the tile that is connected to two of the three nodes but node to you.
+            neighbourTiles.removeAll(currentTiles); // remove Tiles already appended to this node
+
+            //get duplicated element left
+            Tile tileToAdd = findDuplicateTile(neighbourTiles);
+            currentNode.addTile(tileToAdd);
+
+            assert currentNode.getTiles().size() == 3;
+
+        }
+
+    }
+
+    /**
+     * O(1) Implementation of findDuplicate for lists of size 4 due to frequent usage in other Methods,
+     * avoiding using the O(n) Algorithm of repeatedly removing an element (internal O(n) implementation in ArrayList)
+     * until only the once duplicate is contaminated.
+     * @param list
+     * @return
+     */
+    public Tile findDuplicateTile(List<Tile> list) {
+        assert list.size() == 4;
+        // First Element is Duplicate
+        if (list.get(0).equals(list.get(1)) || list.get(0).equals(list.get(2)) || list.get(0).equals(list.get(3))) {
+            return list.get(0);
+        }
+        // Or Second Element is Duplicate
+        if (list.get(1).equals(list.get(2)) || list.get(1).equals(list.get(3))) {
+            return list.get(1);
+        }
+        // or else third Element is Duplicate
+        assert list.get(2).equals(list.get(3));
+        return list.get(2);
     }
 
     public void addTilesToNodeInTheInnerLayer(SettlementPosition innerNode, SettlementPosition outerNode){
@@ -157,7 +217,7 @@ public class GameBoard {
     }
 
     /**
-     * Create a new Edge = Road in the Graph = GameBoard connection two settlementpositions
+     * Create a new Edge = Road in the Graph = GameBoard connection two settlement positions
      * @param a Settlementposition a
      * @param b Settlementposition b
      */
