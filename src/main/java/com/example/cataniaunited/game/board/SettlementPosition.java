@@ -42,4 +42,12 @@ public class SettlementPosition {
     public ArrayList<Tile> getTiles() {
         return tiles;
     }
+
+    public List<Road> getRoads() {
+        return roads;
+    }
+
+    public void addRoad(Road road) {
+        this.roads.add(road);
+    }
 }

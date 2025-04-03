@@ -167,7 +167,7 @@ public class GameBoard {
             assert currentTiles.size() < 3; // if > 3 exception
             // else < 3
             // get tiles of All Connected Nodes (3) if 2 outer layer or something went wrong -> exception
-            assert currentNode.roads.size() == 3; // TODO: create setter and test in SettlementPosition class
+            assert currentNode.getRoads().size() == 3; // TODO: create setter and test in SettlementPosition class
             neighbours = currentNode.getNeighbours();
             assert neighbours.size() == 3;
 
@@ -223,8 +223,8 @@ public class GameBoard {
      */
     public void createRoadBetweenTwoSettlements(SettlementPosition a, SettlementPosition b){
         Road roadToAdd = new Road(a, b);
-        a.roads.add(roadToAdd);
-        b.roads.add(roadToAdd);
+        a.addRoad(roadToAdd);
+        b.addRoad(roadToAdd);
     }
 
     /**
