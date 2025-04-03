@@ -7,7 +7,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
-import java.util.List;
+import java.util.*;
 
 @QuarkusTest
 class LobbyServiceImplTest {
@@ -42,5 +42,25 @@ class LobbyServiceImplTest {
         assertTrue(openLobbies.contains(lobbyId2));
 
         logger.infof("Open lobbies: %s", openLobbies);
+    }
+    @Test
+    void testGeneratedLobbyIdFormat() {
+        for (int i = 0; i < 100; i++) {
+            String lobbyId = lobbyService.createLobby("Player1");
+
+            assertEquals(6, lobbyId.length(), "Lobby ID should be exactly 6 characters long");
+            assertTrue(lobbyId.matches("[a-z]{3}\\d{3}") || lobbyId.matches("\\d{3}[a-z]{3}"),
+                    "Lobby Id should be in the format abc123 or 123abc");
+        }
+    }
+    @Test
+    void testNoDuplicateLobbyIds () {
+        Set<String> ids = new HashSet<>();
+
+        for (int i = 0; i < 500; i++) {
+            String id = lobbyService.createLobby("Player" + i);
+            assertFalse(ids.contains(id), "Duplicate Lobby ID found: " + id);
+            ids.add(id);
+        }
     }
 }
