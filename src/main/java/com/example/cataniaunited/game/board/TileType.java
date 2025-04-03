@@ -1,4 +1,4 @@
-package game.activeGame.board;
+package com.example.cataniaunited.game.board;
 
 public enum TileType {
     WHEAT,

@@ -1,4 +1,4 @@
-package game.activeGame.board;
+package com.example.cataniaunited.game.board;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -66,6 +66,12 @@ public class GameBoard {
     public void createInterconnectedSubgraphOfLevelk(List<SettlementPosition> nodeList, List<Tile> tileList, int level){
         // amount new vertices for level k = 6(2*(k-1) + 3)
         Function<Integer, Integer> calculateEndIndexForLayerK = (k) -> 6 * (2 * (k-2) + 3);
+        Function<Integer, Integer> calculateAmountOfTilesForLayerK = (k) -> (k > 0) ? (int) (3*Math.pow((k-1), 2) + 3 * (k-1) + 1) : 0;
+        // amount of new Tiles for this level (level k -> k-1 rings)
+
+        int amountOfTilesOnBoardBefore = calculateAmountOfTilesForLayerK.apply(level-1); // amount of tiles placed before
+        int amountOfTilesOnBoardNow =calculateAmountOfTilesForLayerK.apply(level); // amount of tiles that will be placed after this method is done
+        int currentTileIndex = amountOfTilesOnBoardBefore; // index of current Tile in regards to tileList
 
         int endIndex = calculateEndIndexForLayerK.apply(level); // calculate the amount of new Nodes for this level
         int id = nodeList.size();
@@ -83,6 +89,7 @@ public class GameBoard {
         // create the first node of the Graph of this level
         SettlementPosition lastSettlement = new SettlementPosition(++id);
         nodeList.add(lastSettlement);
+        lastSettlement.addTile(tileList.get(currentTileIndex));
 
         // Connect first element of new layer, to inner layer
         if (level != 1){
@@ -120,6 +127,8 @@ public class GameBoard {
                 }
                 // reset nodes after last connection was made
                 nodesAfterCompletionOfPreviousHex = 0;
+            } else if(level == 1) { // In the first layer all Nodes neighbour Tile 1
+                 currentSettlement.addTile(tileList.get(currentTileIndex));
             }
         }
 

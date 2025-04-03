@@ -1,6 +1,5 @@
-package game.activeGame.board;
-
-import game.activeGame.buildings.Building;
+package com.example.cataniaunited.game.board;
+import com.example.cataniaunited.game.buildings.Building;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -9,7 +8,7 @@ import java.util.List;
 public class SettlementPosition {
     Building building = null;
     List<Road> roads = new ArrayList<>(3);
-    Tile[] tiles = new Tile[3];
+    ArrayList<Tile> tiles = new ArrayList<>();
 
     final int ID;
 
@@ -30,5 +29,10 @@ public class SettlementPosition {
                 ", tiles=" + Arrays.toString(tiles) +
                 ", ID='" + ID + '\'' +
                 '}';
+    }
+
+    public void addTile(Tile tileToAdd){
+        tiles.add(tileToAdd);
+        assert tiles.size() <= 3: "Cant assign 4 Tiles to a single settlement Position";
     }
 }

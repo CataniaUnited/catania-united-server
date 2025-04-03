@@ -1,6 +1,6 @@
 package com.example.cataniaunited.api;
 
-import game.activeGame.board.GameBoard;
+import com.example.cataniaunited.game.board.GameBoard;
 import io.quarkus.websockets.next.OnClose;
 import io.quarkus.websockets.next.OnOpen;
 import io.quarkus.websockets.next.OnTextMessage;

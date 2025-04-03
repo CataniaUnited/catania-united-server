@@ -1,6 +1,6 @@
-package game.activeGame.board;
+package com.example.cataniaunited.game.board;
 
-import game.activeGame.Player;
+import com.example.cataniaunited.game.Player;
 
 public class Road {
     Player owner;
