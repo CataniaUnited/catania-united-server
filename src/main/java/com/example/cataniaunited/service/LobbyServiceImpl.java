@@ -14,7 +14,12 @@ public class LobbyServiceImpl implements LobbyService {
 
     @Override
     public String createLobby(String hostPlayer) {
-        String lobbyId = UUID.randomUUID().toString().substring(0, 6);
+        String lobbyId;
+
+        do {
+            lobbyId = generateLobbyId();
+        } while (lobbies.containsKey(lobbyId));
+
         lobbies.put(lobbyId, new Lobby(lobbyId, hostPlayer));
 
         logger.infof("Lobby created: ID=%s, Host=%s", lobbyId, hostPlayer);
@@ -23,8 +28,21 @@ public class LobbyServiceImpl implements LobbyService {
     }
 
     @Override
-    public String generateLobbyID() {
-        return null;
+    public String generateLobbyId() {
+        String letters = getRandomCharacters("abcdefghijklmnopqrstuvwxyz", 3);
+        String numbers = getRandomCharacters("0123456789", 3);
+
+        return Math.random() < 0.5 ? letters + numbers : numbers + letters;
+    }
+
+    private String getRandomCharacters(String characters, int length) {
+        StringBuilder stringBuilder = new StringBuilder();
+        Random random = new Random();
+
+        for (int i = 0; i < length; i++) {
+            stringBuilder.append(characters.charAt(random.nextInt(characters.length())));
+        }
+        return stringBuilder.toString();
     }
 
     @Override

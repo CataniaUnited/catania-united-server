@@ -4,7 +4,7 @@ import java.util.List;
 
 public interface LobbyService {
     String createLobby(String hostPlayer);
-    String generateLobbyID();
+    String generateLobbyId();
     List<String> getOpenLobbies();
     void clearLobbies();
 }
