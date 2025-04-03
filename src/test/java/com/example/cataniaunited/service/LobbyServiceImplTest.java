@@ -46,7 +46,7 @@ class LobbyServiceImplTest {
     @Test
     void testGeneratedLobbyIdFormat() {
         for (int i = 0; i < 100; i++) {
-            String lobbyId = lobbyService.createLobby("Player1");
+            String lobbyId = lobbyService.createLobby("Player" + i);
 
             assertEquals(6, lobbyId.length(), "Lobby ID should be exactly 6 characters long");
             assertTrue(lobbyId.matches("[a-z]{3}\\d{3}") || lobbyId.matches("\\d{3}[a-z]{3}"),
