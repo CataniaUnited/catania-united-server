@@ -3,6 +3,8 @@ package com.example.cataniaunited.player;
 import io.quarkus.websockets.next.WebSocketConnection;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.List;
+import java.util.ArrayList;
 
 public class Player {
 
@@ -10,7 +12,6 @@ public class Player {
     private final String uniqueId;
     private final String connectionId;
     private static final ConcurrentHashMap<String, Player> players = new ConcurrentHashMap<>();
-
 
     public Player() {
         this.username = "RandomPlayer_4";
@@ -41,6 +42,11 @@ public class Player {
 
     public static void removePlayer(WebSocketConnection connection) {
         players.remove(connection.id());
+    }
+
+    // NEW: Returns a list of all connected players.
+    public static List<Player> getAllPlayers() {
+        return new ArrayList<>(players.values());
     }
 
     public String getUsername() {

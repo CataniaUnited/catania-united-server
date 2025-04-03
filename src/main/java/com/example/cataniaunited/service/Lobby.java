@@ -10,6 +10,10 @@ public class Lobby {
     public Lobby(String lobbyId, String hostPlayer) {
         this.lobbyId = lobbyId;
         this.players.add(hostPlayer);
+
+        // Hard-code a couple of test names:
+        this.players.add("Alice (test)");
+        this.players.add("Bob (test)");
     }
 
     public String getLobbyId() {
