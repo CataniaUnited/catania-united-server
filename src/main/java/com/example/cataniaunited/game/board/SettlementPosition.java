@@ -26,7 +26,7 @@ public class SettlementPosition {
         return "SettlementPosition{" +
                 "building=" + building +
                 ", roads=" + roads +
-                ", tiles=" + Arrays.toString(tiles) +
+                ", tiles=" + tiles +
                 ", ID='" + ID + '\'' +
                 '}';
     }
@@ -34,5 +34,9 @@ public class SettlementPosition {
     public void addTile(Tile tileToAdd){
         tiles.add(tileToAdd);
         assert tiles.size() <= 3: "Cant assign 4 Tiles to a single settlement Position";
+    }
+
+    public ArrayList<Tile> getTiles() {
+        return tiles;
     }
 }

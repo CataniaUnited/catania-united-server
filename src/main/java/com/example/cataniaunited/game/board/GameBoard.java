@@ -60,6 +60,8 @@ public class GameBoard {
         for (int level = 1; level <= sizeOfBoard; level++){ // for each level create the subgraph and snd continuously interconnect it with the inner layer
             createInterconnectedSubgraphOfLevelk(nodeList, tileList, level);
         }
+        
+        //TODO: Update Nodes with only one (or two) connections by Checking all Neighbours and adding Tile where two of the three neighbours connect to and you don't
         return nodeList;
     }
 
@@ -70,7 +72,7 @@ public class GameBoard {
         // amount of new Tiles for this level (level k -> k-1 rings)
 
         int amountOfTilesOnBoardBefore = calculateAmountOfTilesForLayerK.apply(level-1); // amount of tiles placed before
-        int amountOfTilesOnBoardNow =calculateAmountOfTilesForLayerK.apply(level); // amount of tiles that will be placed after this method is done
+        int indexOfLastTileOfThisLayer =calculateAmountOfTilesForLayerK.apply(level)-1; // amount of tiles that will be placed after this method is done -1 to get index
         int currentTileIndex = amountOfTilesOnBoardBefore; // index of current Tile in regards to tileList
 
         int endIndex = calculateEndIndexForLayerK.apply(level); // calculate the amount of new Nodes for this level
@@ -89,11 +91,17 @@ public class GameBoard {
         // create the first node of the Graph of this level
         SettlementPosition lastSettlement = new SettlementPosition(++id);
         nodeList.add(lastSettlement);
+        // Add all tiles the starting node connects to on the current layer
+        // Normally first and last, if only layer one, then only first layer (there is only one tile no level1)
         lastSettlement.addTile(tileList.get(currentTileIndex));
 
-        // Connect first element of new layer, to inner layer
+        // Connect first element of new layer, to inner layer and add second Tile
         if (level != 1){
-            createRoadBetweenTwoSettlements(nodeList.get((id-1) - offsetBetweenIndicesOfHexesToInterConnect), lastSettlement);
+            lastSettlement.addTile(tileList.get(indexOfLastTileOfThisLayer));
+
+            SettlementPosition innerSettlement = nodeList.get((id-1) - offsetBetweenIndicesOfHexesToInterConnect);
+            createRoadBetweenTwoSettlements(innerSettlement, lastSettlement);
+            addTilesToNodeInTheInnerLayer(innerSettlement, lastSettlement);
             offsetBetweenIndicesOfHexesToInterConnect+=2;
         }
 
@@ -102,6 +110,7 @@ public class GameBoard {
             // New Node
             SettlementPosition currentSettlement = new SettlementPosition(++id);
             nodeList.add(currentSettlement);
+            currentSettlement.addTile(tileList.get(currentTileIndex)); // Add Tile two current Node
 
             // create connection with previous node of the same layer
             createRoadBetweenTwoSettlements(lastSettlement, currentSettlement);
@@ -114,10 +123,16 @@ public class GameBoard {
             // In the first layer, there are no inner layers; in all other layer we check if we created the same amount
             // of nodes as needed until a new connection
             if (level != 1 && currentNodesUntilCompletionOfNextHex == ++nodesAfterCompletionOfPreviousHex){
-                // if yes, create a road between them and log a new connection
-                createRoadBetweenTwoSettlements(nodeList.get((id-1) - offsetBetweenIndicesOfHexesToInterConnect), currentSettlement);
-                connectionCount++;
+                // if yes
+                currentTileIndex++; //  Update tileIndex
+                currentSettlement.addTile(tileList.get(currentTileIndex)); // Add second Tile to current Node
 
+                // and, create a road between them, log a new connection and add tile to inner Nodes
+                SettlementPosition innerSettlement = nodeList.get((id-1) - offsetBetweenIndicesOfHexesToInterConnect);
+                createRoadBetweenTwoSettlements(innerSettlement, currentSettlement);
+                addTilesToNodeInTheInnerLayer(innerSettlement, currentSettlement);
+
+                connectionCount++;
                 // decide where we are in the Edge Cycle and set amount of nodes till next connection depending on that
                 if (connectionCount % cornerRhythm == 0){
                     offsetBetweenIndicesOfHexesToInterConnect+=2;
@@ -127,15 +142,19 @@ public class GameBoard {
                 }
                 // reset nodes after last connection was made
                 nodesAfterCompletionOfPreviousHex = 0;
-            } else if(level == 1) { // In the first layer all Nodes neighbour Tile 1
-                 currentSettlement.addTile(tileList.get(currentTileIndex));
             }
         }
 
         // Connect first and last node of current layer
         createRoadBetweenTwoSettlements(nodeList.get((id)-endIndex), nodeList.get(nodeList.size()-1));
+        // No Tile Adding since its done by creation
     }
 
+    public void addTilesToNodeInTheInnerLayer(SettlementPosition innerNode, SettlementPosition outerNode){
+        for (Tile tile: outerNode.getTiles()){
+            innerNode.addTile(tile);
+        }
+    }
 
     /**
      * Create a new Edge = Road in the Graph = GameBoard connection two settlementpositions
