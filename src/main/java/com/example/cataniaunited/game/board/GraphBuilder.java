@@ -31,6 +31,14 @@ public class GraphBuilder {
 
         addCoordinatesToInnerNodes(nodeList, sizeOfBoard);
         addCoordinatesToOuterNodes(nodeList, sizeOfBoard);
+
+        // set coordinates to all roads //TODO: refactor to reduce runtime complexity back to O(n)
+        for (SettlementPosition currentNode : nodeList) {
+            for (Road road : currentNode.getRoads()) {
+                road.setCoordinatesAndRotationAngle();
+            }
+        }
+
         return nodeList;
     }
 
