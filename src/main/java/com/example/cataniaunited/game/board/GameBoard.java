@@ -15,7 +15,7 @@ public class GameBoard {
     private static final int DEFAULT_TILES_PER_PLAYER_GOAL = 6;
     private static final int SIZE_OF_HEX = 10;
 
-    public GameBoard(int playerCount){
+    public GameBoard(int playerCount, boolean printLoop){
 
         int sizeOfBoard = switch (playerCount) {
             case 2, 3, 4 -> 3;
@@ -29,6 +29,9 @@ public class GameBoard {
         long endtime = System.nanoTime();
         //printMainLoop(settlementPositionGraph);
         logger.infof("Generated Board for %d players, with %d Levels in %fs\n".formatted(playerCount, sizeOfBoard,(endtime-starttime)*10e-10));
+
+        if (printLoop)
+            printMainLoop(settlementPositionGraph);
     }
 
     public List<SettlementPosition> generateBoard(int sizeOfBoard){

@@ -15,12 +15,16 @@ import java.util.stream.Stream;
 
 @QuarkusTest
 public class GameBoardTest {
+    @Test
+    void michi(){
+        GameBoard board = new GameBoard(4, true);
+    }
 
     @ParameterizedTest
     @MethodSource("benchMarkTestProvider")
     void benchMarkTest(int sizeOfBoard){
         try {
-            new GameBoard(sizeOfBoard);
+            new GameBoard(sizeOfBoard, false);
         } catch (OutOfMemoryError e){
             Assertions.assertFalse(true);
         }

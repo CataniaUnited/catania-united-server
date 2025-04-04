@@ -35,7 +35,7 @@ public class GameWebSocket {
             logger.infof("Generating Board");
             try {
                 int boardSize = Integer.parseInt(message.substring("generateBoard".length()).trim());
-                new GameBoard(boardSize);
+                new GameBoard(boardSize, true);
             } catch (NumberFormatException e){
                 logger.error("Cant Generate Board, cant extract numberOfLayers");
             }

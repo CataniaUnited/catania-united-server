@@ -5,6 +5,8 @@ import com.example.cataniaunited.game.board.tileStuff.Tile;
 import org.jboss.logging.Logger;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.function.Function;
 
@@ -26,15 +28,19 @@ public class GraphBuilder {
 
         // Update Nodes with only two connections by Checking all Neighbours and adding Tile where two of the three neighbours connect to and you don't
         insertTilesIntoNodesThatHaveLessThan3Connections(nodeList, sizeOfBoard);
+
+        addCoordinatesToInnerNodes(nodeList, sizeOfBoard);
+        addCoordinatesToOuterNodes(nodeList, sizeOfBoard);
         return nodeList;
     }
 
     public void createInterconnectedSubgraphOfLevelK(List<SettlementPosition> nodeList, List<Tile> tileList, int level){
         // amount new vertices for level k = 6(2*(k-1) + 3)
         Function<Integer, Integer> calculateEndIndexForLayerK = (k) -> 6 * (2 * (k-2) + 3);
+        Function<Integer, Integer> calculateAmountOfTilesForLayerK = (k) -> (k > 0) ? (int) (3*Math.pow((k-1), 2) + 3 * (k-1) + 1) : 0;
         // amount of new Tiles for this level (level k -> k-1 rings)
-        int amountOfTilesOnBoardBefore = calculateAmountOfTilesForLayerK(level-1); // amount of tiles placed before
-        int indexOfLastTileOfThisLayer =calculateAmountOfTilesForLayerK(level)-1; // amount of tiles that will be placed after this method is done -1 to get index
+        int amountOfTilesOnBoardBefore = calculateAmountOfTilesForLayerK.apply(level-1); // amount of tiles placed before
+        int indexOfLastTileOfThisLayer =calculateAmountOfTilesForLayerK.apply(level)-1; // amount of tiles that will be placed after this method is done -1 to get index
         int currentTileIndex = amountOfTilesOnBoardBefore; // index of current Tile regarding tileList
 
         int endIndex = calculateEndIndexForLayerK.apply(level); // calculate the amount of new Nodes for this level
@@ -196,13 +202,6 @@ public class GraphBuilder {
         b.addRoad(roadToAdd);
     }
 
-
-
-
-    private static int calculateAmountOfTilesForLayerK(int k) {
-        return (k > 0) ? (int) (3*Math.pow((k-1), 2) + 3 * (k-1) + 1) : 0;
-    }
-
     public static void customAssertion(boolean success, String errorMessage){
         if (success)
             return;
@@ -210,4 +209,156 @@ public class GraphBuilder {
         logger.error(errorMessage);
         throw new AssertionError(errorMessage);
     }
+
+    void addCoordinatesToInnerNodes(List <SettlementPosition> nodeList, int sizeOfBoard){
+        if (sizeOfBoard == 1){ // If there is only one layer, there are no inner nodes
+            return;
+        }
+
+        int lastNodeWith3Neighbors = (int) (6*Math.pow((sizeOfBoard-1), 2));
+
+        for(int i = 0; i < lastNodeWith3Neighbors; i++){
+            SettlementPosition currentNode = nodeList.get(i);
+            // get Positions of Tiles
+            List<Tile> nodeTiles = currentNode.getTiles();
+            customAssertion(nodeTiles.size() == 3, "Node (%s) is supposed to have 3 Tiles Attached to it!".formatted("s"));
+            // calculate middle Position
+            double sumX = 0;
+            double sumY = 0;
+            double[] coordinates;
+            for (Tile tile: nodeTiles){
+                coordinates = tile.getCoordinates();
+                sumX+=coordinates[0];
+                sumY+=coordinates[1];
+            }
+
+            // set position
+
+            currentNode.setCoordinates(sumX/3, sumY/3);
+
+        }
+    }
+
+    void addCoordinatesToOuterNodes(List <SettlementPosition> nodeList, int sizeOfBoard){
+        int startingIndex = (int) (6*Math.pow((sizeOfBoard-1), 2));
+
+        for (int i = startingIndex; i < nodeList.size(); i++){
+            SettlementPosition currentNode = nodeList.get(i);
+
+            // To specify the point on the plane where our node needs to be placed we need 3 reference coordinates.
+            // There are 3 Scenarios.
+            // a) 3 Tiles (already completed in previous method)
+            // b) 2 Tiles + one Neighbor with coordinates
+            if (currentNode.getTiles().size() == 2){
+                addCoordinatesToNodeWith2TilesAnd1Neighbor(currentNode);
+            } else { // c) 1 Tile + 2 Neighbors with coordinates
+                // We don't have two neighbours -> shit
+                // c.1) check if next node has two neighbours and create them first
+                if (i+1 < nodeList.size() && nodeList.get(i+1).getTiles().size() == 2){
+                    addCoordinatesToNodeWith2TilesAnd1Neighbor(nodeList.get(i+1));
+                    addCoordinatesToNodeWith1TilesAnd2NeighborsWithCoordinates(currentNode);
+                    i++;
+                } else if (i + 1 == nodeList.size()) {
+                    // c.1.b this is the last node and the first node of this layer already got its coordinates
+                    // therefore this node is the only one that already has 2 neighbors
+                    addCoordinatesToNodeWith1TilesAnd2NeighborsWithCoordinates(currentNode);
+                } else {
+                    // c.2) previous node has two tiles do some fancy triangulation to
+                    customAssertion(i > startingIndex, "First node has to have 2 Tiles");
+                    SettlementPosition previousNode = nodeList.get(i-1);
+                    addCoordinatesToNodeWith1Tiles1NeighbourAnd1NodeAsNeighbourFromPreviousNode(currentNode);
+                }
+
+
+            }
+
+        }
+    }
+
+    void addCoordinatesToNodeWith2TilesAnd1Neighbor(SettlementPosition node){
+        List<Tile> tileList = node.getTiles();
+        List<SettlementPosition> neighbors = node.getNeighbours();
+
+        customAssertion(tileList.size() == 2, "You need 2 tiles");
+        customAssertion(!neighbors.isEmpty(), "You need at least one neighbour.");
+
+        SettlementPosition minNode = Collections.min(neighbors, Comparator.comparingInt(SettlementPosition::getID));
+
+        // Find Midpoint between the two tiles (add and div by 2 but mult by to later so just add)
+        double x = 0;
+        double y = 0;
+        double[] coordinates;
+        for (Tile tile: tileList){
+            coordinates = tile.getCoordinates();
+            x += coordinates[0];
+            y += coordinates[1];
+        }
+
+        // Reflect the Node across the Midpoint; 2 midpoint - node
+        coordinates = minNode.getCoordinates();
+        x -= coordinates[0];
+        y -= coordinates[1];
+
+        node.setCoordinates(x, y);
+    }
+
+    void addCoordinatesToNodeWith1TilesAnd2NeighborsWithCoordinates(SettlementPosition node){
+        List<SettlementPosition> neighbours = node.getNeighbours();
+
+        customAssertion(node.getTiles().size() == 1, "You need one node for this method");
+        customAssertion(neighbours.size() == 2, "You need 2 neighbours.");
+
+        Tile tile = node.getTiles().get(0);
+
+        // Find Midpoint between the two neighbours (add and div by 2 but mult by to later so just add)
+        double x = 0;
+        double y = 0;
+        double[] coordinates;
+        for (SettlementPosition position: neighbours){
+            coordinates = position.getCoordinates();
+            x += coordinates[0];
+            y += coordinates[1];
+        }
+
+        // Reflect the Tile Center across the Midpoint; 2 midpoint - tileCenter
+        coordinates = tile.getCoordinates();
+        x -= coordinates[0];
+        y -= coordinates[1];
+
+        node.setCoordinates(x, y);
+    }
+
+    void addCoordinatesToNodeWith1Tiles1NeighbourAnd1NodeAsNeighbourFromPreviousNode(SettlementPosition node){
+        List<SettlementPosition> neighbours = node.getNeighbours();
+        customAssertion(!neighbours.isEmpty(), "You need 1 neighbour.");
+        SettlementPosition neighbour = Collections.min(neighbours, Comparator.comparingInt(SettlementPosition::getID));
+
+        List<SettlementPosition> distance2Connection = neighbour.getNeighbours();
+        customAssertion(distance2Connection.size() == 3, "PreviousNode needs 3 neighbours.");
+        SettlementPosition reflectionNode = Collections.min(distance2Connection, Comparator.comparingInt(SettlementPosition::getID));
+
+        customAssertion(node.getTiles().size() == 1, "You need one Tile for this method");
+        Tile tile = node.getTiles().get(0);
+
+        // Find Midpoint between Tile and Neighbour (add and div by 2 but mult by to later so just add)
+        double x = 0;
+        double y = 0;
+        double[] coordinates;
+        coordinates = neighbour.getCoordinates();
+        x += coordinates[0];
+        y += coordinates[1];
+
+        coordinates = tile.getCoordinates();
+        x += coordinates[0];
+        y += coordinates[1];
+
+
+        // Reflect the Tile reflectionNode across the Midpoint; 2 midpoint - reflectionNode
+        coordinates = reflectionNode.getCoordinates();
+        x -= coordinates[0];
+        y -= coordinates[1];
+
+        node.setCoordinates(x, y);
+    }
+
 }

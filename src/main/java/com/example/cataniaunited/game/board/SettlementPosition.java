@@ -10,6 +10,8 @@ public class SettlementPosition {
     List<Road> roads = new ArrayList<>(3);
     ArrayList<Tile> tiles = new ArrayList<>();
 
+    double[] coordinates = new double[2];
+
     final int ID;
 
 
@@ -23,12 +25,13 @@ public class SettlementPosition {
 
     @Override
     public String toString() {
-        return "SettlementPosition{" +
+        return String.format("SettlementPosition{" +
                 ", ID='" + ID + '\'' +
+                ", (%s; %s)" +
                 //"building=" + building +
                 ", tiles=" + tiles +
                 ", roads=" + roads +
-                '}';
+                '}', this.coordinates[0], this.coordinates[1]);
     }
 
     public void addTile(Tile tileToAdd){
@@ -50,5 +53,15 @@ public class SettlementPosition {
 
     public void addRoad(Road road) {
         this.roads.add(road);
+    }
+
+    public void setCoordinates(double x, double y) {
+        if (this.coordinates[0] == 0 && this.coordinates[1] == 0) {
+            this.coordinates = new double[]{x, y};
+        }
+    }
+
+    public double[] getCoordinates() {
+        return coordinates;
     }
 }

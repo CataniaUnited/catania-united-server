@@ -6,8 +6,7 @@ public class Tile {
     final TileType type;
     final int value = 0; // To set later
 
-    private double x;
-    private double y;
+    double[] coordinates = new double[2];
     int id;
 
     public Tile(TileType type){
@@ -23,14 +22,13 @@ public class Tile {
     }
 
     public void setCoordinates(double x, double y) {
-        if (this.x == 0 && this.y == 0) {
-            this.x = x;
-            this.y = y;
+        if (this.coordinates[0] == 0 && this.coordinates[1] == 0) {
+            this.coordinates = new double[]{x, y};
         }
     }
 
     public double[] getCoordinates() {
-        return new double[]{x, y};
+        return coordinates;
     }
 
     @Override
@@ -39,6 +37,6 @@ public class Tile {
         "Tile{" +
                 "id=" + id + "," +
                 "coordinates=(%f, %f)" +
-        '}', x, y);
+        '}', this.coordinates[0], this.coordinates[1]);
     }
 }
