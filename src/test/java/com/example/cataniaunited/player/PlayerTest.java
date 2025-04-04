@@ -17,7 +17,7 @@ class PlayerTest {
 
     @Test
     void testCustomConstructor() {
-        String customUsername = "Alice1";
+        String customUsername = "Alice";
         Player player = new Player(customUsername);
         Assertions.assertEquals(customUsername, player.getUsername());
         Assertions.assertNotNull(player.getUniqueId(), "uniqueId should not be null");
