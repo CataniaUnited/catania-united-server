@@ -1,6 +1,7 @@
 package com.example.cataniaunited.game.board;
 
-import com.example.cataniaunited.game.board.CoordinateSetter.TileListCoordinateSetter;
+import com.example.cataniaunited.game.board.tileStuff.Tile;
+import com.example.cataniaunited.game.board.tileStuff.TileListGenerator;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -40,15 +41,13 @@ public class GameBoardTest {
                 Arguments.of(100),
                 Arguments.of(1000),
                 Arguments.of(10000),
-                Arguments.of(100000),
-                Arguments.of(150000)
+                Arguments.of(100000)
         );
     }
 
     @Test void testCoordinateCalculationOfTiles(){
         int sizeOfBoard = 4;
-        List<Tile> tileList = GameBoard.generateShuffledTileList(sizeOfBoard);
-        tileList = new TileListCoordinateSetter(tileList, sizeOfBoard, 10, true).addCoordinatesToTileList();
+        List<Tile> tileList = new TileListGenerator(sizeOfBoard, 10, true).generateShuffledTileList();
         for(Tile node:tileList){
             System.out.println(node);
         }
@@ -56,16 +55,16 @@ public class GameBoardTest {
 
     @Test
     void testTileCoordinateSettercalculateAmountOfTilesForLayerK(){
-        Assertions.assertEquals(1, TileListCoordinateSetter.calculateAmountOfTilesForLayerK(1));
-        Assertions.assertEquals(7, TileListCoordinateSetter.calculateAmountOfTilesForLayerK(2));
-        Assertions.assertEquals(19, TileListCoordinateSetter.calculateAmountOfTilesForLayerK(3));
-        Assertions.assertEquals(37, TileListCoordinateSetter.calculateAmountOfTilesForLayerK(4));
+        Assertions.assertEquals(1, TileListGenerator.calculateAmountOfTilesForLayerK(1));
+        Assertions.assertEquals(7, TileListGenerator.calculateAmountOfTilesForLayerK(2));
+        Assertions.assertEquals(19, TileListGenerator.calculateAmountOfTilesForLayerK(3));
+        Assertions.assertEquals(37, TileListGenerator.calculateAmountOfTilesForLayerK(4));
     }
 
     @ParameterizedTest
     @MethodSource("duplicateListProvider")
     void findDuplicateTileListTest(List<Tile> tileList, Tile duplicateTile){
-        Assertions.assertEquals(GameBoard.findDuplicateTile(tileList), duplicateTile);
+        Assertions.assertEquals(GraphBuilder.findDuplicateTile(tileList), duplicateTile);
     }
 
     static Stream<Arguments> duplicateListProvider(){

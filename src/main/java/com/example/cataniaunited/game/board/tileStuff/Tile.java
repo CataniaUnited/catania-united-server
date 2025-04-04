@@ -1,4 +1,6 @@
-package com.example.cataniaunited.game.board;
+package com.example.cataniaunited.game.board.tileStuff;
+
+import com.example.cataniaunited.game.board.TileType;
 
 public class Tile {
     final TileType type;

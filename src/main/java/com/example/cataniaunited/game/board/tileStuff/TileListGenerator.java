@@ -1,16 +1,19 @@
-package com.example.cataniaunited.game.board.CoordinateSetter;
+package com.example.cataniaunited.game.board.tileStuff;
 
-import com.example.cataniaunited.game.board.Tile;
+import com.example.cataniaunited.game.board.TileType;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 
-public class TileListCoordinateSetter {
+public class TileListGenerator {
 
     private final int sizeOfBoard;
     private final List<Tile> tileList;
     private final int sizeOfHex;
+    private int amountOfTilesOnBoard;
 
     // precomputed values of the angle to get to the midpoint of the starting tile of the next layer k -> (k*StrictMath.PI)/3;
     // to prevent rounding errors used Bigdecimal to compute the values and then transformed them to with k.doubleValue()
@@ -22,8 +25,9 @@ public class TileListCoordinateSetter {
 
     double[] northWestAddition;
     double[] southEastAddition;
-    public TileListCoordinateSetter(List<Tile> tileList, int sizeOfBoard, int sizeOfHex, boolean flipYAxis){
-        this.tileList = tileList;
+    public TileListGenerator(int sizeOfBoard, int sizeOfHex, boolean flipYAxis){
+        amountOfTilesOnBoard = calculateAmountOfTilesForLayerK(sizeOfBoard);
+        tileList = new ArrayList<>(amountOfTilesOnBoard);
         this.sizeOfBoard = sizeOfBoard;
         this.sizeOfHex =sizeOfHex;
         this.distanceBetweenTiles = StrictMath.sqrt(3)*sizeOfHex;
@@ -34,11 +38,32 @@ public class TileListCoordinateSetter {
         southEastAddition = polarToCartesian(distanceBetweenTiles, southEastAngle);
     }
 
+    public List<Tile> generateShuffledTileList(){
+
+        TileType[] tileTypes = TileType.values();
+
+        tileList.add(new Tile(TileType.WASTE));
+
+        for(int i = 1; i < amountOfTilesOnBoard; i++){
+            TileType currentTileType = tileTypes[i % (tileTypes.length -1)];
+            tileList.add(new Tile(currentTileType));
+        }
+
+        Collections.shuffle(tileList);
+        for(int i = 0; i < tileList.size(); i++){
+            tileList.get(i).id = i+1;
+        }
+
+        addCoordinatesToTileList();
+        return tileList;
+    }
+
+
     public static int calculateAmountOfTilesForLayerK(int k) {
         return (k > 0) ? (int) (3*Math.pow((k-1), 2) + 3 * (k-1) + 1) : 0;
     }
 
-    public List<Tile> addCoordinatesToTileList() {
+    public void addCoordinatesToTileList() {
         Function<Integer, Integer> getIndexOfMiddleElementOfLayerK = (k) -> (calculateAmountOfTilesForLayerK(k+1) - calculateAmountOfTilesForLayerK(k))/2 + calculateAmountOfTilesForLayerK(k);
         // set coordinates of center Tile
         tileList.get(0).setCoordinates(0, 0);
@@ -64,8 +89,6 @@ public class TileListCoordinateSetter {
             // calculate rows depending on newly discovered diagonal tiles
             addCoordinatesToRows(layerIndex, indexOfFirstTileOfThisLayer, indexOfMiddleTileOfThisLayer);
         }
-
-        return tileList;
     }
 
     void addCoordinatesToRows(int layerIndex, int southRowStartingTileIndex, int northRowStartingTileIndex){
