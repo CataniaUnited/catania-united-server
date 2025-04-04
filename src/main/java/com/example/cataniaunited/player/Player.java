@@ -40,13 +40,16 @@ public class Player {
         return players.get(connection.id());
     }
 
+    public static List<Player> getAllPlayers() {
+        return new ArrayList<>(players.values());
+    }
+
     public static void removePlayer(WebSocketConnection connection) {
         players.remove(connection.id());
     }
 
-    // NEW: Returns a list of all connected players.
-    public static List<Player> getAllPlayers() {
-        return new ArrayList<>(players.values());
+    public static void removePlayerById(String connectionId) {
+        players.remove(connectionId);
     }
 
     public String getUsername() {
