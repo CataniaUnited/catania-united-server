@@ -1,5 +1,9 @@
 package com.example.cataniaunited.game.board;
 
+import com.example.cataniaunited.api.GameWebSocket;
+import org.jboss.logging.Logger;
+
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -7,35 +11,34 @@ import java.util.function.Function;
 
 public class GameBoard {
     // TODO implement position for tiles and nodes
-    /*
-        //Random Calculations might not be needed
-        // double apothem = StrictMath.sqrt(3.0/2.0) * sizeOfHex;
-        double distanceBetweenTheMidpointOfTwoHexes = StrictMath.sqrt(3)*sizeOfHex;
-        //double anglesToGetToAnotherMidpoint = (k -> ((double)k/3 + (double)1/6)*StrictMath.PI);
-        //double anglesToGetToSettlementPosition = k -> (k*StrictMath.PI)/3;
+    private static final Logger logger = Logger.getLogger(GameWebSocket.class);
+    private static final int DEFAULT_TILES_PER_PLAYER_GOAL = 6;
+    private static final int SIZE_OF_HEX = 10;
 
-        //int y = r * StrictMath.sin(theta);
-        //int r = r * StrictMath.cos(theta);
-        //int r = StrictMath.sqrt(StrictMath.pow(x, 2) + StrictMath.pow(y,2));
-        //theta = StrictMath.atan(y / x);
-    */
+    public GameBoard(int playerCount){
 
-    public GameBoard(int sizeOfBoard){
+        int sizeOfBoard = switch (playerCount) {
+            case 2, 3, 4 -> 3;
+            case 5, 6 -> 4;
+            case 7, 8 -> 5;
+            default -> (int) Math.floor(Math.sqrt((double) (DEFAULT_TILES_PER_PLAYER_GOAL * playerCount - 1) / 3)) + 1;
+        };
+
         long starttime = System.nanoTime();
         List<SettlementPosition> settlementPositionGraph =  generateBoard(sizeOfBoard);
         long endtime = System.nanoTime();
-        printMainLoop(settlementPositionGraph);
-        System.out.printf("Generated Board with %d Levels in %fs\n", sizeOfBoard,(endtime-starttime)*10e-9);
+        //printMainLoop(settlementPositionGraph);
+        logger.infof("Generated Board for %d players, with %d Levels in %fs\n".formatted(playerCount, sizeOfBoard,(endtime-starttime)*10e-10));
     }
 
     public List<SettlementPosition> generateBoard(int sizeOfBoard){
         List<Tile> tileList = generateShuffledTileList(sizeOfBoard);
+        addCoordinatesToTileList(tileList, sizeOfBoard);
         return generateGraph(sizeOfBoard, tileList);
     }
 
-    public List<Tile> generateShuffledTileList(int sizeOfBoard){
-        int rings = sizeOfBoard-1;
-        int amountOfTilesOnBoard = (int) (3*Math.pow(rings, 2) + 3 * rings + 1);
+    public static List<Tile> generateShuffledTileList(int sizeOfBoard){
+        int amountOfTilesOnBoard = calculateAmountOfTilesForLayerK(sizeOfBoard);
         TileType[] tileTypes = TileType.values();
 
         List<Tile> tileList = new ArrayList<>(amountOfTilesOnBoard);
@@ -73,11 +76,9 @@ public class GameBoard {
     public void createInterconnectedSubgraphOfLevelK(List<SettlementPosition> nodeList, List<Tile> tileList, int level){
         // amount new vertices for level k = 6(2*(k-1) + 3)
         Function<Integer, Integer> calculateEndIndexForLayerK = (k) -> 6 * (2 * (k-2) + 3);
-        Function<Integer, Integer> calculateAmountOfTilesForLayerK = (k) -> (k > 0) ? (int) (3*Math.pow((k-1), 2) + 3 * (k-1) + 1) : 0;
         // amount of new Tiles for this level (level k -> k-1 rings)
-
-        int amountOfTilesOnBoardBefore = calculateAmountOfTilesForLayerK.apply(level-1); // amount of tiles placed before
-        int indexOfLastTileOfThisLayer =calculateAmountOfTilesForLayerK.apply(level)-1; // amount of tiles that will be placed after this method is done -1 to get index
+        int amountOfTilesOnBoardBefore = calculateAmountOfTilesForLayerK(level-1); // amount of tiles placed before
+        int indexOfLastTileOfThisLayer =calculateAmountOfTilesForLayerK(level)-1; // amount of tiles that will be placed after this method is done -1 to get index
         int currentTileIndex = amountOfTilesOnBoardBefore; // index of current Tile regarding tileList
 
         int endIndex = calculateEndIndexForLayerK.apply(level); // calculate the amount of new Nodes for this level
@@ -157,7 +158,7 @@ public class GameBoard {
         // No Tile Adding since it's done by creation
     }
 
-    public void insertTilesIntoNodesThatHaveLessThan3Connections(List<SettlementPosition> nodeList, int layers){
+    public void insertTilesIntoNodesThatHaveLessThan3Connections(List<SettlementPosition> nodeList, int layers) {
         // Since we insert tiles of the outer layer into nodes of the inner layers, we don't need to check the last layer
         SettlementPosition currentNode;
         List<SettlementPosition> neighbours;
@@ -170,12 +171,13 @@ public class GameBoard {
             if (currentTiles.size() == 3){
                 continue; // if == 3 continue
             }
-            assert currentTiles.size() < 3; // if > 3 exception
             // else < 3
+            customAssertion(currentTiles.size() == 2, "Node %s has more than three, or less than 2 connections to tiles".formatted(currentNode));
+
             // get tiles of All Connected Nodes (3) if 2 outer layer or something went wrong -> exception
-            assert currentNode.getRoads().size() == 3;
+            customAssertion(currentNode.getRoads().size() == 3, "Node %s should have 3 Road connections".formatted(currentNode));
             neighbours = currentNode.getNeighbours();
-            assert neighbours.size() == 3;
+            customAssertion(neighbours.size() == 3, "Node %s should have 3 Neighbours connections".formatted(currentNode));
 
             for(SettlementPosition neighbour: neighbours){
                 neighbourTiles.addAll(neighbour.getTiles()); // add all Possible Tiles !!!including duplicates!!!
@@ -185,14 +187,10 @@ public class GameBoard {
             neighbourTiles.removeAll(currentTiles); // remove Tiles already appended to this node
 
             //get duplicated element left
-            //System.out.println("Find duplicate");
-            //System.out.println(neighbourTiles);
             Tile tileToAdd = findDuplicateTile(neighbourTiles);
-            //System.out.println(tileToAdd);
-            //System.out.println("\n\n\n\n\n");
+
             currentNode.addTile(tileToAdd);
 
-            assert currentNode.getTiles().size() == 3;
             neighbourTiles.clear();
 
         }
@@ -200,14 +198,14 @@ public class GameBoard {
     }
 
     /**
-     * O(1) Implementation of findDuplicate for lists of size 4 due to frequent usage in other Methods,
+     * O(1) Implementation of findDuplicate for lists of size 5 due to frequent usage in other Methods,
      * avoiding using the O(n) Algorithm of repeatedly removing an element (internal O(n) implementation in ArrayList)
      * until only the once duplicate is contaminated.
-     * @param list
+     * @param list List of size 5 that includes at least one duplicate
      * @return returns the first Tile, that exists twice in the list
      */
     public static Tile findDuplicateTile(List<Tile> list) {
-        assert list.size() == 5;
+        customAssertion(list.size() == 5, "findDuplicateTile only works with 5 tiles, from which one needs to be duplicate, %s".formatted(list));
         // First Element is Duplicate
         if (list.get(0).equals(list.get(1)) || list.get(0).equals(list.get(2)) || list.get(0).equals(list.get(3)) || list.get(0).equals(list.get(4))) {
             return list.get(0);
@@ -221,7 +219,7 @@ public class GameBoard {
             return list.get(2);
         }
         // or else third Element is Duplicate
-        assert list.get(3).equals(list.get(4));
+        customAssertion(list.get(3).equals(list.get(4)), "findDuplicateTile only works with 5 tiles, from which one needs to be duplicate, %s".formatted(list));
         return list.get(3);
     }
 
@@ -242,6 +240,110 @@ public class GameBoard {
         b.addRoad(roadToAdd);
     }
 
+
+    public static void addCoordinatesToTileList(List<Tile> tileList, int sizeOfBoard) {
+        double distanceBetweenTiles = StrictMath.sqrt(3)*SIZE_OF_HEX;
+        Function<Integer, Integer> getIndexOfMiddleElementOfLayerK = (k) -> (calculateAmountOfTilesForLayerK(k+1) - calculateAmountOfTilesForLayerK(k))/2 + calculateAmountOfTilesForLayerK(k);
+
+        // precomputed values of the angle to get to the midpoint of the starting tile of the next layer k -> (k*StrictMath.PI)/3;
+        // to prevent rounding errors used Bigdecimal to compute the values and then transformed them to with k.doubleValue()
+        double northWestAngle = 2.0943951023931957; // k = 2
+        double southEastAngle = 5.235987755982989; // k = 5
+
+        // precomputing offset since working with bigDecimalObjects takes time
+        double[] northWestAddition = polarToCartesian(distanceBetweenTiles, northWestAngle, true);
+        double[] southEastAddition = polarToCartesian(distanceBetweenTiles, southEastAngle, true);
+
+        double[] previousCoordinates;
+        double x, y;
+        int indexOfFirstTileOfThisLayer, indexOfFirstTileOfPreviousLayer, indexOfMiddleTileOfThisLayer, indexOfMiddleTileOfPreviousLayer;
+
+        // set coordinates of center Tile
+        tileList.get(0).setCoordinates(0, 0);
+
+        for(int layer = 1; layer < sizeOfBoard; layer++){
+            // set south-east tile
+            indexOfFirstTileOfThisLayer = calculateAmountOfTilesForLayerK(layer); // index of current Tile regarding tileList
+            indexOfFirstTileOfPreviousLayer = calculateAmountOfTilesForLayerK(layer-1); // amount of tiles placed before-1 to get index
+
+            Tile previousTile = tileList.get(indexOfFirstTileOfPreviousLayer);
+            Tile currentTile = tileList.get(indexOfFirstTileOfThisLayer);
+
+
+            previousCoordinates = previousTile.getCoordinates();
+            x = previousCoordinates[0] + southEastAddition[0];
+            y = previousCoordinates[1] + southEastAddition[1];
+            currentTile.setCoordinates(x, y);
+
+            // set north-west tile
+            indexOfMiddleTileOfThisLayer = getIndexOfMiddleElementOfLayerK.apply(layer);
+            indexOfMiddleTileOfPreviousLayer = getIndexOfMiddleElementOfLayerK.apply(layer-1);
+
+            currentTile = tileList.get(indexOfMiddleTileOfThisLayer);
+            previousTile = tileList.get(indexOfMiddleTileOfPreviousLayer);
+
+            previousCoordinates = previousTile.getCoordinates();
+            x = previousCoordinates[0] + northWestAddition[0];
+            y = previousCoordinates[1] + northWestAddition[1];
+            currentTile.setCoordinates(x, y);
+        }
+
+
+
+    }
+
+    private static int calculateAmountOfTilesForLayerK(int k) {
+        return (k > 0) ? (int) (3*Math.pow((k-1), 2) + 3 * (k-1) + 1) : 0;
+    }
+
+    private static double[] polarToCartesian(double r, double theta, boolean flipYAxis){
+        double[] coordinates = new double[2];
+        double trigResult;
+        BigDecimal multiplicationResult;
+
+        trigResult = StrictMath.cos(theta);
+        multiplicationResult = new BigDecimal(r).multiply(new BigDecimal(trigResult));
+        coordinates[0] = multiplicationResult.doubleValue();
+
+        trigResult = StrictMath.sin(theta);
+        multiplicationResult = new BigDecimal(r).multiply(new BigDecimal(trigResult));
+        coordinates[1] = multiplicationResult.doubleValue();
+        coordinates[1] = (flipYAxis) ? -coordinates[1] : coordinates[1];
+
+        return coordinates;
+    }
+
+
+
+    /*
+        //Random Calculations might not be needed
+        // double apothem = StrictMath.sqrt(3.0/2.0) * sizeOfHex;
+        double distanceBetweenTheMidpointOfTwoHexes = StrictMath.sqrt(3)*sizeOfHex;
+        //double anglesToGetToAnotherMidpoint = (k -> ((double)k/3 + (double)1/6)*StrictMath.PI);
+        //double anglesToGetToSettlementPosition = k -> (k*StrictMath.PI)/3;
+
+        //int y = r * StrictMath.sin(theta);
+        //int x = r * StrictMath.cos(theta);
+        //int r = StrictMath.sqrt(StrictMath.pow(x, 2) + StrictMath.pow(y,2));
+        //theta = StrictMath.atan(y / x);
+    */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     /**
      * Print out some stats of the graph
      * @param graph graph to gather stats from
@@ -250,6 +352,14 @@ public class GameBoard {
         for(SettlementPosition node:graph){
             System.out.println(node);
         }
+    }
+
+    public static void customAssertion(boolean success, String errorMessage){
+        if (success)
+            return;
+
+        logger.error(errorMessage);
+        throw new AssertionError(errorMessage);
     }
 
 }
