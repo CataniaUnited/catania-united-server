@@ -1,5 +1,6 @@
 package com.example.cataniaunited.api;
 
+import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.dto.MessageType;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -130,6 +131,7 @@ public class GameWebSocketTest {
         var objectMapper = new ObjectMapper();
         var unknownMessageDto = new MessageDTO();
         unknownMessageDto.setPlayer("Player 1");
+        // Set a non-null type so the switch statement can work. This will cause the default branch.
         unknownMessageDto.setType(MessageType.ERROR);
 
         List<String> receivedMessages = new ArrayList<>();
@@ -159,5 +161,37 @@ public class GameWebSocketTest {
         assertEquals(MessageType.ERROR, responseMessage.getType());
         assertEquals("Server", responseMessage.getPlayer());
         assertEquals("Unknown command", responseMessage.getLobbyId());
+    }
+
+    @Test
+    void testSetUsernameCode() throws InterruptedException, JsonProcessingException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        CountDownLatch latch = new CountDownLatch(1);
+        List<String> receivedMessages = new ArrayList<>();
+
+        var client = BasicWebSocketConnector.create()
+                .baseUri(SERVER_URI)
+                .path("/game")
+                .onTextMessage((connection, message) -> {
+                    if (message.startsWith("{")) {
+                        receivedMessages.add(message);
+                        latch.countDown();
+                    }
+                })
+                .connectAndAwait();
+
+        MessageDTO setUsernameMsg = new MessageDTO();
+        setUsernameMsg.setType(MessageType.SET_USERNAME);
+        setUsernameMsg.setPlayer("Chicken");
+        client.sendTextAndAwait(objectMapper.writeValueAsString(setUsernameMsg));
+
+        assertTrue(latch.await(5, TimeUnit.SECONDS), "Did not receive LOBBY_UPDATED in time");
+        assertEquals(1, receivedMessages.size());
+
+        MessageDTO received = objectMapper.readValue(receivedMessages.get(0), MessageDTO.class);
+        assertEquals(MessageType.LOBBY_UPDATED, received.getType());
+        assertEquals("Chicken", received.getPlayer());
+        assertNotNull(received.getPlayers());
+        assertTrue(received.getPlayers().contains("Chicken"));
     }
 }
