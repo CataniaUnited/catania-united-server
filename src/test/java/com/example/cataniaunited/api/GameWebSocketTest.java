@@ -130,6 +130,7 @@ public class GameWebSocketTest {
         var objectMapper = new ObjectMapper();
         var unknownMessageDto = new MessageDTO();
         unknownMessageDto.setPlayer("Player 1");
+        unknownMessageDto.setType(MessageType.ERROR);
 
         List<String> receivedMessages = new ArrayList<>();
         CountDownLatch messageLatch = new CountDownLatch(1);
@@ -145,21 +146,18 @@ public class GameWebSocketTest {
                 })
                 .connectAndAwait();
 
-        // Send message
         String sentMessage = objectMapper.writeValueAsString(unknownMessageDto);
         webSocketClientConnection.sendTextAndAwait(sentMessage);
 
-        // Wait up to 5 seconds for both messages to arrive
         boolean allMessagesReceived = messageLatch.await(5, TimeUnit.SECONDS);
 
         assertTrue(allMessagesReceived, "Not all messages were received in time!");
         assertEquals(1, receivedMessages.size());
 
-        MessageDTO responseMessage = objectMapper.readValue(receivedMessages.getFirst(), MessageDTO.class);
+        MessageDTO responseMessage = objectMapper.readValue(receivedMessages.get(0), MessageDTO.class);
 
         assertEquals(MessageType.ERROR, responseMessage.getType());
         assertEquals("Server", responseMessage.getPlayer());
         assertEquals("Unknown command", responseMessage.getLobbyId());
     }
-
 }
