@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.function.Function;
 
 public class GameBoard {
+    // TODO implement position for tiles and nodes
     /*
         //Random Calculations might not be needed
         // double apothem = StrictMath.sqrt(3.0/2.0) * sizeOfHex;
@@ -46,6 +47,9 @@ public class GameBoard {
         }
 
         Collections.shuffle(tileList);
+        for(int i = 0; i < tileList.size(); i++){
+            tileList.get(i).id = i+1;
+        }
         return tileList;
     }
 
@@ -96,12 +100,14 @@ public class GameBoard {
         // Normally first and last, if only layer one, then only first layer (there is only one tile no level1)
         lastSettlement.addTile(tileList.get(currentTileIndex));
 
-        // Connect first element of new layer, to inner layer and add second Tile
         if (level != 1){
+            // From the second layer on  you start between two tiles therefore the last tile needs to be added to the Settlementposition
             lastSettlement.addTile(tileList.get(indexOfLastTileOfThisLayer));
 
+            // Connect first element of new layer, to inner layer and add second Tile
             SettlementPosition innerSettlement = nodeList.get((id-1) - offsetBetweenIndicesOfHexesToInterConnect);
             createRoadBetweenTwoSettlements(innerSettlement, lastSettlement);
+
             addTilesToNodeInTheInnerLayer(innerSettlement, lastSettlement);
             offsetBetweenIndicesOfHexesToInterConnect+=2;
         }
@@ -167,7 +173,7 @@ public class GameBoard {
             assert currentTiles.size() < 3; // if > 3 exception
             // else < 3
             // get tiles of All Connected Nodes (3) if 2 outer layer or something went wrong -> exception
-            assert currentNode.getRoads().size() == 3; // TODO: create setter and test in SettlementPosition class
+            assert currentNode.getRoads().size() == 3;
             neighbours = currentNode.getNeighbours();
             assert neighbours.size() == 3;
 
@@ -179,10 +185,15 @@ public class GameBoard {
             neighbourTiles.removeAll(currentTiles); // remove Tiles already appended to this node
 
             //get duplicated element left
+            //System.out.println("Find duplicate");
+            //System.out.println(neighbourTiles);
             Tile tileToAdd = findDuplicateTile(neighbourTiles);
+            //System.out.println(tileToAdd);
+            //System.out.println("\n\n\n\n\n");
             currentNode.addTile(tileToAdd);
 
             assert currentNode.getTiles().size() == 3;
+            neighbourTiles.clear();
 
         }
 
@@ -193,21 +204,25 @@ public class GameBoard {
      * avoiding using the O(n) Algorithm of repeatedly removing an element (internal O(n) implementation in ArrayList)
      * until only the once duplicate is contaminated.
      * @param list
-     * @return
+     * @return returns the first Tile, that exists twice in the list
      */
-    public Tile findDuplicateTile(List<Tile> list) {
-        assert list.size() == 4;
+    public static Tile findDuplicateTile(List<Tile> list) {
+        assert list.size() == 5;
         // First Element is Duplicate
-        if (list.get(0).equals(list.get(1)) || list.get(0).equals(list.get(2)) || list.get(0).equals(list.get(3))) {
+        if (list.get(0).equals(list.get(1)) || list.get(0).equals(list.get(2)) || list.get(0).equals(list.get(3)) || list.get(0).equals(list.get(4))) {
             return list.get(0);
         }
         // Or Second Element is Duplicate
-        if (list.get(1).equals(list.get(2)) || list.get(1).equals(list.get(3))) {
+        if (list.get(1).equals(list.get(2)) || list.get(1).equals(list.get(3))|| list.get(1).equals(list.get(4))) {
             return list.get(1);
         }
+
+        if (list.get(2).equals(list.get(3))|| list.get(2).equals(list.get(4))) {
+            return list.get(2);
+        }
         // or else third Element is Duplicate
-        assert list.get(2).equals(list.get(3));
-        return list.get(2);
+        assert list.get(3).equals(list.get(4));
+        return list.get(3);
     }
 
     public void addTilesToNodeInTheInnerLayer(SettlementPosition innerNode, SettlementPosition outerNode){

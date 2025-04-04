@@ -23,10 +23,10 @@ public class SettlementPosition {
     @Override
     public String toString() {
         return "SettlementPosition{" +
-                "building=" + building +
-                ", roads=" + roads +
-                ", tiles=" + tiles +
                 ", ID='" + ID + '\'' +
+                //"building=" + building +
+                ", tiles=" + tiles +
+                ", roads=" + roads +
                 '}';
     }
 
