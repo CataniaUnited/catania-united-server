@@ -1,5 +1,6 @@
 package com.example.cataniaunited.game.board;
 
+import com.example.cataniaunited.game.board.CoordinateSetter.TileListCoordinateSetter;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -7,13 +8,60 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.Arguments;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
 
 @QuarkusTest
 public class GameBoardTest {
+
+    @ParameterizedTest
+    @MethodSource("benchMarkTestProvider")
+    void benchMarkTest(int sizeOfBoard){
+        try {
+            new GameBoard(sizeOfBoard);
+        } catch (OutOfMemoryError e){
+            Assertions.assertFalse(true);
+        }
+
+    }
+
+    static Stream<Arguments> benchMarkTestProvider() {
+        return Stream.of(
+                Arguments.of(1),
+                Arguments.of(2),
+                Arguments.of(3),
+                Arguments.of(4),
+                Arguments.of(5),
+                Arguments.of(6),
+                Arguments.of(7),
+                Arguments.of(8),
+                Arguments.of(10),
+                Arguments.of(100),
+                Arguments.of(1000),
+                Arguments.of(10000),
+                Arguments.of(100000),
+                Arguments.of(150000)
+        );
+    }
+
+    @Test void testCoordinateCalculationOfTiles(){
+        int sizeOfBoard = 4;
+        List<Tile> tileList = GameBoard.generateShuffledTileList(sizeOfBoard);
+        tileList = new TileListCoordinateSetter(tileList, sizeOfBoard, 10, true).addCoordinatesToTileList();
+        for(Tile node:tileList){
+            System.out.println(node);
+        }
+    }
+
+    @Test
+    void testTileCoordinateSettercalculateAmountOfTilesForLayerK(){
+        Assertions.assertEquals(1, TileListCoordinateSetter.calculateAmountOfTilesForLayerK(1));
+        Assertions.assertEquals(7, TileListCoordinateSetter.calculateAmountOfTilesForLayerK(2));
+        Assertions.assertEquals(19, TileListCoordinateSetter.calculateAmountOfTilesForLayerK(3));
+        Assertions.assertEquals(37, TileListCoordinateSetter.calculateAmountOfTilesForLayerK(4));
+    }
+
     @ParameterizedTest
     @MethodSource("duplicateListProvider")
     void findDuplicateTileListTest(List<Tile> tileList, Tile duplicateTile){

@@ -8,8 +8,8 @@ import java.util.function.Function;
 
 public class TileListCoordinateSetter {
 
-    private int sizeOfBoard;
-    private List<Tile> tileList;
+    private final int sizeOfBoard;
+    private final List<Tile> tileList;
     private final int sizeOfHex;
 
     // precomputed values of the angle to get to the midpoint of the starting tile of the next layer k -> (k*StrictMath.PI)/3;
@@ -34,34 +34,135 @@ public class TileListCoordinateSetter {
         southEastAddition = polarToCartesian(distanceBetweenTiles, southEastAngle);
     }
 
-    private static int calculateAmountOfTilesForLayerK(int k) {
+    public static int calculateAmountOfTilesForLayerK(int k) {
         return (k > 0) ? (int) (3*Math.pow((k-1), 2) + 3 * (k-1) + 1) : 0;
     }
 
     public List<Tile> addCoordinatesToTileList() {
-
+        Function<Integer, Integer> getIndexOfMiddleElementOfLayerK = (k) -> (calculateAmountOfTilesForLayerK(k+1) - calculateAmountOfTilesForLayerK(k))/2 + calculateAmountOfTilesForLayerK(k);
         // set coordinates of center Tile
         tileList.get(0).setCoordinates(0, 0);
+        // Set Middle row coordinates
+        changeStartingPositionForSouthWestHalfAndMiddleRow(2, 0, 2, 7, -1, true);
+        changeStartingPositionForSouthWestHalfAndMiddleRow(2, 0, 5, 10, -1, false);
 
-        for(int layer = 1; layer < sizeOfBoard; layer++){
-            addCoordinatesToMainDiagonal(tileList, layer, northWestAddition, southEastAddition);
+        // set coordinates for tiles in every other row (regular)
+        int indexOfFirstTileOfThisLayer, indexOfFirstTileOfPreviousLayer, indexOfMiddleTileOfThisLayer, indexOfMiddleTileOfPreviousLayer;
+        for(int layerIndex = 1; layerIndex < sizeOfBoard; layerIndex++){
+            // get indices of current Layer
+            indexOfFirstTileOfThisLayer = calculateAmountOfTilesForLayerK(layerIndex); // index of current Tile regarding tileList
+            indexOfFirstTileOfPreviousLayer = calculateAmountOfTilesForLayerK(layerIndex-1); // amount of tiles placed before-1 to get index
+            indexOfMiddleTileOfThisLayer = getIndexOfMiddleElementOfLayerK.apply(layerIndex);
+            indexOfMiddleTileOfPreviousLayer = getIndexOfMiddleElementOfLayerK.apply(layerIndex-1);
+
+            // calculate next tiles on diagonal
+            addCoordinatesToMainDiagonal(indexOfFirstTileOfThisLayer,
+                    indexOfFirstTileOfPreviousLayer,
+                    indexOfMiddleTileOfThisLayer,
+                    indexOfMiddleTileOfPreviousLayer);
+
+            // calculate rows depending on newly discovered diagonal tiles
+            addCoordinatesToRows(layerIndex, indexOfFirstTileOfThisLayer, indexOfMiddleTileOfThisLayer);
         }
-
 
         return tileList;
     }
 
-    public void addCoordinatesToMainDiagonal(List<Tile> tileList, int layer, double[] northWestAddition, double[] southEastAddition){
-        Function<Integer, Integer> getIndexOfMiddleElementOfLayerK = (k) -> (calculateAmountOfTilesForLayerK(k+1) - calculateAmountOfTilesForLayerK(k))/2 + calculateAmountOfTilesForLayerK(k);
-        int indexOfFirstTileOfThisLayer, indexOfFirstTileOfPreviousLayer, indexOfMiddleTileOfThisLayer, indexOfMiddleTileOfPreviousLayer;
+    void addCoordinatesToRows(int layerIndex, int southRowStartingTileIndex, int northRowStartingTileIndex){
+        int layer = layerIndex+1;
+        int offset;
+
+        // Add East Part Of South Row
+        offset =  calculateAmountOfTilesForLayerK(layer) - calculateAmountOfTilesForLayerK(layer-1)+ 1;
+        addCoordinatesForRowWhereEveryStepIsIntoANewLayer(layer, southRowStartingTileIndex, offset, true);
+
+        // Add West Part Of North Row
+        offset =  calculateAmountOfTilesForLayerK(layer) - calculateAmountOfTilesForLayerK(layer-1)+ 4;
+        addCoordinatesForRowWhereEveryStepIsIntoANewLayer(layer, northRowStartingTileIndex, offset, false);
+
+        // Add East part Of North Row
+        offset =  calculateAmountOfTilesForLayerK(layer) - calculateAmountOfTilesForLayerK(layer-1)+ 1;
+        addNeighboringTile(layer, northRowStartingTileIndex, offset, layer-1, true);
+
+        // Add West Part South Row
+        offset =  calculateAmountOfTilesForLayerK(layer) - calculateAmountOfTilesForLayerK(layer-1)+ 4;
+        int irregularIndex = calculateAmountOfTilesForLayerK(layer)-1; // Last tile of current layer
+        changeStartingPositionForSouthWestHalfAndMiddleRow(layer, southRowStartingTileIndex, irregularIndex, offset, layer-2, false);
+
+    }
+
+    void addCoordinatesForRowWhereEveryStepIsIntoANewLayer(int startingLayer, int startingTileIndex, int startingOffset, boolean xIsGettingLarger){
+        Tile lastTile = tileList.get(startingTileIndex);
+        int lastTileIndex = startingTileIndex;
+        int currentTileIndex;
+        int offset = startingOffset;
+        Tile currentTile;
+        double[] coordinates;
+
+        for (int currentLayer = startingLayer; currentLayer < sizeOfBoard; currentLayer++) {
+            currentTileIndex = lastTileIndex + offset;
+            currentTile = tileList.get(currentTileIndex);
+
+            coordinates = lastTile.getCoordinates();
+            if (xIsGettingLarger){
+                currentTile.setCoordinates(coordinates[0] + distanceBetweenTiles, coordinates[1]);
+            } else {
+                currentTile.setCoordinates(coordinates[0] - distanceBetweenTiles, coordinates[1]);
+            }
+
+            lastTileIndex = currentTileIndex;
+            lastTile = currentTile;
+            offset += 6;
+        }
+    }
+
+    private void addNeighboringTile(int startingLayer, int startingTileIndex, int startingOffsetForSubRoutine, int counter, boolean xIsGettingLarger){
+        Tile lastTile = tileList.get(startingTileIndex);
+        int lastTileIndex = startingTileIndex;
+        int currentTileIndex;
+        Tile currentTile;
+        double[] coordinates;
+        for(; counter > 0; counter--){
+            currentTileIndex = lastTileIndex - 1;
+            currentTile = tileList.get(currentTileIndex);
+
+            coordinates = lastTile.getCoordinates();
+            if (xIsGettingLarger){
+                currentTile.setCoordinates(coordinates[0] + distanceBetweenTiles, coordinates[1]);
+            } else {
+                currentTile.setCoordinates(coordinates[0] - distanceBetweenTiles, coordinates[1]);
+            }
+
+            lastTileIndex = currentTileIndex;
+            lastTile = currentTile;
+        }
+
+        addCoordinatesForRowWhereEveryStepIsIntoANewLayer(startingLayer, lastTileIndex, startingOffsetForSubRoutine, xIsGettingLarger);
+    }
+    private void changeStartingPositionForSouthWestHalfAndMiddleRow(int startingLayerForSubRoutine, int startingTileIndex, int irregularTileIndex, int startingOffsetForSubRoutine, int counterForSubRoutine, boolean xIsGettingLarger){
+        Tile lastTile = tileList.get(startingTileIndex);
+        Tile currentTile = tileList.get(irregularTileIndex);
+
+        double[] coordinates = lastTile.getCoordinates();
+        if (xIsGettingLarger){
+            currentTile.setCoordinates(coordinates[0] + distanceBetweenTiles, coordinates[1]);
+        } else {
+            currentTile.setCoordinates(coordinates[0] - distanceBetweenTiles, coordinates[1]);
+        }
+
+        addNeighboringTile(startingLayerForSubRoutine, irregularTileIndex, startingOffsetForSubRoutine, counterForSubRoutine, xIsGettingLarger);
+    }
+
+    public void addCoordinatesToMainDiagonal(int indexOfFirstTileOfThisLayer,
+                                             int indexOfFirstTileOfPreviousLayer,
+                                             int indexOfMiddleTileOfThisLayer,
+                                             int indexOfMiddleTileOfPreviousLayer){
         double x, y;
         double[] previousCoordinates;
 
-
         // -------------- set south-east tile --------------
         // get tile indices
-        indexOfFirstTileOfThisLayer = calculateAmountOfTilesForLayerK(layer); // index of current Tile regarding tileList
-        indexOfFirstTileOfPreviousLayer = calculateAmountOfTilesForLayerK(layer-1); // amount of tiles placed before-1 to get index
+
 
         // get tiles
         Tile previousTile = tileList.get(indexOfFirstTileOfPreviousLayer);
@@ -75,8 +176,6 @@ public class TileListCoordinateSetter {
 
         // -------------- set north-west tile --------------
         // get tile indices
-        indexOfMiddleTileOfThisLayer = getIndexOfMiddleElementOfLayerK.apply(layer);
-        indexOfMiddleTileOfPreviousLayer = getIndexOfMiddleElementOfLayerK.apply(layer-1);
 
         // get tiles
         currentTile = tileList.get(indexOfMiddleTileOfThisLayer);
