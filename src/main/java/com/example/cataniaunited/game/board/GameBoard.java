@@ -1,6 +1,7 @@
 package com.example.cataniaunited.game.board;
 
 import com.example.cataniaunited.api.GameWebSocket;
+import com.example.cataniaunited.game.board.CoordinateSetter.TileListCoordinateSetter;
 import org.jboss.logging.Logger;
 
 import java.math.BigDecimal;
@@ -33,7 +34,7 @@ public class GameBoard {
 
     public List<SettlementPosition> generateBoard(int sizeOfBoard){
         List<Tile> tileList = generateShuffledTileList(sizeOfBoard);
-        addCoordinatesToTileList(tileList, sizeOfBoard);
+        tileList = new TileListCoordinateSetter(tileList, sizeOfBoard, SIZE_OF_HEX, true).addCoordinatesToTileList();
         return generateGraph(sizeOfBoard, tileList);
     }
 
@@ -241,107 +242,11 @@ public class GameBoard {
     }
 
 
-    public static void addCoordinatesToTileList(List<Tile> tileList, int sizeOfBoard) {
-        double distanceBetweenTiles = StrictMath.sqrt(3)*SIZE_OF_HEX;
-        Function<Integer, Integer> getIndexOfMiddleElementOfLayerK = (k) -> (calculateAmountOfTilesForLayerK(k+1) - calculateAmountOfTilesForLayerK(k))/2 + calculateAmountOfTilesForLayerK(k);
 
-        // precomputed values of the angle to get to the midpoint of the starting tile of the next layer k -> (k*StrictMath.PI)/3;
-        // to prevent rounding errors used Bigdecimal to compute the values and then transformed them to with k.doubleValue()
-        double northWestAngle = 2.0943951023931957; // k = 2
-        double southEastAngle = 5.235987755982989; // k = 5
-
-        // precomputing offset since working with bigDecimalObjects takes time
-        double[] northWestAddition = polarToCartesian(distanceBetweenTiles, northWestAngle, true);
-        double[] southEastAddition = polarToCartesian(distanceBetweenTiles, southEastAngle, true);
-
-        double[] previousCoordinates;
-        double x, y;
-        int indexOfFirstTileOfThisLayer, indexOfFirstTileOfPreviousLayer, indexOfMiddleTileOfThisLayer, indexOfMiddleTileOfPreviousLayer;
-
-        // set coordinates of center Tile
-        tileList.get(0).setCoordinates(0, 0);
-
-        for(int layer = 1; layer < sizeOfBoard; layer++){
-            // set south-east tile
-            indexOfFirstTileOfThisLayer = calculateAmountOfTilesForLayerK(layer); // index of current Tile regarding tileList
-            indexOfFirstTileOfPreviousLayer = calculateAmountOfTilesForLayerK(layer-1); // amount of tiles placed before-1 to get index
-
-            Tile previousTile = tileList.get(indexOfFirstTileOfPreviousLayer);
-            Tile currentTile = tileList.get(indexOfFirstTileOfThisLayer);
-
-
-            previousCoordinates = previousTile.getCoordinates();
-            x = previousCoordinates[0] + southEastAddition[0];
-            y = previousCoordinates[1] + southEastAddition[1];
-            currentTile.setCoordinates(x, y);
-
-            // set north-west tile
-            indexOfMiddleTileOfThisLayer = getIndexOfMiddleElementOfLayerK.apply(layer);
-            indexOfMiddleTileOfPreviousLayer = getIndexOfMiddleElementOfLayerK.apply(layer-1);
-
-            currentTile = tileList.get(indexOfMiddleTileOfThisLayer);
-            previousTile = tileList.get(indexOfMiddleTileOfPreviousLayer);
-
-            previousCoordinates = previousTile.getCoordinates();
-            x = previousCoordinates[0] + northWestAddition[0];
-            y = previousCoordinates[1] + northWestAddition[1];
-            currentTile.setCoordinates(x, y);
-        }
-
-
-
-    }
 
     private static int calculateAmountOfTilesForLayerK(int k) {
         return (k > 0) ? (int) (3*Math.pow((k-1), 2) + 3 * (k-1) + 1) : 0;
     }
-
-    private static double[] polarToCartesian(double r, double theta, boolean flipYAxis){
-        double[] coordinates = new double[2];
-        double trigResult;
-        BigDecimal multiplicationResult;
-
-        trigResult = StrictMath.cos(theta);
-        multiplicationResult = new BigDecimal(r).multiply(new BigDecimal(trigResult));
-        coordinates[0] = multiplicationResult.doubleValue();
-
-        trigResult = StrictMath.sin(theta);
-        multiplicationResult = new BigDecimal(r).multiply(new BigDecimal(trigResult));
-        coordinates[1] = multiplicationResult.doubleValue();
-        coordinates[1] = (flipYAxis) ? -coordinates[1] : coordinates[1];
-
-        return coordinates;
-    }
-
-
-
-    /*
-        //Random Calculations might not be needed
-        // double apothem = StrictMath.sqrt(3.0/2.0) * sizeOfHex;
-        double distanceBetweenTheMidpointOfTwoHexes = StrictMath.sqrt(3)*sizeOfHex;
-        //double anglesToGetToAnotherMidpoint = (k -> ((double)k/3 + (double)1/6)*StrictMath.PI);
-        //double anglesToGetToSettlementPosition = k -> (k*StrictMath.PI)/3;
-
-        //int y = r * StrictMath.sin(theta);
-        //int x = r * StrictMath.cos(theta);
-        //int r = StrictMath.sqrt(StrictMath.pow(x, 2) + StrictMath.pow(y,2));
-        //theta = StrictMath.atan(y / x);
-    */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
     /**
