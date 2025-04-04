@@ -1,5 +1,4 @@
 package com.example.cataniaunited.player;
-import io.quarkus.websockets.next.WebSocketConnection;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -10,7 +9,7 @@ class PlayerTest {
     void testDefaultConstructor() {
         Player player = new Player();
 
-        Assertions.assertEquals("RandomPlayer_4", player.getUsername());
+        Assertions.assertTrue(player.getUsername().startsWith("RandomPlayer_"));
         Assertions.assertNotNull(player.getUniqueId(), "uniqueId should not be null");
         Assertions.assertFalse(player.getUniqueId().isEmpty(), "uniqueId should not be empty");
     }
