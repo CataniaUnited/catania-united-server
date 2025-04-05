@@ -64,7 +64,17 @@ public class GameWebSocket {
             return Uni.createFrom().item(
                     new MessageDTO(MessageType.LOBBY_CREATED, message.getPlayer(), lobbyId)
             );
+        } else if(message.getType() == MessageType.JOIN_LOBBY){
+            boolean joined = lobbyService.joinLobbyByCode(message.getLobbyId(), message.getPlayer());
+            if(joined){
+                MessageDTO update = new MessageDTO(MessageType.PLAYER_JOINED, message.getPlayer(), message.getLobbyId());
+                return connection.broadcast().sendText(update).chain(i -> Uni.createFrom().item(update));
+            }
+            return Uni.createFrom().item(
+                    new MessageDTO(MessageType.ERROR,"Server","Invalid or expired lobby code"));
         }
+
+
         return Uni.createFrom().item(
                 new MessageDTO(MessageType.ERROR, "Server", "Unknown command")
         );
