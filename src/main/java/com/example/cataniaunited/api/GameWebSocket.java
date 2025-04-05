@@ -2,10 +2,9 @@ package com.example.cataniaunited.api;
 
 import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.dto.MessageType;
+import com.example.cataniaunited.player.Player;
+import com.example.cataniaunited.player.PlayerService;
 import com.example.cataniaunited.service.LobbyService;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quarkus.websockets.next.OnClose;
 import io.quarkus.websockets.next.OnOpen;
 import io.quarkus.websockets.next.OnTextMessage;
@@ -16,6 +15,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
+import java.util.List;
+
 @ApplicationScoped
 @WebSocket(path = "/game")
 public class GameWebSocket {
@@ -25,27 +26,47 @@ public class GameWebSocket {
     @Inject
     LobbyService lobbyService;
 
+    @Inject
+    PlayerService playerService;
+
     @OnOpen
     public Uni<String> onOpen(WebSocketConnection connection) {
         logger.infof("Client connected: %s", connection.id());
+        playerService.addPlayer(connection);
         return Uni.createFrom().item("Connection successful");
     }
 
     @OnClose
     public void onClose(WebSocketConnection connection) {
         logger.infof("Client closed connection: %s", connection.id());
+        playerService.removePlayer(connection);
         connection.broadcast().sendTextAndAwait("Client disconnected");
     }
 
     @OnTextMessage
     public Uni<MessageDTO> onTextMessage(MessageDTO message, WebSocketConnection connection) {
         logger.infof("Received message from client %s: %s", connection.id(), message.getType());
+        if (message.getType() == MessageType.SET_USERNAME) {
+            Player player = playerService.getPlayerByConnection(connection);
+            if (player != null) {
+                player.setUsername(message.getPlayer());
 
-        if (message.getType() == MessageType.CREATE_LOBBY) {
+                List<String> allPlayers = playerService.getAllPlayers().stream()
+                        .map(Player::getUsername).toList();
+                MessageDTO update = new MessageDTO(MessageType.LOBBY_UPDATED, player.getUsername(), null, allPlayers);
+                return connection.broadcast().sendText(update).chain(i -> Uni.createFrom().item(update));
+            }
+            return Uni.createFrom().item(
+                    new MessageDTO(MessageType.ERROR, "Server", "No player session")
+            );
+        } else if (message.getType() == MessageType.CREATE_LOBBY) {
             String lobbyId = lobbyService.createLobby(message.getPlayer());
-            return Uni.createFrom().item(new MessageDTO(MessageType.LOBBY_CREATED, message.getPlayer(), lobbyId));
+            return Uni.createFrom().item(
+                    new MessageDTO(MessageType.LOBBY_CREATED, message.getPlayer(), lobbyId)
+            );
         }
-
-        return Uni.createFrom().item(new MessageDTO(MessageType.ERROR, "Server", "Unknown command"));
+        return Uni.createFrom().item(
+                new MessageDTO(MessageType.ERROR, "Server", "Unknown command")
+        );
     }
 }

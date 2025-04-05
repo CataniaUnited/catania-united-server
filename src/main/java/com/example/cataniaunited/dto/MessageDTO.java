@@ -1,16 +1,29 @@
 package com.example.cataniaunited.dto;
 
+import java.util.List;
+
 public class MessageDTO {
+
     private MessageType type;
     private String player;
     private String lobbyId;
 
-    public MessageDTO() {}
+    private List<String> players;
+
+    public MessageDTO() {
+    }
 
     public MessageDTO(MessageType type, String player, String lobbyId) {
         this.type = type;
         this.player = player;
         this.lobbyId = lobbyId;
+    }
+
+    public MessageDTO(MessageType type, String player, String lobbyId, List<String> players) {
+        this.type = type;
+        this.player = player;
+        this.lobbyId = lobbyId;
+        this.players = players;
     }
 
     public MessageType getType() {
@@ -35,5 +48,14 @@ public class MessageDTO {
 
     public void setLobbyId(String lobbyId) {
         this.lobbyId = lobbyId;
+    }
+
+    // NEW getters/setters for players
+    public List<String> getPlayers() {
+        return players;
+    }
+
+    public void setPlayers(List<String> players) {
+        this.players = players;
     }
 }
