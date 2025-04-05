@@ -57,6 +57,11 @@ public class LobbyServiceImpl implements LobbyService {
     }
 
     @Override
+    public boolean joinLobbyByCode(String lobbyId, String player) {
+        return false;
+    }
+
+    @Override
     public void clearLobbies() {
         lobbies.clear();
         logger.info("All lobbies have been cleared.");
