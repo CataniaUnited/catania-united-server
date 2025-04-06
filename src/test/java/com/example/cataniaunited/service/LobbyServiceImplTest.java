@@ -43,6 +43,7 @@ class LobbyServiceImplTest {
 
         logger.infof("Open lobbies: %s", openLobbies);
     }
+
     @Test
     void testGeneratedLobbyIdFormat() {
         for (int i = 0; i < 100; i++) {
@@ -63,4 +64,33 @@ class LobbyServiceImplTest {
             ids.add(id);
         }
     }
+
+    @Test
+    void testJoinLobbyByValidCode (){
+        String hostPlayer = "HostPlayer";
+        String joiningPlayer = "NewPlayer";
+
+        String lobbyId = lobbyService.createLobby(hostPlayer);
+        boolean joined = lobbyService.joinLobbyByCode(lobbyId, joiningPlayer);
+
+        assertTrue(joined, "Player should be able to join the lobby with a valid code");
+
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+
+        assertNotNull(lobby, "Lobby should exist");
+        assertTrue(lobby.getPlayers().contains(joiningPlayer),
+                "The joining player should be in the lobby's player list.");
+
+        lobbyService.clearLobbies();
+        List<String> openLobbies = lobbyService.getOpenLobbies();
+        assertTrue(openLobbies.isEmpty(), "All lobbies should be cleared after the test");
+    }
+
+    @Test
+    void testJoinLobbyByInvalidCode (){
+        boolean joined = lobbyService.joinLobbyByCode("InvalidCode", "New Player");
+
+        assertFalse(joined, "Player should not be able to join the lobby with a valid code");
+    }
+
 }
