@@ -22,6 +22,7 @@ import java.util.List;
 public class GameWebSocket {
 
     private static final Logger logger = Logger.getLogger(GameWebSocket.class);
+    private static final String SERVER_NAME = "Server";
 
     @Inject
     LobbyService lobbyService;
@@ -57,16 +58,26 @@ public class GameWebSocket {
                 return connection.broadcast().sendText(update).chain(i -> Uni.createFrom().item(update));
             }
             return Uni.createFrom().item(
-                    new MessageDTO(MessageType.ERROR, "Server", "No player session")
+                    new MessageDTO(MessageType.ERROR, SERVER_NAME, "No player session")
             );
         } else if (message.getType() == MessageType.CREATE_LOBBY) {
             String lobbyId = lobbyService.createLobby(message.getPlayer());
             return Uni.createFrom().item(
                     new MessageDTO(MessageType.LOBBY_CREATED, message.getPlayer(), lobbyId)
             );
+        } else if(message.getType() == MessageType.JOIN_LOBBY){
+            boolean joined = lobbyService.joinLobbyByCode(message.getLobbyId(), message.getPlayer());
+            if(joined){
+                MessageDTO update = new MessageDTO(MessageType.PLAYER_JOINED, message.getPlayer(), message.getLobbyId());
+                return connection.broadcast().sendText(update).chain(i -> Uni.createFrom().item(update));
+            }
+            return Uni.createFrom().item(
+                    new MessageDTO(MessageType.ERROR, SERVER_NAME,"Invalid or expired lobby code"));
         }
+
+
         return Uni.createFrom().item(
-                new MessageDTO(MessageType.ERROR, "Server", "Unknown command")
+                new MessageDTO(MessageType.ERROR, SERVER_NAME, "Unknown command")
         );
     }
 }

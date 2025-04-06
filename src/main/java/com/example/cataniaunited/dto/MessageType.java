@@ -3,7 +3,9 @@ package com.example.cataniaunited.dto;
 public enum MessageType {
     CREATE_LOBBY,
     LOBBY_CREATED,
-    ERROR,
+    JOIN_LOBBY,
+    PLAYER_JOINED,
     SET_USERNAME,
-    LOBBY_UPDATED
+    LOBBY_UPDATED,
+    ERROR,
 }

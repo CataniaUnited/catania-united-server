@@ -57,6 +57,24 @@ public class LobbyServiceImpl implements LobbyService {
     }
 
     @Override
+    public boolean joinLobbyByCode(String lobbyId, String player) {
+        Lobby lobby = lobbies.get(lobbyId);
+        if(lobby != null){
+            lobby.addPlayer(player);
+            logger.infof("Player %s joined lobby %s", player, lobbyId);
+            return true;
+        }
+
+        logger.warnf("Invalid or expired lobby ID: %s", lobbyId);
+        return false;
+    }
+
+    @Override
+    public Lobby getLobbyById(String lobbyId) {
+        return lobbies.get(lobbyId);
+    }
+
+    @Override
     public void clearLobbies() {
         lobbies.clear();
         logger.info("All lobbies have been cleared.");
