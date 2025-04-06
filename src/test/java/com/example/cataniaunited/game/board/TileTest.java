@@ -2,7 +2,6 @@ package com.example.cataniaunited.game.board;
 
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -72,7 +71,6 @@ public class TileTest {
 
 
     @Test
-    @DisplayName("getCoordinates should return the current coordinates array")
     void testGetCoordinates() {
         assertArrayEquals(new double[]{0.0, 0.0}, tile.getCoordinates(), "Should return initial coordinates");
 
@@ -85,7 +83,6 @@ public class TileTest {
     }
 
     @Test
-    @DisplayName("toString should return correct format after setting coordinates")
     void testToStringAfterSetCoordinates() {
         double x = 7.8;
         double y = -9.1;

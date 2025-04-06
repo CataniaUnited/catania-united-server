@@ -3,7 +3,6 @@ package com.example.cataniaunited.game.board;
 import com.example.cataniaunited.game.Player;
 
 import java.util.Arrays;
-import java.util.Objects;
 
 public class Road {
     Player owner;
@@ -19,11 +18,17 @@ public class Road {
     }
 
     public SettlementPosition getNeighbour(SettlementPosition currentSettlement){
-        return (this.positionA == currentSettlement) ? positionB : positionA;
+        if (this.positionA == currentSettlement){
+            return positionB;
+        }
+        if (this.positionB == currentSettlement){
+            return positionA;
+        }
+        return null;
     }
 
     public double[] getCoordinates() {
-        return coordinates;
+        return coordinates.clone();
     }
 
     public double getRationAngle() {
@@ -43,7 +48,7 @@ public class Road {
         x_min = x_max;
         y_min = y_max;
 
-        if (coordinates[0] == 0 && coordinates[1] == 0){  // position of A is not yet set
+        if (coordinates[0] == 0 && coordinates[1] == 0){  // position of Settlement A is not yet set
             return;
         }
 
@@ -53,12 +58,12 @@ public class Road {
         y_max += coordinates[1];
         y_min -= coordinates[1];
 
-        if (coordinates[0] == 0 && coordinates[1] == 0){  // position of B is not yet set
+        if (coordinates[0] == 0 && coordinates[1] == 0){  // position of Settlement B is not yet set
             return;
         }
 
         this.coordinates = new double[]{x_max/2, y_max/2};
-        this.rationAngle = StrictMath.atan2(y_min, x_min);
+        this.rationAngle = StrictMath.atan2(y_min, x_min); // No need to assert that since no Road will be placed on 0,0
 
     }
 
