@@ -1,6 +1,7 @@
 package com.example.cataniaunited.game.board;
 
 import com.example.cataniaunited.api.GameWebSocket;
+import com.example.cataniaunited.game.board.tileListBuilder.StandardTileListBuilder;
 import com.example.cataniaunited.game.board.tileListBuilder.Tile;
 import org.jboss.logging.Logger;
 
@@ -13,65 +14,85 @@ import java.util.function.Function;
 public class GraphBuilder {
 
     private static final Logger logger = Logger.getLogger(GameWebSocket.class);
+    final List<Tile> tileList;
+    List<SettlementPosition> nodeList;
+    int sizeOfBoard;
+
+    public GraphBuilder(List<Tile> tileList, int sizeOfBoard) {
+        if (tileList == null || tileList.isEmpty()) {
+            throw new IllegalArgumentException("Tile list cannot be null or empty.");
+        }
+        if (sizeOfBoard <= 0) {
+            throw new IllegalArgumentException("Board size must be positive.");
+        }
+
+        // Check if tileList has the expected number of tiles for the size
+        int expectedTileCount = StandardTileListBuilder.calculateAmountOfTilesForLayerK(sizeOfBoard);
+        if (tileList.size() != expectedTileCount) {
+            throw new IllegalArgumentException("Tile list size mismatch.");
+        }
+
+        this.tileList = tileList;
+        this.sizeOfBoard = sizeOfBoard;
+
+        // Initialize node list with expected capacity
+        int totalAmountOfSettlementPositions = calculateTotalSettlementPositions(sizeOfBoard);
+        this.nodeList = new ArrayList<>(totalAmountOfSettlementPositions);
+    }
 
     /**
-     * @param sizeOfBoard specifies the amount of hexes next do each other on the row with the most amount of hexes
+     * Generates the complete graph of SettlementPositions.
+     * Orchestrates the building process layer by layer and performs post-processing.
+     * @return The generated list of SettlementPosition nodes.
      */
-    public List<SettlementPosition> generateGraph(int sizeOfBoard, List<Tile> tileList){
-        int totalAmountOfSettlementPositions = (int) (6*Math.pow(sizeOfBoard, 2)); // the total amount of nodes in our Settlementposition Graph will be 6 * k^2
-        List<SettlementPosition> nodeList = new ArrayList<>(totalAmountOfSettlementPositions);
-
-
+    public List<SettlementPosition> generateGraph(){
         for (int level = 1; level <= sizeOfBoard; level++){ // for each level create the subgraph and snd continuously interconnect it with the inner layer
-            createInterconnectedSubgraphOfLevelK(nodeList, tileList, level);
+            createLayerStructure(level);
         }
 
-        // Update Nodes with only two connections by Checking all Neighbours and adding Tile where two of the three neighbours connect to and you don't
-        insertTilesIntoNodesThatHaveLessThan3Connections(nodeList, sizeOfBoard);
+        // Assign remaining tiles to nodes with only two initial tiles
+        assignTilesToIncompleteNodes();
 
-        addCoordinatesToInnerNodes(nodeList, sizeOfBoard);
-        addCoordinatesToOuterNodes(nodeList, sizeOfBoard);
+        // Calculate coordinates for settlement positions = nodes of the graph
+        calculateSettlementCoordinates();
 
-        // set coordinates to all roads //TODO: refactor to reduce runtime complexity back to O(n)
-        for (SettlementPosition currentNode : nodeList) {
-            for (Road road : currentNode.getRoads()) {
-                road.setCoordinatesAndRotationAngle();
-            }
-        }
+
+        // Calculate coordinates and angles for roads //TODO: refactor to reduce runtime complexity back to O(n)
+        calculateRoadCoordinates();
 
         return nodeList;
     }
 
-    public void createInterconnectedSubgraphOfLevelK(List<SettlementPosition> nodeList, List<Tile> tileList, int level){
-        // amount new vertices for level k = 6(2*(k-1) + 3)
+    public void createLayerStructure(int currentLayer){
+        // amount new vertices for currentLayer k = 6(2*(k-1) + 3)
         Function<Integer, Integer> calculateEndIndexForLayerK = (k) -> 6 * (2 * (k-2) + 3);
         Function<Integer, Integer> calculateAmountOfTilesForLayerK = (k) -> (k > 0) ? (int) (3*Math.pow((k-1), 2) + 3 * (k-1) + 1) : 0;
-        // amount of new Tiles for this level (level k -> k-1 rings)
-        int amountOfTilesOnBoardBefore = calculateAmountOfTilesForLayerK.apply(level-1); // amount of tiles placed before
-        int indexOfLastTileOfThisLayer =calculateAmountOfTilesForLayerK.apply(level)-1; // amount of tiles that will be placed after this method is done -1 to get index
+        // amount of new Tiles for this currentLayer (currentLayer k -> k-1 rings)
+        int amountOfTilesOnBoardBefore = calculateAmountOfTilesForLayerK.apply(currentLayer-1); // amount of tiles placed before
+        int indexOfLastTileOfThisLayer =calculateAmountOfTilesForLayerK.apply(currentLayer)-1; // amount of tiles that will be placed after this method is done -1 to get index
         int currentTileIndex = amountOfTilesOnBoardBefore; // index of current Tile regarding tileList
 
-        int endIndex = calculateEndIndexForLayerK.apply(level); // calculate the amount of new Nodes for this level
+        int endIndex = calculateEndIndexForLayerK.apply(currentLayer); // calculate the amount of new Nodes for this currentLayer
         int id = nodeList.size();
 
         int nodesUntilCompletionOfNextHexWithoutCorner = 2; // when we are currently not traversing a corner, every second node needs to connect to the inner sub graph
         int nodesUntilCompletionOfNextHexWithCorner = 3; // when we are currently not traversing a corner, every third node needs to connect to the inner sub graph
-        int cornerRhythm = level - 1; // the rhythm in which corners appear correlate with the rhythm on level 2 its c c c c ... on level 3 c s c s cs, on level 4 c s s c s s c...
+        int cornerRhythm = currentLayer - 1; // the rhythm in which corners appear correlate with the rhythm on currentLayer 2 its c c c c ... on currentLayer 3 c s c s cs, on currentLayer 4 c s s c s s c...
         int connectionCount = 0; // the count of connection made to know whether a corner follows or a side
         int currentNodesUntilCompletionOfNextHex = nodesUntilCompletionOfNextHexWithCorner; // the amount of nodes to traverse till the next connection to the subgraph has to be made
         int nodesAfterCompletionOfPreviousHex = 0; // the amount of nodes traversed since the last connection
 
         // the offset between the indices of nodes and the nodes of the inner layer are the amount of nodes in the previous layer -1
-        int offsetBetweenIndicesOfHexesToInterConnect = (level > 2) ? calculateEndIndexForLayerK.apply(level-1)-1 : 6;
+        int offsetBetweenIndicesOfHexesToInterConnect = (currentLayer > 2) ? calculateEndIndexForLayerK.apply(currentLayer-1)-1 : 6;
 
-        // create the first node of the Graph of this level
+        // create the first node of the Graph of this currentLayer
         SettlementPosition lastSettlement = new SettlementPosition(++id);
         nodeList.add(lastSettlement);
         // Add all tiles the starting node connects to on the current layer
         // Normally first and last, if only layer one, then only first layer (there is only one tile no level1)
         lastSettlement.addTile(tileList.get(currentTileIndex));
 
-        if (level != 1){
+        if (currentLayer != 1){
             // From the second layer on  you start between two tiles therefore the last tile needs to be added to the Settlementposition
             lastSettlement.addTile(tileList.get(indexOfLastTileOfThisLayer));
 
@@ -100,7 +121,7 @@ public class GraphBuilder {
             // Do some black magic to connect the right nodes with the nodes from the inner layers
             // In the first layer, there are no inner layers; in all other layer we check if we created the same amount
             // of nodes as needed until a new connection
-            if (level != 1 && currentNodesUntilCompletionOfNextHex == ++nodesAfterCompletionOfPreviousHex){
+            if (currentLayer != 1 && currentNodesUntilCompletionOfNextHex == ++nodesAfterCompletionOfPreviousHex){
                 // if yes
                 currentTileIndex++; //  Update tileIndex
                 currentSettlement.addTile(tileList.get(currentTileIndex)); // Add second Tile to current Node
@@ -128,13 +149,13 @@ public class GraphBuilder {
         // No Tile Adding since it's done by creation
     }
 
-    public void insertTilesIntoNodesThatHaveLessThan3Connections(List<SettlementPosition> nodeList, int layers) {
+    public void assignTilesToIncompleteNodes() {
         // Since we insert tiles of the outer layer into nodes of the inner layers, we don't need to check the last layer
         SettlementPosition currentNode;
         List<SettlementPosition> neighbours;
         List<Tile> currentTiles, neighbourTiles = new ArrayList<>();
 
-        int amountOfNodesToCheck = (int) (6*Math.pow((layers-1), 2));
+        int amountOfNodesToCheck = (int) (6*Math.pow((sizeOfBoard-1), 2));
         for(int i = 0; i < amountOfNodesToCheck; i++){
             currentNode = nodeList.get(i);
             currentTiles = currentNode.getTiles(); // get amount of tiles of this node
@@ -210,6 +231,10 @@ public class GraphBuilder {
         b.addRoad(roadToAdd);
     }
 
+    public static int calculateTotalSettlementPositions(int sizeOfBoard){
+        return (int) (6*Math.pow(sizeOfBoard, 2));
+    }
+
     public static void customAssertion(boolean success, String errorMessage){
         if (success)
             return;
@@ -218,7 +243,20 @@ public class GraphBuilder {
         throw new AssertionError(errorMessage);
     }
 
-    void addCoordinatesToInnerNodes(List <SettlementPosition> nodeList, int sizeOfBoard){
+    void calculateRoadCoordinates(){
+        for (SettlementPosition currentNode : nodeList) {
+            for (Road road : currentNode.getRoads()) {
+                road.setCoordinatesAndRotationAngle();
+            }
+        }
+    }
+
+    void calculateSettlementCoordinates(){
+        addCoordinatesToInnerNodes();
+        addCoordinatesToOuterNodes();
+    }
+
+    void addCoordinatesToInnerNodes(){
         if (sizeOfBoard == 1){ // If there is only one layer, there are no inner nodes
             return;
         }
@@ -247,7 +285,7 @@ public class GraphBuilder {
         }
     }
 
-    void addCoordinatesToOuterNodes(List <SettlementPosition> nodeList, int sizeOfBoard){
+    void addCoordinatesToOuterNodes(){
         int startingIndex = (int) (6*Math.pow((sizeOfBoard-1), 2));
 
         for (int i = startingIndex; i < nodeList.size(); i++){
@@ -273,7 +311,6 @@ public class GraphBuilder {
                 } else {
                     // c.2) previous node has two tiles do some fancy triangulation to
                     customAssertion(i > startingIndex, "First node has to have 2 Tiles");
-                    SettlementPosition previousNode = nodeList.get(i-1);
                     addCoordinatesToNodeWith1Tiles1NeighbourAnd1NodeAsNeighbourFromPreviousNode(currentNode);
                 }
 
@@ -330,23 +367,24 @@ public class GraphBuilder {
     double[] calculateCoordinatesThruReflectingAPointAcrossTheMidpointOfTwoOtherPoints(Placable placableA, Placable placableB, Placable reflectedPlacable){
         double x = 0;
         double y = 0;
-        double[] coordinates;
+        double[] coordinates = new double[2];
+        double[] placableCoordinates;
 
-        coordinates = placableA.getCoordinates();
-        x += coordinates[0];
-        y += coordinates[1];
+        placableCoordinates = placableA.getCoordinates();
+        coordinates[0] += placableCoordinates[0];
+        coordinates[1] += placableCoordinates[1];
 
-        coordinates = placableB.getCoordinates();
-        x += coordinates[0];
-        y += coordinates[1];
+        placableCoordinates = placableB.getCoordinates();
+        coordinates[0] += placableCoordinates[0];
+        coordinates[1] += placableCoordinates[1];
 
 
         // Reflect the Tile reflectionNode across the Midpoint; 2 midpoint - reflectionNode
-        coordinates = reflectedPlacable.getCoordinates();
-        x -= coordinates[0];
-        y -= coordinates[1];
+        placableCoordinates = reflectedPlacable.getCoordinates();
+        coordinates[0] -= placableCoordinates[0];
+        coordinates[1] -= placableCoordinates[1];
 
-        return new double[]{x, y};
+        return coordinates;
     }
 
 }

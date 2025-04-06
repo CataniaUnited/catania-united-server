@@ -62,13 +62,12 @@ public class GameBoard {
     }
 
     void generateBoard(){
-        GraphBuilder graphBuilder = new GraphBuilder();
-
         if (this.tileList == null) {
             throw new IllegalStateException("Cannot generate board graph before tile list is generated.");
         }
 
-        settlementPositionGraph = graphBuilder.generateGraph(sizeOfBoard, tileList);
+        GraphBuilder graphBuilder = new GraphBuilder(tileList, sizeOfBoard);
+        settlementPositionGraph = graphBuilder.generateGraph();
     }
 
     public List<SettlementPosition> getSettlementPositionGraph() {

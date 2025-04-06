@@ -271,7 +271,7 @@ public class StandardTileListBuilder implements TileListBuilder{
 
 
     // --- Static Helper Methods  ---
-    static int calculateAmountOfTilesForLayerK(int layers) {
+    public static int calculateAmountOfTilesForLayerK(int layers) {
         if (layers <= 0) return 0;
         int n = layers - 1;
         return 3 * n * (n + 1) + 1;
