@@ -3,6 +3,7 @@ package com.example.cataniaunited.api;
 import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.player.PlayerService;
+import com.example.cataniaunited.service.LobbyService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quarkus.test.common.http.TestHTTPResource;
@@ -39,6 +40,9 @@ public class GameWebSocketTest {
 
     @InjectSpy
     PlayerService playerService;
+
+    @InjectSpy
+    LobbyService lobbyService;
 
     @Test
     void testWebSocketOnOpen() throws InterruptedException {
@@ -234,5 +238,48 @@ public class GameWebSocketTest {
         assertEquals(MessageType.ERROR, received.getType());
         assertEquals("Server", received.getPlayer());
         assertEquals("No player session", received.getLobbyId());
+    }
+
+    @Test
+    void testJoinLobbySuccess() throws InterruptedException, JsonProcessingException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        MessageDTO joinLobbyMessage = new MessageDTO(MessageType.JOIN_LOBBY, "Player 1", "abc123");
+
+        doReturn(true).when(lobbyService).joinLobbyByCode("abc123", "Player 1");
+        CountDownLatch latch = new CountDownLatch(1);
+        BasicWebSocketConnector.create()
+                .baseUri(serverUri)
+                .path("/game")
+                .onTextMessage((connection, message) -> {
+                    if(message.startsWith("{")){
+                        latch.countDown();
+                    }
+                })
+                .connectAndAwait()
+                .sendTextAndAwait(objectMapper.writeValueAsString(joinLobbyMessage));
+
+        assertTrue(latch.await(5, TimeUnit.SECONDS), "Did not receive PLAYER_JOINED message in time");
+    }
+
+    @Test
+    void testJoinLobbyFailure() throws InterruptedException, JsonProcessingException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        MessageDTO joinLobbyMessage = new MessageDTO(MessageType.JOIN_LOBBY, "Player 1", "invalidLobbyId");
+
+        doReturn(false).when(lobbyService).joinLobbyByCode("invalidLobbyId", "Player 1");
+        CountDownLatch latch = new CountDownLatch(1);
+        BasicWebSocketConnector.create()
+                .baseUri(serverUri)
+                .path("/game")
+                .onTextMessage((connection, message) -> {
+                    if(message.startsWith("{")){
+                        latch.countDown();
+                    }
+                })
+                .connectAndAwait()
+                .sendTextAndAwait(objectMapper.writeValueAsString(joinLobbyMessage));
+
+        assertTrue(latch.await(5, TimeUnit.SECONDS), "Did not receive ERROR message in time");
+
     }
 }
