@@ -5,7 +5,7 @@ import com.example.cataniaunited.game.buildings.Building;
 import java.util.ArrayList;
 import java.util.List;
 
-public class SettlementPosition {
+public class SettlementPosition implements Placable {
     Building building = null;
     List<Road> roads = new ArrayList<>(3);
     ArrayList<Tile> tiles = new ArrayList<>(3);

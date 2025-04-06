@@ -292,22 +292,9 @@ public class GraphBuilder {
 
         SettlementPosition minNode = Collections.min(neighbors, Comparator.comparingInt(SettlementPosition::getID));
 
-        // Find Midpoint between the two tiles (add and div by 2 but mult by to later so just add)
-        double x = 0;
-        double y = 0;
-        double[] coordinates;
-        for (Tile tile: tileList){
-            coordinates = tile.getCoordinates();
-            x += coordinates[0];
-            y += coordinates[1];
-        }
+        double[] coordinates = calculateCoordinatesThruReflectingAPointAcrossTheMidpointOfTwoOtherPoints(tileList.get(0), tileList.get(1), minNode);
 
-        // Reflect the Node across the Midpoint; 2 midpoint - node
-        coordinates = minNode.getCoordinates();
-        x -= coordinates[0];
-        y -= coordinates[1];
-
-        node.setCoordinates(x, y);
+        node.setCoordinates(coordinates[0], coordinates[1]);
     }
 
     void addCoordinatesToNodeWith1TilesAnd2NeighborsWithCoordinates(SettlementPosition node){
@@ -318,22 +305,9 @@ public class GraphBuilder {
 
         Tile tile = node.getTiles().get(0);
 
-        // Find Midpoint between the two neighbours (add and div by 2 but mult by to later so just add)
-        double x = 0;
-        double y = 0;
-        double[] coordinates;
-        for (SettlementPosition position: neighbours){
-            coordinates = position.getCoordinates();
-            x += coordinates[0];
-            y += coordinates[1];
-        }
+        double[] coordinates = calculateCoordinatesThruReflectingAPointAcrossTheMidpointOfTwoOtherPoints(neighbours.get(0), neighbours.get(1), tile);
 
-        // Reflect the Tile Center across the Midpoint; 2 midpoint - tileCenter
-        coordinates = tile.getCoordinates();
-        x -= coordinates[0];
-        y -= coordinates[1];
-
-        node.setCoordinates(x, y);
+        node.setCoordinates(coordinates[0], coordinates[1]);
     }
 
     void addCoordinatesToNodeWith1Tiles1NeighbourAnd1NodeAsNeighbourFromPreviousNode(SettlementPosition node){
@@ -348,25 +322,31 @@ public class GraphBuilder {
         customAssertion(node.getTiles().size() == 1, "You need one Tile for this method");
         Tile tile = node.getTiles().get(0);
 
-        // Find Midpoint between Tile and Neighbour (add and div by 2 but mult by to later so just add)
+        double[] coordinates = calculateCoordinatesThruReflectingAPointAcrossTheMidpointOfTwoOtherPoints(neighbour, tile, reflectionNode);
+
+        node.setCoordinates(coordinates[0], coordinates[1]);
+    }
+
+    double[] calculateCoordinatesThruReflectingAPointAcrossTheMidpointOfTwoOtherPoints(Placable placableA, Placable placableB, Placable reflectedPlacable){
         double x = 0;
         double y = 0;
         double[] coordinates;
-        coordinates = neighbour.getCoordinates();
+
+        coordinates = placableA.getCoordinates();
         x += coordinates[0];
         y += coordinates[1];
 
-        coordinates = tile.getCoordinates();
+        coordinates = placableB.getCoordinates();
         x += coordinates[0];
         y += coordinates[1];
 
 
         // Reflect the Tile reflectionNode across the Midpoint; 2 midpoint - reflectionNode
-        coordinates = reflectionNode.getCoordinates();
+        coordinates = reflectedPlacable.getCoordinates();
         x -= coordinates[0];
         y -= coordinates[1];
 
-        node.setCoordinates(x, y);
+        return new double[]{x, y};
     }
 
 }

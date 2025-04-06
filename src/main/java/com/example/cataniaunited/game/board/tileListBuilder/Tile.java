@@ -1,6 +1,8 @@
 package com.example.cataniaunited.game.board.tileListBuilder;
 
-public class Tile {
+import com.example.cataniaunited.game.board.Placable;
+
+public class Tile implements Placable {
     final TileType type;
     final int value = 0; // To set later
 

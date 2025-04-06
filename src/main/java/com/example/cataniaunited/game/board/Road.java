@@ -4,7 +4,7 @@ import com.example.cataniaunited.game.Player;
 
 import java.util.Arrays;
 
-public class Road {
+public class Road implements Placable{
     Player owner;
     final SettlementPosition positionA;
     final SettlementPosition positionB;
