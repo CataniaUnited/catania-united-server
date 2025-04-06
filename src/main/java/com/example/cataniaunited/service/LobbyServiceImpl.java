@@ -70,6 +70,11 @@ public class LobbyServiceImpl implements LobbyService {
     }
 
     @Override
+    public Lobby getLobbyById(String lobbyId) {
+        return lobbies.get(lobbyId);
+    }
+
+    @Override
     public void clearLobbies() {
         lobbies.clear();
         logger.info("All lobbies have been cleared.");
