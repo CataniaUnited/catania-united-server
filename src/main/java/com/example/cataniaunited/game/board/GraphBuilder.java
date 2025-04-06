@@ -149,32 +149,45 @@ public class GraphBuilder {
         // No Tile Adding since it's done by creation
     }
 
-    public void assignTilesToIncompleteNodes() {
+    /**
+     * Post-processing step: Finds nodes with only 2 tiles (typically inner nodes
+     * that border the next layer) and assigns the missing 3rd tile by looking
+     * at common tiles among neighbours.
+     */
+    void assignTilesToIncompleteNodes() {
         // Since we insert tiles of the outer layer into nodes of the inner layers, we don't need to check the last layer
         SettlementPosition currentNode;
         List<SettlementPosition> neighbours;
-        List<Tile> currentTiles, neighbourTiles = new ArrayList<>();
+        List<Tile> currentTiles;
 
+        // Only inner nodes can be added, because outer ones might not have 3 neighbours
         int amountOfNodesToCheck = (int) (6*Math.pow((sizeOfBoard-1), 2));
+
         for(int i = 0; i < amountOfNodesToCheck; i++){
+
             currentNode = nodeList.get(i);
             currentTiles = currentNode.getTiles(); // get amount of tiles of this node
+
             if (currentTiles.size() == 3){
                 continue; // if == 3 continue
             }
+
             // else < 3
             customAssertion(currentTiles.size() == 2, "Node %s has more than three, or less than 2 connections to tiles".formatted(currentNode));
 
             // get tiles of All Connected Nodes (3) if 2 outer layer or something went wrong -> exception
             customAssertion(currentNode.getRoads().size() == 3, "Node %s should have 3 Road connections".formatted(currentNode));
+
             neighbours = currentNode.getNeighbours();
+
             customAssertion(neighbours.size() == 3, "Node %s should have 3 Neighbours connections".formatted(currentNode));
 
+            // add the tile that is connected to two of the three nodes but node to you.
+            List<Tile> neighbourTiles = new ArrayList<>();
             for(SettlementPosition neighbour: neighbours){
                 neighbourTiles.addAll(neighbour.getTiles()); // add all Possible Tiles !!!including duplicates!!!
             }
 
-            // add the tile that is connected to two of the three nodes but node to you.
             neighbourTiles.removeAll(currentTiles); // remove Tiles already appended to this node
 
             //get duplicated element left
@@ -192,6 +205,7 @@ public class GraphBuilder {
      * O(1) Implementation of findDuplicate for lists of size 5 due to frequent usage in other Methods,
      * avoiding using the O(n) Algorithm of repeatedly removing an element (internal O(n) implementation in ArrayList)
      * until only the once duplicate is contaminated.
+     * Used to find the tile that is common among neighbours but missing from the current node.
      * @param list List of size 5 that includes at least one duplicate
      * @return returns the first Tile, that exists twice in the list
      */
@@ -261,6 +275,7 @@ public class GraphBuilder {
             return;
         }
 
+        // All nodes beside the one on the outermost layer have 3 neighbors
         int lastNodeWith3Neighbors = (int) (6*Math.pow((sizeOfBoard-1), 2));
 
         for(int i = 0; i < lastNodeWith3Neighbors; i++){
@@ -278,8 +293,7 @@ public class GraphBuilder {
                 sumY+=coordinates[1];
             }
 
-            // set position
-
+            // set positiond
             currentNode.setCoordinates(sumX/3, sumY/3);
 
         }
@@ -364,9 +378,16 @@ public class GraphBuilder {
         node.setCoordinates(coordinates[0], coordinates[1]);
     }
 
+    /**
+     * Calculates the coordinates of a point C by reflecting point P across the midpoint M of points A and B.
+     * Formula: C = M + (M - P) = 2*M - P = A + B - P
+     * Where A, B, P are treated as vectors from the origin.
+     * @param placableA Point A (provides coordinates)
+     * @param placableB Point B (provides coordinates)
+     * @param reflectedPlacable Point P (provides coordinates)
+     * @return The calculated coordinates [x, y] for point C.
+     */
     double[] calculateCoordinatesThruReflectingAPointAcrossTheMidpointOfTwoOtherPoints(Placable placableA, Placable placableB, Placable reflectedPlacable){
-        double x = 0;
-        double y = 0;
         double[] coordinates = new double[2];
         double[] placableCoordinates;
 
