@@ -1,6 +1,7 @@
 package com.example.cataniaunited.game.board;
 
 import com.example.cataniaunited.api.GameWebSocket;
+import com.example.cataniaunited.game.board.tileListBuilder.Tile;
 import org.jboss.logging.Logger;
 
 import java.util.ArrayList;

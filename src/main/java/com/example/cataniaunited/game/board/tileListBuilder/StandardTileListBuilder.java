@@ -1,4 +1,4 @@
-package com.example.cataniaunited.game.board;
+package com.example.cataniaunited.game.board.tileListBuilder;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -6,70 +6,117 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 
-public class TileListGenerator {
+public class StandardTileListBuilder implements TileListBuilder{
 
-    private final int sizeOfBoard;
-    private final List<Tile> tileList;
-    private final int sizeOfHex;
+    private int sizeOfBoard;
+    private int sizeOfHex;
+    private boolean flipYAxis;
+
     private int amountOfTilesOnBoard;
+    private double distanceBetweenTiles;
+    private double[] northWestAddition;
+    private double[] southEastAddition;
 
     // precomputed values of the angle to get to the midpoint of the starting tile of the next layer k -> (k*StrictMath.PI)/3;
     // to prevent rounding errors used Bigdecimal to compute the values and then transformed them to with k.doubleValue()
-    double northWestAngle = 2.0943951023931957; // k = 2
-    double southEastAngle = 5.235987755982989; // k = 5
-    double distanceBetweenTiles;
+    private static final double northWestAngle = 2.0943951023931957; // k = 2
+    private static final double southEastAngle = 5.235987755982989; // k = 5
 
-    boolean flipYAxis;
+    private List<Tile> tileList;
 
-    double[] northWestAddition;
-    double[] southEastAddition;
-    public TileListGenerator(int sizeOfBoard, int sizeOfHex, boolean flipYAxis){
-        amountOfTilesOnBoard = calculateAmountOfTilesForLayerK(sizeOfBoard);
-        tileList = new ArrayList<>(amountOfTilesOnBoard);
+    public StandardTileListBuilder(){
+        this.reset(); // Initialize and Reset
+    }
+
+    @Override
+    public void reset() {
+        this.sizeOfBoard = 0;
+        this.sizeOfHex = 0;
+        this.flipYAxis = false;
+        this.tileList = new ArrayList<>();
+        this.amountOfTilesOnBoard = 0;
+        this.distanceBetweenTiles = 0;
+        this.northWestAddition = null;
+        this.southEastAddition = null;
+    }
+
+    @Override
+    public void setConfiguration(int sizeOfBoard, int sizeOfHex, boolean flipYAxis) {
+        if (sizeOfBoard <= 0 || sizeOfHex <= 0) {
+            throw new IllegalArgumentException("Board size and hex size must be positive.");
+        }
         this.sizeOfBoard = sizeOfBoard;
-        this.sizeOfHex =sizeOfHex;
-        this.distanceBetweenTiles = StrictMath.sqrt(3)*sizeOfHex;
+        this.sizeOfHex = sizeOfHex;
         this.flipYAxis = flipYAxis;
 
+        this.distanceBetweenTiles = StrictMath.sqrt(3)*sizeOfHex;
+        amountOfTilesOnBoard = calculateAmountOfTilesForLayerK(sizeOfBoard);
+
         // precomputing offset since working with bigDecimalObjects takes time
-        northWestAddition = polarToCartesian(distanceBetweenTiles, northWestAngle);
-        southEastAddition = polarToCartesian(distanceBetweenTiles, southEastAngle);
+        northWestAddition = polarToCartesian(distanceBetweenTiles, northWestAngle, this.flipYAxis);
+        southEastAddition = polarToCartesian(distanceBetweenTiles, southEastAngle, this.flipYAxis);
+
+        tileList = new ArrayList<>(amountOfTilesOnBoard);
     }
 
-    public List<Tile> generateShuffledTileList(){
+    @Override
+    public void buildTiles() {
+        if (this.tileList == null || amountOfTilesOnBoard <= 0) {
+            throw new IllegalStateException("Configuration must be set before building tiles.");
+        }
 
-        TileType[] tileTypes = TileType.values();
+        TileType[] availableTypes = TileType.values();
+        int usableTypeCount = availableTypes.length - 1; // Assuming one WASTE type (last index)
+        if (usableTypeCount <= 0) throw new IllegalStateException("Requires non-WASTE types.");
+        if (availableTypes[usableTypeCount] != TileType.WASTE) throw new IllegalStateException("WASTE-Type needs to be at last position.");
+
 
         tileList.add(new Tile(TileType.WASTE));
-
         for(int i = 1; i < amountOfTilesOnBoard; i++){
-            TileType currentTileType = tileTypes[i % (tileTypes.length -1)];
+            TileType currentTileType = availableTypes[i % (usableTypeCount)];
             tileList.add(new Tile(currentTileType));
         }
+    }
 
-        Collections.shuffle(tileList);
-        for(int i = 0; i < tileList.size(); i++){
-            tileList.get(i).setId(i+1);
+    @Override
+    public void shuffleTiles() {
+        if (this.tileList == null || this.tileList.isEmpty()) {
+            throw new IllegalStateException("Tiles must be built before shuffling.");
         }
 
-        addCoordinatesToTileList();
-        return tileList;
+
+        Collections.shuffle(this.tileList);
     }
 
+    @Override
+    public void assignTileIds() {
+        if (this.tileList == null || this.tileList.isEmpty()) {
+            throw new IllegalStateException("Tiles must be built before assigning IDs.");
+        }
 
-    public static int calculateAmountOfTilesForLayerK(int k) {
-        return (k > 0) ? (int) (3*Math.pow((k-1), 2) + 3 * (k-1) + 1) : 0;
+        for (int i = 0; i < this.tileList.size(); i++) {
+            this.tileList.get(i).setId(i + 1);
+        }
     }
 
-    public void addCoordinatesToTileList() {
+    @Override
+    public void calculateTilePositions() {
+        if (this.northWestAddition == null || this.southEastAddition == null) {
+            throw new IllegalStateException("Configuration must be set before building tiles.");
+        }
+        if (this.tileList == null || this.tileList.isEmpty()) {
+            throw new IllegalStateException("Tiles must be built before calculating coordinates.");
+        }
+
         Function<Integer, Integer> getIndexOfMiddleElementOfLayerK = (k) -> (calculateAmountOfTilesForLayerK(k+1) - calculateAmountOfTilesForLayerK(k))/2 + calculateAmountOfTilesForLayerK(k);
         // set coordinates of center Tile
         tileList.get(0).setCoordinates(0, 0);
+
         // Set Middle row coordinates
         changeStartingPositionForSouthWestHalfAndMiddleRow(2, 0, 2, 7, -1, true);
         changeStartingPositionForSouthWestHalfAndMiddleRow(2, 0, 5, 10, -1, false);
 
-        // set coordinates for tiles in every other row (regular)
+        // set coordinates for tiles in every row
         int indexOfFirstTileOfThisLayer, indexOfFirstTileOfPreviousLayer, indexOfMiddleTileOfThisLayer, indexOfMiddleTileOfPreviousLayer;
         for(int layerIndex = 1; layerIndex < sizeOfBoard; layerIndex++){
             // get indices of current Layer
@@ -87,8 +134,19 @@ public class TileListGenerator {
             // calculate rows depending on newly discovered diagonal tiles
             addCoordinatesToRows(layerIndex, indexOfFirstTileOfThisLayer, indexOfMiddleTileOfThisLayer);
         }
+
     }
 
+    @Override
+    public List<Tile> getTileList() {
+        if (this.tileList == null || this.tileList.isEmpty()) {
+            throw new IllegalStateException("Tiles must be built before returning coordinates.");
+        }
+
+        return this.tileList;
+    }
+
+    // --- coordinate calculation ---
     void addCoordinatesToRows(int layerIndex, int southRowStartingTileIndex, int northRowStartingTileIndex){
         int layer = layerIndex+1;
         int offset;
@@ -210,7 +268,16 @@ public class TileListGenerator {
     }
 
 
-    double[] polarToCartesian(double r, double theta){
+
+
+    // --- Static Helper Methods  ---
+    static int calculateAmountOfTilesForLayerK(int layers) {
+        if (layers <= 0) return 0;
+        int n = layers - 1;
+        return 3 * n * (n + 1) + 1;
+    }
+
+    static double[] polarToCartesian(double r, double theta, boolean flipYAxis){
         double[] coordinates = new double[2];
         double trigResult;
         BigDecimal multiplicationResult;
@@ -228,16 +295,3 @@ public class TileListGenerator {
     }
 
 }
-
-    /*
-        //Random Calculations might not be needed
-        // double apothem = StrictMath.sqrt(3.0/2.0) * sizeOfHex;
-        double distanceBetweenTheMidpointOfTwoHexes = StrictMath.sqrt(3)*sizeOfHex;
-        //double anglesToGetToAnotherMidpoint = (k -> ((double)k/3 + (double)1/6)*StrictMath.PI);
-        //double anglesToGetToSettlementPosition = k -> (k*StrictMath.PI)/3;
-
-        //int y = r * StrictMath.sin(theta);
-        //int x = r * StrictMath.cos(theta);
-        //int r = StrictMath.sqrt(StrictMath.pow(x, 2) + StrictMath.pow(y,2));
-        //theta = StrictMath.atan(y / x);
-    */

@@ -1,4 +1,4 @@
-package com.example.cataniaunited.game.board;
+package com.example.cataniaunited.game.board.tileListBuilder;
 
 public enum TileType {
     WHEAT,
@@ -6,7 +6,7 @@ public enum TileType {
     WOOD,
     CLAY,
     ORE,
-    WASTE
+    WASTE // WASTE NEEDS TO BE AT THE LAST INDEX!!!
 
     /*4 × Wald (ergibt Holz)
     4 × Weideland (ergibt Wolle)

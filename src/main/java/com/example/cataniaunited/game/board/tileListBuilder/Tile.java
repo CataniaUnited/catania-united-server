@@ -1,4 +1,4 @@
-package com.example.cataniaunited.game.board;
+package com.example.cataniaunited.game.board.tileListBuilder;
 
 public class Tile {
     final TileType type;

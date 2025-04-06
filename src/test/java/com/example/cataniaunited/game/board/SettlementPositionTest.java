@@ -1,5 +1,6 @@
 package com.example.cataniaunited.game.board;
 
+import com.example.cataniaunited.game.board.tileListBuilder.Tile;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
