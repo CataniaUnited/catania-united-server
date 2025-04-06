@@ -1,16 +1,20 @@
 package com.example.cataniaunited.game.board.tileListBuilder;
 
-import java.util.Objects;
-
 public class TileListDirector {
-    private TileListBuilder builder;
+    TileListBuilder builder;
 
     public TileListDirector(TileListBuilder builder) {
-        this.builder = Objects.requireNonNull(builder, "Builder cannot be null");
+        if (builder == null){
+            throw new NullPointerException("Builder cannot be null");
+        }
+        this.builder = builder;
     }
 
     public void setBuilder(TileListBuilder builder) {
-        this.builder = Objects.requireNonNull(builder, "Builder cannot be null");
+        if (builder == null){
+            throw new NullPointerException("Builder cannot be null");
+        }
+        this.builder = builder;
     }
 
     public void constructStandardTileList(int sizeOfBoard, int sizeOfHex, boolean flipYAxis) {
