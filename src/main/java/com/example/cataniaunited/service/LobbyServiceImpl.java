@@ -60,7 +60,7 @@ public class LobbyServiceImpl implements LobbyService {
     public boolean joinLobbyByCode(String lobbyId, String player) {
         Lobby lobby = lobbies.get(lobbyId);
         if(lobby != null){
-            lobby.getPlayers().add(player);
+            lobby.addPlayer(player);
             logger.infof("Player %s joined lobby %s", player, lobbyId);
             return true;
         }

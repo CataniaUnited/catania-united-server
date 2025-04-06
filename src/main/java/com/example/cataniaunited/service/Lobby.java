@@ -19,4 +19,8 @@ public class Lobby {
     public Set<String> getPlayers() {
         return players;
     }
+
+    public void addPlayer(String player){
+        players.add(player);
+    }
 }
