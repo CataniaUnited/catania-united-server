@@ -1,12 +1,11 @@
 package com.example.cataniaunited.game.board;
 
-import com.example.cataniaunited.game.board.TileType;
-
 public class Tile {
     final TileType type;
     final int value = 0; // To set later
 
     double[] coordinates = new double[2];
+
     int id;
 
     public Tile(TileType type){
@@ -28,7 +27,15 @@ public class Tile {
     }
 
     public double[] getCoordinates() {
-        return coordinates;
+        return coordinates.clone();
+    }
+
+    public void setId(int id) {
+        if (this.id != 0) {
+            return;
+        }
+
+        this.id = id;
     }
 
     @Override

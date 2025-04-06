@@ -49,7 +49,7 @@ public class TileListGenerator {
 
         Collections.shuffle(tileList);
         for(int i = 0; i < tileList.size(); i++){
-            tileList.get(i).id = i+1;
+            tileList.get(i).setId(i+1);
         }
 
         addCoordinatesToTileList();
