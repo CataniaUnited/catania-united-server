@@ -1,4 +1,4 @@
-package com.example.cataniaunited.game.board.tileStuff;
+package com.example.cataniaunited.game.board;
 
 import com.example.cataniaunited.game.board.TileType;
 

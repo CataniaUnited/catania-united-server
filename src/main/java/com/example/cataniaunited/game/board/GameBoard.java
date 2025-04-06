@@ -1,13 +1,9 @@
 package com.example.cataniaunited.game.board;
 
 import com.example.cataniaunited.api.GameWebSocket;
-import com.example.cataniaunited.game.board.tileStuff.Tile;
-import com.example.cataniaunited.game.board.tileStuff.TileListGenerator;
 import org.jboss.logging.Logger;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Function;
 
 public class GameBoard {
     // TODO implement position for tiles and nodes

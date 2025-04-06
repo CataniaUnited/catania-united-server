@@ -1,7 +1,5 @@
 package com.example.cataniaunited.game.board;
 
-import com.example.cataniaunited.game.board.tileStuff.Tile;
-import com.example.cataniaunited.game.board.tileStuff.TileListGenerator;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;

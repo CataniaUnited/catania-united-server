@@ -1,6 +1,4 @@
-package com.example.cataniaunited.game.board.tileStuff;
-
-import com.example.cataniaunited.game.board.TileType;
+package com.example.cataniaunited.game.board;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
