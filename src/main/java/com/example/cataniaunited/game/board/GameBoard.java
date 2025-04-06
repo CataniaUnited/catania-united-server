@@ -56,11 +56,8 @@ public class GameBoard {
 
     void generateTileList(){
         TileListBuilder tileBuilder = new StandardTileListBuilder();
-
         TileListDirector director = new TileListDirector(tileBuilder);
-
         director.constructStandardTileList(sizeOfBoard, SIZE_OF_HEX, true);
-
         tileList = tileBuilder.getTileList();
     }
 

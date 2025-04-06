@@ -35,6 +35,10 @@ public class TileTest {
     void testValueGetter() {
         assertEquals(tile.value, tile.getValue(), "getValue() return value");
     }
+    @Test
+    void testIdGetter() {
+        assertEquals(tile.id, tile.getId(), "getId() doesn't return id");
+    }
 
     @Test
     void testIdSetterInitializesValueCorrectly(){

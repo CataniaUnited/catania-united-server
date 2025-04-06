@@ -8,21 +8,21 @@ import java.util.function.Function;
 
 public class StandardTileListBuilder implements TileListBuilder{
 
-    private int sizeOfBoard;
-    private int sizeOfHex;
-    private boolean flipYAxis;
+    int sizeOfBoard;
+    int sizeOfHex;
+    boolean flipYAxis;
 
-    private int amountOfTilesOnBoard;
-    private double distanceBetweenTiles;
-    private double[] northWestAddition;
-    private double[] southEastAddition;
+    int amountOfTilesOnBoard;
+    double distanceBetweenTiles;
+    double[] northWestAddition;
+    double[] southEastAddition;
 
     // precomputed values of the angle to get to the midpoint of the starting tile of the next layer k -> (k*StrictMath.PI)/3;
     // to prevent rounding errors used Bigdecimal to compute the values and then transformed them to with k.doubleValue()
     private static final double northWestAngle = 2.0943951023931957; // k = 2
     private static final double southEastAngle = 5.235987755982989; // k = 5
 
-    private List<Tile> tileList;
+    List<Tile> tileList;
 
     public StandardTileListBuilder(){
         this.reset(); // Initialize and Reset
@@ -32,7 +32,7 @@ public class StandardTileListBuilder implements TileListBuilder{
     public void reset() {
         this.sizeOfBoard = 0;
         this.sizeOfHex = 0;
-        this.flipYAxis = false;
+        this.flipYAxis = true;
         this.tileList = new ArrayList<>();
         this.amountOfTilesOnBoard = 0;
         this.distanceBetweenTiles = 0;
@@ -49,7 +49,7 @@ public class StandardTileListBuilder implements TileListBuilder{
         this.sizeOfHex = sizeOfHex;
         this.flipYAxis = flipYAxis;
 
-        this.distanceBetweenTiles = StrictMath.sqrt(3)*sizeOfHex;
+        this.distanceBetweenTiles = StrictMath.sqrt(3)*this.sizeOfHex;
         amountOfTilesOnBoard = calculateAmountOfTilesForLayerK(sizeOfBoard);
 
         // precomputing offset since working with bigDecimalObjects takes time
@@ -72,7 +72,7 @@ public class StandardTileListBuilder implements TileListBuilder{
 
 
         tileList.add(new Tile(TileType.WASTE));
-        for(int i = 1; i < amountOfTilesOnBoard; i++){
+        for(int i = 0; i < amountOfTilesOnBoard-1; i++){
             TileType currentTileType = availableTypes[i % (usableTypeCount)];
             tileList.add(new Tile(currentTileType));
         }
@@ -147,7 +147,7 @@ public class StandardTileListBuilder implements TileListBuilder{
     }
 
     // --- coordinate calculation ---
-    void addCoordinatesToRows(int layerIndex, int southRowStartingTileIndex, int northRowStartingTileIndex){
+    private void addCoordinatesToRows(int layerIndex, int southRowStartingTileIndex, int northRowStartingTileIndex){
         int layer = layerIndex+1;
         int offset;
 
@@ -170,7 +170,7 @@ public class StandardTileListBuilder implements TileListBuilder{
 
     }
 
-    void addCoordinatesForRowWhereEveryStepIsIntoANewLayer(int startingLayer, int startingTileIndex, int startingOffset, boolean xIsGettingLarger){
+    private void addCoordinatesForRowWhereEveryStepIsIntoANewLayer(int startingLayer, int startingTileIndex, int startingOffset, boolean xIsGettingLarger){
         Tile lastTile = tileList.get(startingTileIndex);
         int lastTileIndex = startingTileIndex;
         int currentTileIndex;
@@ -232,7 +232,7 @@ public class StandardTileListBuilder implements TileListBuilder{
         addNeighboringTile(startingLayerForSubRoutine, irregularTileIndex, startingOffsetForSubRoutine, counterForSubRoutine, xIsGettingLarger);
     }
 
-    public void addCoordinatesToMainDiagonal(int indexOfFirstTileOfThisLayer,
+    private void addCoordinatesToMainDiagonal(int indexOfFirstTileOfThisLayer,
                                              int indexOfFirstTileOfPreviousLayer,
                                              int indexOfMiddleTileOfThisLayer,
                                              int indexOfMiddleTileOfPreviousLayer){
