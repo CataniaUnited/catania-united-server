@@ -5,11 +5,7 @@ import com.example.cataniaunited.game.board.tileListBuilder.StandardTileListBuil
 import com.example.cataniaunited.game.board.tileListBuilder.Tile;
 import org.jboss.logging.Logger;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.function.Function;
+import java.util.*;
 
 public class GraphBuilder {
 
@@ -17,6 +13,8 @@ public class GraphBuilder {
     final List<Tile> tileList;
     List<SettlementPosition> nodeList;
     int sizeOfBoard;
+
+    int nodeId=0;
 
     public GraphBuilder(List<Tile> tileList, int sizeOfBoard) {
         if (tileList == null || tileList.isEmpty()) {
@@ -63,17 +61,58 @@ public class GraphBuilder {
         return nodeList;
     }
 
-    public void createLayerStructure(int currentLayer){
-        // amount new vertices for currentLayer k = 6(2*(k-1) + 3)
-        Function<Integer, Integer> calculateEndIndexForLayerK = (k) -> 6 * (2 * (k-2) + 3);
-        Function<Integer, Integer> calculateAmountOfTilesForLayerK = (k) -> (k > 0) ? (int) (3*Math.pow((k-1), 2) + 3 * (k-1) + 1) : 0;
-        // amount of new Tiles for this currentLayer (currentLayer k -> k-1 rings)
-        int amountOfTilesOnBoardBefore = calculateAmountOfTilesForLayerK.apply(currentLayer-1); // amount of tiles placed before
-        int indexOfLastTileOfThisLayer =calculateAmountOfTilesForLayerK.apply(currentLayer)-1; // amount of tiles that will be placed after this method is done -1 to get index
+    /**
+     * Creates the structure (nodes and roads) for a specific layer and connects it
+     * to the previously built inner layer (if applicable).
+     * @param layer The current layer number (1-based).
+     */
+    private void createLayerStructure(int layer) {
+        logger.debugf("Creating structure for layer %d...", layer);
+        if (layer <= 0) {
+            throw new IllegalArgumentException("Layer number must be positive.");
+        }
+
+        if (layer == 1) {
+            createFirstLayerRing();
+        } else {
+            createSubsequentLayerRing(layer);
+        }
+    }
+
+    /** Creates the first layer (ring of 6 nodes) around the conceptual center. */
+    private void createFirstLayerRing() {
+        int nodesInRing = calculateNodesInRing(1); // Should be 6
+        if (tileList.isEmpty()) throw new IllegalStateException("Tile list is empty, cannot create layer 1.");
+        Tile centerTile = tileList.get(0);
+
+        SettlementPosition firstNode = null;
+        SettlementPosition previousNode = null;
+
+        for (int i = 0; i < nodesInRing; i++) {
+            SettlementPosition currentNode = createAndAddNode();
+            currentNode.addTile(centerTile); // All nodes in layer 1 connect to the center tile
+
+            if (previousNode != null) {
+                createRoadBetweenTwoSettlements(previousNode, currentNode);
+            }
+            if (i == 0) {
+                firstNode = currentNode;
+            }
+            previousNode = currentNode;
+        }
+
+        // Connect last node back to first node
+        if (firstNode != null && firstNode != previousNode) {
+            createRoadBetweenTwoSettlements(previousNode, firstNode);
+        }
+    }
+
+    private void createSubsequentLayerRing(int currentLayer){
+        int amountOfTilesOnBoardBefore = calculateTilesInBoardUpToLayer(currentLayer-1); // amount of tiles placed before
+        int indexOfLastTileOfThisLayer =calculateTilesInBoardUpToLayer(currentLayer)-1; // amount of tiles that will be placed after this method is done -1 to get index
         int currentTileIndex = amountOfTilesOnBoardBefore; // index of current Tile regarding tileList
 
-        int endIndex = calculateEndIndexForLayerK.apply(currentLayer); // calculate the amount of new Nodes for this currentLayer
-        int id = nodeList.size();
+        int endIndex = calculateNodesInRing(currentLayer); // calculate the amount of new Nodes for this currentLayer
 
         int nodesUntilCompletionOfNextHexWithoutCorner = 2; // when we are currently not traversing a corner, every second node needs to connect to the inner sub graph
         int nodesUntilCompletionOfNextHexWithCorner = 3; // when we are currently not traversing a corner, every third node needs to connect to the inner sub graph
@@ -82,33 +121,28 @@ public class GraphBuilder {
         int currentNodesUntilCompletionOfNextHex = nodesUntilCompletionOfNextHexWithCorner; // the amount of nodes to traverse till the next connection to the subgraph has to be made
         int nodesAfterCompletionOfPreviousHex = 0; // the amount of nodes traversed since the last connection
 
-        // the offset between the indices of nodes and the nodes of the inner layer are the amount of nodes in the previous layer -1
-        int offsetBetweenIndicesOfHexesToInterConnect = (currentLayer > 2) ? calculateEndIndexForLayerK.apply(currentLayer-1)-1 : 6;
+        // the offset between the indices of the current nodes and the nodes of the inner layer are the amount of nodes in the previous layer -1
+        int offsetBetweenIndicesOfHexesToInterConnect = (currentLayer > 2) ? calculateNodesInRing(currentLayer-1)-1 : 6;
 
+        // -------------------------------- SETUP DONE, CREATE FIRST NODE ----------------------------------------
         // create the first node of the Graph of this currentLayer
-        SettlementPosition lastSettlement = new SettlementPosition(++id);
-        nodeList.add(lastSettlement);
+        SettlementPosition lastSettlement = createAndAddNode();
         // Add all tiles the starting node connects to on the current layer
-        // Normally first and last, if only layer one, then only first layer (there is only one tile no level1)
         lastSettlement.addTile(tileList.get(currentTileIndex));
+        lastSettlement.addTile(tileList.get(indexOfLastTileOfThisLayer));
 
-        if (currentLayer != 1){
-            // From the second layer on  you start between two tiles therefore the last tile needs to be added to the Settlementposition
-            lastSettlement.addTile(tileList.get(indexOfLastTileOfThisLayer));
+        // Connect first element of new layer, to inner layer and add second Tile
+        SettlementPosition innerSettlement = nodeList.get((nodeId-1) - offsetBetweenIndicesOfHexesToInterConnect);
+        createRoadBetweenTwoSettlements(innerSettlement, lastSettlement);
 
-            // Connect first element of new layer, to inner layer and add second Tile
-            SettlementPosition innerSettlement = nodeList.get((id-1) - offsetBetweenIndicesOfHexesToInterConnect);
-            createRoadBetweenTwoSettlements(innerSettlement, lastSettlement);
+        addTilesToNodeInTheInnerLayer(innerSettlement, lastSettlement); // add the two tiles of the current node to the node in the inner layer
+        offsetBetweenIndicesOfHexesToInterConnect+=2; // increase offset since a 'corner' follows and there are more nodes on the outher layer than on the inner layer
 
-            addTilesToNodeInTheInnerLayer(innerSettlement, lastSettlement);
-            offsetBetweenIndicesOfHexesToInterConnect+=2;
-        }
 
-        // Generate nodes of current layer
+        // -------------------------------- CREATE ALL NODES ----------------------------------------
         for(int i = 2;i <= endIndex; i++){ // 'i' represent the ith node of this layer
             // New Node
-            SettlementPosition currentSettlement = new SettlementPosition(++id);
-            nodeList.add(currentSettlement);
+            SettlementPosition currentSettlement = createAndAddNode();
             currentSettlement.addTile(tileList.get(currentTileIndex)); // Add Tile two current Node
 
             // create connection with previous node of the same layer
@@ -118,35 +152,41 @@ public class GraphBuilder {
             lastSettlement = currentSettlement;
 
 
-            // Do some black magic to connect the right nodes with the nodes from the inner layers
-            // In the first layer, there are no inner layers; in all other layer we check if we created the same amount
-            // of nodes as needed until a new connection
-            if (currentLayer != 1 && currentNodesUntilCompletionOfNextHex == ++nodesAfterCompletionOfPreviousHex){
+            // ---------------------------- Check if you need to connect the current node if the inner layer ---------------------
+            // check if we created the same amount of nodes as needed until a new connection
+            if (currentNodesUntilCompletionOfNextHex == ++nodesAfterCompletionOfPreviousHex){
                 // if yes
-                currentTileIndex++; //  Update tileIndex
+                currentTileIndex++; //  Update tileIndex, the previous tile is complete, you are at a new one
                 currentSettlement.addTile(tileList.get(currentTileIndex)); // Add second Tile to current Node
 
-                // and, create a road between them, log a new connection and add tile to inner Nodes
-                SettlementPosition innerSettlement = nodeList.get((id-1) - offsetBetweenIndicesOfHexesToInterConnect);
+                // create a connection to the inner layer, to divide the old hex and the now hex
+                // and add the 2 tiles to the node in the inner layer
+                innerSettlement = nodeList.get((nodeId-1) - offsetBetweenIndicesOfHexesToInterConnect);
                 createRoadBetweenTwoSettlements(innerSettlement, currentSettlement);
                 addTilesToNodeInTheInnerLayer(innerSettlement, currentSettlement);
 
+                // log the connection to predict when the next connection to the inner layer has to be made
                 connectionCount++;
                 // decide where we are in the Edge Cycle and set amount of nodes till next connection depending on that
                 if (connectionCount % cornerRhythm == 0){
-                    offsetBetweenIndicesOfHexesToInterConnect+=2;
+                    offsetBetweenIndicesOfHexesToInterConnect+=2; // if we are in an edge cycle, we set more nodes, the offset to the inner cycle increases
                     currentNodesUntilCompletionOfNextHex = nodesUntilCompletionOfNextHexWithCorner;
                 } else {
                     currentNodesUntilCompletionOfNextHex = nodesUntilCompletionOfNextHexWithoutCorner;
                 }
+
                 // reset nodes after last connection was made
                 nodesAfterCompletionOfPreviousHex = 0;
             }
         }
 
+        SettlementPosition firstNodeOfCurrentLayer = nodeList.get((nodeId)-endIndex);
+        SettlementPosition lastPlacedNode = nodeList.get(nodeList.size()-1);
+
         // Connect first and last node of current layer
-        createRoadBetweenTwoSettlements(nodeList.get((id)-endIndex), nodeList.get(nodeList.size()-1));
-        // No Tile Adding since it's done by creation
+        createRoadBetweenTwoSettlements(firstNodeOfCurrentLayer, lastPlacedNode);
+        // No Tile Adding since it's added when creating the node
+
     }
 
     /**
@@ -154,7 +194,7 @@ public class GraphBuilder {
      * that border the next layer) and assigns the missing 3rd tile by looking
      * at common tiles among neighbours.
      */
-    void assignTilesToIncompleteNodes() {
+    private void assignTilesToIncompleteNodes() {
         // Since we insert tiles of the outer layer into nodes of the inner layers, we don't need to check the last layer
         SettlementPosition currentNode;
         List<SettlementPosition> neighbours;
@@ -173,14 +213,14 @@ public class GraphBuilder {
             }
 
             // else < 3
-            customAssertion(currentTiles.size() == 2, "Node %s has more than three, or less than 2 connections to tiles".formatted(currentNode));
+            checkAndThrowAssertionError(currentTiles.size() == 2, "Node %s has more than three, or less than 2 connections to tiles".formatted(currentNode));
 
             // get tiles of All Connected Nodes (3) if 2 outer layer or something went wrong -> exception
-            customAssertion(currentNode.getRoads().size() == 3, "Node %s should have 3 Road connections".formatted(currentNode));
+            checkAndThrowAssertionError(currentNode.getRoads().size() == 3, "Node %s should have 3 Road connections".formatted(currentNode));
 
             neighbours = currentNode.getNeighbours();
 
-            customAssertion(neighbours.size() == 3, "Node %s should have 3 Neighbours connections".formatted(currentNode));
+            checkAndThrowAssertionError(neighbours.size() == 3, "Node %s should have 3 Neighbours connections".formatted(currentNode));
 
             // add the tile that is connected to two of the three nodes but node to you.
             List<Tile> neighbourTiles = new ArrayList<>();
@@ -201,34 +241,7 @@ public class GraphBuilder {
 
     }
 
-    /**
-     * O(1) Implementation of findDuplicate for lists of size 5 due to frequent usage in other Methods,
-     * avoiding using the O(n) Algorithm of repeatedly removing an element (internal O(n) implementation in ArrayList)
-     * until only the once duplicate is contaminated.
-     * Used to find the tile that is common among neighbours but missing from the current node.
-     * @param list List of size 5 that includes at least one duplicate
-     * @return returns the first Tile, that exists twice in the list
-     */
-    public static Tile findDuplicateTile(List<Tile> list) {
-        customAssertion(list.size() == 5, "findDuplicateTile only works with 5 tiles, from which one needs to be duplicate, %s".formatted(list));
-        // First Element is Duplicate
-        if (list.get(0).equals(list.get(1)) || list.get(0).equals(list.get(2)) || list.get(0).equals(list.get(3)) || list.get(0).equals(list.get(4))) {
-            return list.get(0);
-        }
-        // Or Second Element is Duplicate
-        if (list.get(1).equals(list.get(2)) || list.get(1).equals(list.get(3))|| list.get(1).equals(list.get(4))) {
-            return list.get(1);
-        }
-
-        if (list.get(2).equals(list.get(3))|| list.get(2).equals(list.get(4))) {
-            return list.get(2);
-        }
-        // or else third Element is Duplicate
-        customAssertion(list.get(3).equals(list.get(4)), "findDuplicateTile only works with 5 tiles, from which one needs to be duplicate, %s".formatted(list));
-        return list.get(3);
-    }
-
-    public void addTilesToNodeInTheInnerLayer(SettlementPosition innerNode, SettlementPosition outerNode){
+    private void addTilesToNodeInTheInnerLayer(SettlementPosition innerNode, SettlementPosition outerNode){
         for (Tile tile: outerNode.getTiles()){
             innerNode.addTile(tile);
         }
@@ -239,25 +252,13 @@ public class GraphBuilder {
      * @param a Settlementposition a
      * @param b Settlementposition b
      */
-    public void createRoadBetweenTwoSettlements(SettlementPosition a, SettlementPosition b){
+    private void createRoadBetweenTwoSettlements(SettlementPosition a, SettlementPosition b){
         Road roadToAdd = new Road(a, b);
         a.addRoad(roadToAdd);
         b.addRoad(roadToAdd);
     }
 
-    public static int calculateTotalSettlementPositions(int sizeOfBoard){
-        return (int) (6*Math.pow(sizeOfBoard, 2));
-    }
-
-    public static void customAssertion(boolean success, String errorMessage){
-        if (success)
-            return;
-
-        logger.error(errorMessage);
-        throw new AssertionError(errorMessage);
-    }
-
-    void calculateRoadCoordinates(){
+    private void calculateRoadCoordinates(){
         for (SettlementPosition currentNode : nodeList) {
             for (Road road : currentNode.getRoads()) {
                 road.setCoordinatesAndRotationAngle();
@@ -265,12 +266,12 @@ public class GraphBuilder {
         }
     }
 
-    void calculateSettlementCoordinates(){
+    private void calculateSettlementCoordinates(){
         addCoordinatesToInnerNodes();
         addCoordinatesToOuterNodes();
     }
 
-    void addCoordinatesToInnerNodes(){
+    private void addCoordinatesToInnerNodes(){
         if (sizeOfBoard == 1){ // If there is only one layer, there are no inner nodes
             return;
         }
@@ -282,7 +283,7 @@ public class GraphBuilder {
             SettlementPosition currentNode = nodeList.get(i);
             // get Positions of Tiles
             List<Tile> nodeTiles = currentNode.getTiles();
-            customAssertion(nodeTiles.size() == 3, "Node (%s) is supposed to have 3 Tiles Attached to it!".formatted("s"));
+            checkAndThrowAssertionError(nodeTiles.size() == 3, "Node (%s) is supposed to have 3 Tiles Attached to it!".formatted("s"));
             // calculate middle Position
             double sumX = 0;
             double sumY = 0;
@@ -299,7 +300,7 @@ public class GraphBuilder {
         }
     }
 
-    void addCoordinatesToOuterNodes(){
+    private void addCoordinatesToOuterNodes(){
         int startingIndex = (int) (6*Math.pow((sizeOfBoard-1), 2));
 
         for (int i = startingIndex; i < nodeList.size(); i++){
@@ -324,7 +325,7 @@ public class GraphBuilder {
                     addCoordinatesToNodeWith1TilesAnd2NeighborsWithCoordinates(currentNode);
                 } else {
                     // c.2) previous node has two tiles do some fancy triangulation to
-                    customAssertion(i > startingIndex, "First node has to have 2 Tiles");
+                    checkAndThrowAssertionError(i > startingIndex, "First node has to have 2 Tiles");
                     addCoordinatesToNodeWith1Tiles1NeighbourAnd1NodeAsNeighbourFromPreviousNode(currentNode);
                 }
 
@@ -334,12 +335,12 @@ public class GraphBuilder {
         }
     }
 
-    void addCoordinatesToNodeWith2TilesAnd1Neighbor(SettlementPosition node){
+    private void addCoordinatesToNodeWith2TilesAnd1Neighbor(SettlementPosition node){
         List<Tile> tileList = node.getTiles();
         List<SettlementPosition> neighbors = node.getNeighbours();
 
-        customAssertion(tileList.size() == 2, "You need 2 tiles");
-        customAssertion(!neighbors.isEmpty(), "You need at least one neighbour.");
+        checkAndThrowAssertionError(tileList.size() == 2, "You need 2 tiles");
+        checkAndThrowAssertionError(!neighbors.isEmpty(), "You need at least one neighbour.");
 
         SettlementPosition minNode = Collections.min(neighbors, Comparator.comparingInt(SettlementPosition::getID));
 
@@ -348,11 +349,11 @@ public class GraphBuilder {
         node.setCoordinates(coordinates[0], coordinates[1]);
     }
 
-    void addCoordinatesToNodeWith1TilesAnd2NeighborsWithCoordinates(SettlementPosition node){
+    private void addCoordinatesToNodeWith1TilesAnd2NeighborsWithCoordinates(SettlementPosition node){
         List<SettlementPosition> neighbours = node.getNeighbours();
 
-        customAssertion(node.getTiles().size() == 1, "You need one node for this method");
-        customAssertion(neighbours.size() == 2, "You need 2 neighbours.");
+        checkAndThrowAssertionError(node.getTiles().size() == 1, "You need one node for this method");
+        checkAndThrowAssertionError(neighbours.size() == 2, "You need 2 neighbours.");
 
         Tile tile = node.getTiles().get(0);
 
@@ -361,16 +362,16 @@ public class GraphBuilder {
         node.setCoordinates(coordinates[0], coordinates[1]);
     }
 
-    void addCoordinatesToNodeWith1Tiles1NeighbourAnd1NodeAsNeighbourFromPreviousNode(SettlementPosition node){
+    private void addCoordinatesToNodeWith1Tiles1NeighbourAnd1NodeAsNeighbourFromPreviousNode(SettlementPosition node){
         List<SettlementPosition> neighbours = node.getNeighbours();
-        customAssertion(!neighbours.isEmpty(), "You need 1 neighbour.");
+        checkAndThrowAssertionError(!neighbours.isEmpty(), "You need 1 neighbour.");
         SettlementPosition neighbour = Collections.min(neighbours, Comparator.comparingInt(SettlementPosition::getID));
 
         List<SettlementPosition> distance2Connection = neighbour.getNeighbours();
-        customAssertion(distance2Connection.size() == 3, "PreviousNode needs 3 neighbours.");
+        checkAndThrowAssertionError(distance2Connection.size() == 3, "PreviousNode needs 3 neighbours.");
         SettlementPosition reflectionNode = Collections.min(distance2Connection, Comparator.comparingInt(SettlementPosition::getID));
 
-        customAssertion(node.getTiles().size() == 1, "You need one Tile for this method");
+        checkAndThrowAssertionError(node.getTiles().size() == 1, "You need one Tile for this method");
         Tile tile = node.getTiles().get(0);
 
         double[] coordinates = calculateCoordinatesThruReflectingAPointAcrossTheMidpointOfTwoOtherPoints(neighbour, tile, reflectionNode);
@@ -387,7 +388,7 @@ public class GraphBuilder {
      * @param reflectedPlacable Point P (provides coordinates)
      * @return The calculated coordinates [x, y] for point C.
      */
-    double[] calculateCoordinatesThruReflectingAPointAcrossTheMidpointOfTwoOtherPoints(Placable placableA, Placable placableB, Placable reflectedPlacable){
+    private double[] calculateCoordinatesThruReflectingAPointAcrossTheMidpointOfTwoOtherPoints(Placable placableA, Placable placableB, Placable reflectedPlacable){
         double[] coordinates = new double[2];
         double[] placableCoordinates;
 
@@ -408,4 +409,64 @@ public class GraphBuilder {
         return coordinates;
     }
 
+    public static int calculateTotalSettlementPositions(int sizeOfBoard){
+        return (int) (6*Math.pow(sizeOfBoard, 2));
+    }
+    private SettlementPosition createAndAddNode(){
+        SettlementPosition currentNode = new SettlementPosition(++nodeId);
+        nodeList.add(currentNode);
+        return currentNode;
+    }
+
+    /** Calculates total tiles up to and including layer k (1-based). */
+    private static int calculateTilesInBoardUpToLayer(int layer) {
+        if (layer <= 0) return 0;
+        int n = layer - 1; // n = number of rings around center (0-based)
+        return 3 * n * (n + 1) + 1;
+    }
+
+    /** Calculates number of *new* settlement positions *in* the ring of layer k (1-based layer).
+     *  Nodes(k) - Nodes(k-1) = 6*k^2 - 6*(k-1)^2 = 6k^2 - 6(k^2-2k+1) = 12k - 6 = 6 * (2k - 1)
+     **/
+    private static int calculateNodesInRing(int layer) {
+        if (layer <= 0) return 0;
+        return 6 * (2 * layer - 1);
+    }
+
+    /**
+     * O(1) Implementation of findDuplicate for lists of size 5 due to frequent usage in other Methods,
+     * avoiding using the O(n) Algorithm of repeatedly removing an element (internal O(n) implementation in ArrayList)
+     * until only the once duplicate is contaminated.
+     * Used to find the tile that is common among neighbours but missing from the current node.
+     * @param list List of size 5 that includes at least one duplicate
+     * @return returns the first Tile, that exists twice in the list
+     */
+    public static Tile findDuplicateTile(List<Tile> list) {
+        checkAndThrowAssertionError(list.size() == 5, "findDuplicateTile only works with 5 tiles, from which one needs to be duplicate, %s".formatted(list));
+        // First Element is Duplicate
+        if (list.get(0).equals(list.get(1)) || list.get(0).equals(list.get(2)) || list.get(0).equals(list.get(3)) || list.get(0).equals(list.get(4))) {
+            return list.get(0);
+        }
+        // Or Second Element is Duplicate
+        if (list.get(1).equals(list.get(2)) || list.get(1).equals(list.get(3))|| list.get(1).equals(list.get(4))) {
+            return list.get(1);
+        }
+
+        if (list.get(2).equals(list.get(3))|| list.get(2).equals(list.get(4))) {
+            return list.get(2);
+        }
+        // or else third Element is Duplicate
+        checkAndThrowAssertionError(list.get(3).equals(list.get(4)), "findDuplicateTile only works with 5 tiles, from which one needs to be duplicate, %s".formatted(list));
+        return list.get(3);
+    }
+
+    private static void checkAndThrowAssertionError(boolean success, String errorMessage){
+        if (success)
+            return;
+
+        logger.error(errorMessage);
+        throw new AssertionError(errorMessage);
+    }
+
 }
+
