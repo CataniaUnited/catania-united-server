@@ -1,15 +1,11 @@
 package com.example.cataniaunited.game.board;
 
-import com.example.cataniaunited.api.GameWebSocket;
 import com.example.cataniaunited.game.board.tileListBuilder.StandardTileListBuilder;
 import com.example.cataniaunited.game.board.tileListBuilder.Tile;
-import org.jboss.logging.Logger;
 
 import java.util.*;
 
 public class GraphBuilder {
-
-    private static final Logger logger = Logger.getLogger(GameWebSocket.class);
     final List<Tile> tileList;
     List<SettlementPosition> nodeList;
     int sizeOfBoard;
@@ -20,8 +16,8 @@ public class GraphBuilder {
         if (tileList == null || tileList.isEmpty()) {
             throw new IllegalArgumentException("Tile list cannot be null or empty.");
         }
-        if (sizeOfBoard <= 0) {
-            throw new IllegalArgumentException("Board size must be positive.");
+        if (sizeOfBoard <= 1) {
+            throw new IllegalArgumentException("Board size must be greater Than 1.");
         }
 
         // Check if tileList has the expected number of tiles for the size
@@ -67,7 +63,6 @@ public class GraphBuilder {
      * @param layer The current layer number (1-based).
      */
     private void createLayerStructure(int layer) {
-        logger.debugf("Creating structure for layer %d...", layer);
         if (layer <= 0) {
             throw new IllegalArgumentException("Layer number must be positive.");
         }
@@ -460,11 +455,10 @@ public class GraphBuilder {
         return list.get(3);
     }
 
-    private static void checkAndThrowAssertionError(boolean success, String errorMessage){
+    static void checkAndThrowAssertionError(boolean success, String errorMessage){
         if (success)
             return;
 
-        logger.error(errorMessage);
         throw new AssertionError(errorMessage);
     }
 

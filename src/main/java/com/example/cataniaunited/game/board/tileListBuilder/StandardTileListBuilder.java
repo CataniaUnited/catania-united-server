@@ -112,6 +112,10 @@ public class StandardTileListBuilder implements TileListBuilder{
         // set coordinates of center Tile
         tileList.get(0).setCoordinates(0, 0);
 
+        if (this.tileList.size() == 1){ // If the size is one, there is only one Tile
+            return;
+        }
+
         // Set Middle row coordinates
         changeStartingPositionForSouthWestHalfAndMiddleRow(2, 0, 2, 7, -1, true);
         changeStartingPositionForSouthWestHalfAndMiddleRow(2, 0, 5, 10, -1, false);
