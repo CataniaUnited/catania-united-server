@@ -21,8 +21,8 @@ public class GameBoard {
 
 
     public GameBoard(int playerCount){
-        if (playerCount <= 0) {
-            throw new IllegalArgumentException("Player count must be positive.");
+        if (playerCount <= 1) {
+            throw new IllegalArgumentException("Player count must be greater than 1.");
         }
 
         sizeOfBoard = calculateSizeOfBoard(playerCount);
@@ -35,11 +35,13 @@ public class GameBoard {
 
         long endtime = System.nanoTime();
 
+
         // Something went wrong
         if (this.tileList == null || this.settlementPositionGraph == null) {
             logger.errorf("Board generation failed for %d players.", playerCount);
             throw new IllegalStateException("Board generation resulted in null lists.");
         }
+
 
 
         logger.infof("Generated Board for %d players, with %d Levels in %fs\n".formatted(playerCount, sizeOfBoard,(endtime-starttime)*10e-10));
@@ -76,12 +78,6 @@ public class GameBoard {
 
     public List<Tile> getTileList() {
         return tileList;
-    }
-
-    public void printMainLoop(List<SettlementPosition> graph){
-        for(SettlementPosition node:graph){
-            System.out.println(node);
-        }
     }
 
 }
