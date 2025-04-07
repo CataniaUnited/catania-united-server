@@ -1,6 +1,6 @@
 package com.example.cataniaunited.game.board;
 
-import com.example.cataniaunited.game.Player;
+import com.example.cataniaunited.player.Player;
 
 import java.util.Arrays;
 
