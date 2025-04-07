@@ -3,13 +3,20 @@ package com.example.cataniaunited.game.board;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
 
-import java.util.Arrays;
+import java.util.Locale;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @QuarkusTest
 public class RoadTest {
@@ -19,9 +26,11 @@ public class RoadTest {
 
     @BeforeEach
     void setUp() {
+        //Ensure that "." is used instead of "," to separate decimals
+        Locale.setDefault(Locale.ENGLISH);
 
-        mockPositionA= mock(SettlementPosition.class);
-        mockPositionB= mock(SettlementPosition.class);
+        mockPositionA = mock(SettlementPosition.class);
+        mockPositionB = mock(SettlementPosition.class);
 
 
         road = new Road(mockPositionA, mockPositionB);
@@ -170,7 +179,7 @@ public class RoadTest {
         road.setCoordinatesAndRotationAngle();
 
         String toString = road.toString();
-        String expectedString = "Road:{owner: null; (123, 456); position: ([4.0, 6.0]); angle: -2,356194}";
+        String expectedString = "Road:{owner: null; (123, 456); position: ([4.0, 6.0]); angle: -2.356194}";
         assertEquals(expectedString, toString, "String does not match");
     }
 }
