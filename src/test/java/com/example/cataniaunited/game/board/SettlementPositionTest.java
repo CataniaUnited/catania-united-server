@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @QuarkusTest
-public class SettlementPositionTest {
+class SettlementPositionTest {
     private static final int STANDARD_ID = 42;
 
 

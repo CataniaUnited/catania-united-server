@@ -19,7 +19,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @QuarkusTest
-public class RoadTest {
+class RoadTest {
     SettlementPosition mockPositionA;
     SettlementPosition mockPositionB;
     Road road;

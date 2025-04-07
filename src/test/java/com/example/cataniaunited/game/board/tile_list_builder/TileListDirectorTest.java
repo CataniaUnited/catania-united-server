@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 
 @QuarkusTest
-public class TileListDirectorTest {
+class TileListDirectorTest {
     private TileListBuilder mockBuilder;
     private TileListDirector director;
         @BeforeEach

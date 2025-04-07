@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 
 @QuarkusTest
-public class GraphBuilderTest {
+class GraphBuilderTest {
 
     private List<Tile> validTileList;
     private int validSizeOfBoard;

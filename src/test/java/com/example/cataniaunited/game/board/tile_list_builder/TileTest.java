@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 @QuarkusTest
-public class TileTest {
+class TileTest {
     private Tile tile;
     private final TileType testType = TileType.WHEAT;
 

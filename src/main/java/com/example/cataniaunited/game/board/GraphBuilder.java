@@ -51,7 +51,8 @@ public class GraphBuilder {
         calculateSettlementCoordinates();
 
 
-        // Calculate coordinates and angles for roads //TODO: refactor to reduce runtime complexity back to O(n)
+        // Calculate coordinates and angles for roads
+        // if possible refactor to reduce runtime complexity back to O(n)
         calculateRoadCoordinates();
 
         return nodeList;

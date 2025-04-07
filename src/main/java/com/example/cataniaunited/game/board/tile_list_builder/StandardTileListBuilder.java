@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.function.Function;
 import java.util.function.IntUnaryOperator;
 
 public class StandardTileListBuilder implements TileListBuilder{

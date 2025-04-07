@@ -14,7 +14,7 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.*;
 
 @QuarkusTest
-public class GameBoardTest {
+class GameBoardTest {
     @Test
     void calculateSizeOfBoardThrowsForZeroPlayers() {
         assertThrows(IllegalArgumentException.class, () -> {

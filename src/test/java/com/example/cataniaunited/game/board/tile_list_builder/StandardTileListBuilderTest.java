@@ -16,7 +16,7 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.*;
 
 @QuarkusTest
-public class StandardTileListBuilderTest {
+class StandardTileListBuilderTest {
 
     // Standard test inputs
     private static final int TEST_BOARD_SIZE_1 = 1; // Center only -> 1
