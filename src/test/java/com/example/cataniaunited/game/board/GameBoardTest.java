@@ -137,7 +137,7 @@ public class GameBoardTest {
         );
     }
 
-    @Disabled
+    @Disabled("BenchmarkTest Tests how many Players theoretically can play a game, doesn't test functionality, therefore disabled")
     @ParameterizedTest
     @MethodSource("benchMarkTestProvider")
     void benchMarkTest(int sizeOfBoard){
@@ -166,16 +166,16 @@ public class GameBoardTest {
         );
     }
 
-    @Disabled
+    @Disabled("test used for debugging purposes, passes automatically")
     @Test
     void debuggingTest(){
         GameBoard board = new GameBoard(4);
-        //List<Tile> tileList = board.getTileList();
         board.generateBoard();
         List<SettlementPosition> graph = board.getSettlementPositionGraph();
         for (SettlementPosition node: graph){
             System.out.println(node);
         }
+        assertTrue(true);
     }
 
 }

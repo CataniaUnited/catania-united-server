@@ -205,14 +205,10 @@ public class GraphBuilder {
             }
 
             // else < 3
-            //checkAndThrowAssertionError(currentTiles.size() == 2, "Node %s has more than three, or less than 2 connections to tiles".formatted(currentNode));
 
             // get tiles of All Connected Nodes (3) if 2 outer layer or something went wrong -> exception
-            //checkAndThrowAssertionError(currentNode.getRoads().size() == 3, "Node %s should have 3 Road connections".formatted(currentNode));
 
             neighbours = currentNode.getNeighbours();
-
-            //checkAndThrowAssertionError(neighbours.size() == 3, "Node %s should have 3 Neighbours connections".formatted(currentNode));
 
             // add the tile that is connected to two of the three nodes but node to you.
             List<Tile> neighbourTiles = new ArrayList<>();
@@ -271,7 +267,7 @@ public class GraphBuilder {
             SettlementPosition currentNode = nodeList.get(i);
             // get Positions of Tiles
             List<Tile> nodeTiles = currentNode.getTiles();
-            //checkAndThrowAssertionError(nodeTiles.size() == 3, "Node (%s) is supposed to have 3 Tiles Attached to it!".formatted("s"));
+
             // calculate middle Position
             double sumX = 0;
             double sumY = 0;
@@ -313,7 +309,7 @@ public class GraphBuilder {
                     addCoordinatesToNodeWith1TilesAnd2NeighborsWithCoordinates(currentNode);
                 } else {
                     // c.2) previous node has two tiles do some fancy triangulation to
-                    ////checkAndThrowAssertionError(i > startingIndex, "First node has to have 2 Tiles");
+                    //
                     addCoordinatesToNodeWith1Tiles1NeighbourAnd1NodeAsNeighbourFromPreviousNode(currentNode);
                 }
 
@@ -327,8 +323,8 @@ public class GraphBuilder {
         List<Tile> tileList = node.getTiles();
         List<SettlementPosition> neighbors = node.getNeighbours();
 
-        //checkAndThrowAssertionError(tileList.size() == 2, "You need 2 tiles");
-        //checkAndThrowAssertionError(!neighbors.isEmpty(), "You need at least one neighbour.");
+
+
 
         SettlementPosition minNode = Collections.min(neighbors, Comparator.comparingInt(SettlementPosition::getID));
 
@@ -340,8 +336,8 @@ public class GraphBuilder {
     private void addCoordinatesToNodeWith1TilesAnd2NeighborsWithCoordinates(SettlementPosition node){
         List<SettlementPosition> neighbours = node.getNeighbours();
 
-        //checkAndThrowAssertionError(node.getTiles().size() == 1, "You need one node for this method");
-        //checkAndThrowAssertionError(neighbours.size() == 2, "You need 2 neighbours.");
+
+
 
         Tile tile = node.getTiles().get(0);
 
@@ -352,14 +348,14 @@ public class GraphBuilder {
 
     private void addCoordinatesToNodeWith1Tiles1NeighbourAnd1NodeAsNeighbourFromPreviousNode(SettlementPosition node){
         List<SettlementPosition> neighbours = node.getNeighbours();
-        //checkAndThrowAssertionError(!neighbours.isEmpty(), "You need 1 neighbour.");
+
         SettlementPosition neighbour = Collections.min(neighbours, Comparator.comparingInt(SettlementPosition::getID));
 
         List<SettlementPosition> distance2Connection = neighbour.getNeighbours();
-        //checkAndThrowAssertionError(distance2Connection.size() == 3, "PreviousNode needs 3 neighbours.");
+
         SettlementPosition reflectionNode = Collections.min(distance2Connection, Comparator.comparingInt(SettlementPosition::getID));
 
-        //checkAndThrowAssertionError(node.getTiles().size() == 1, "You need one Tile for this method");
+
         Tile tile = node.getTiles().get(0);
 
         double[] coordinates = calculateCoordinatesThruReflectingAPointAcrossTheMidpointOfTwoOtherPoints(neighbour, tile, reflectionNode);
@@ -430,7 +426,7 @@ public class GraphBuilder {
      * @return returns the first Tile, that exists twice in the list
      */
     public static Tile findDuplicateTile(List<Tile> list) {
-        //checkAndThrowAssertionError(list.size() == 5, "findDuplicateTile only works with 5 tiles, from which one needs to be duplicate, %s".formatted(list));
+
         // First Element is Duplicate
         if (list.get(0).equals(list.get(1)) || list.get(0).equals(list.get(2)) || list.get(0).equals(list.get(3)) || list.get(0).equals(list.get(4))) {
             return list.get(0);
@@ -444,7 +440,7 @@ public class GraphBuilder {
             return list.get(2);
         }
         // or else third Element is Duplicate
-        //checkAndThrowAssertionError(list.get(3).equals(list.get(4)), "findDuplicateTile only works with 5 tiles, from which one needs to be duplicate, %s".formatted(list));
+
         return list.get(3);
     }
 

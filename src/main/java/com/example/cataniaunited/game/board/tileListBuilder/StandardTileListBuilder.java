@@ -17,10 +17,11 @@ public class StandardTileListBuilder implements TileListBuilder{
     double[] northWestAddition;
     double[] southEastAddition;
 
-    // precomputed values of the angle to get to the midpoint of the starting tile of the next layer k -> (k*StrictMath.PI)/3;
+    // precomputed values of the angle to get to the midpoint of the starting tile of the next layer
+    // calculated by the formula k * PI / 3;
     // to prevent rounding errors used Bigdecimal to compute the values and then transformed them to with k.doubleValue()
-    private static final double northWestAngle = 2.0943951023931957; // k = 2
-    private static final double southEastAngle = 5.235987755982989; // k = 5
+    private static final double NORTH_WEST_ANGLE = 2.0943951023931957; // k = 2
+    private static final double SOUTH_EAST_ANGLE = 5.235987755982989; // k = 5
 
     List<Tile> tileList;
 
@@ -53,8 +54,8 @@ public class StandardTileListBuilder implements TileListBuilder{
         amountOfTilesOnBoard = calculateAmountOfTilesForLayerK(sizeOfBoard);
 
         // precomputing offset since working with bigDecimalObjects takes time
-        northWestAddition = polarToCartesian(distanceBetweenTiles, northWestAngle, this.flipYAxis);
-        southEastAddition = polarToCartesian(distanceBetweenTiles, southEastAngle, this.flipYAxis);
+        northWestAddition = polarToCartesian(distanceBetweenTiles, NORTH_WEST_ANGLE, this.flipYAxis);
+        southEastAddition = polarToCartesian(distanceBetweenTiles, SOUTH_EAST_ANGLE, this.flipYAxis);
 
         tileList = new ArrayList<>(amountOfTilesOnBoard);
     }

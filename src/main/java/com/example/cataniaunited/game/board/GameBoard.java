@@ -27,7 +27,7 @@ public class GameBoard {
 
         sizeOfBoard = calculateSizeOfBoard(playerCount);
 
-        logger.infof("Generating Board for %d players, with %d Levels...", playerCount, sizeOfBoard);
+        logger.infof("Generating Board for %d players, with %d Levels...%n", playerCount, sizeOfBoard);
         long starttime = System.nanoTime();
 
         generateTileList();
@@ -44,7 +44,7 @@ public class GameBoard {
 
 
 
-        logger.infof("Generated Board for %d players, with %d Levels in %fs\n".formatted(playerCount, sizeOfBoard,(endtime-starttime)*10e-10));
+        logger.infof("Generated Board for %d players, with %d Levels in %fs%n".formatted(playerCount, sizeOfBoard,(endtime-starttime)*10e-10));
     }
 
         static int calculateSizeOfBoard(int playerCount){

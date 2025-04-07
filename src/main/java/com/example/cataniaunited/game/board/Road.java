@@ -40,30 +40,30 @@ public class Road implements Placable{
             return; // position has already been set
         }
 
-        double x_max, y_max, x_min, y_min;
+        double xMax, yMax, xMin, yMin;
         double[] coordinates;
         coordinates = positionA.getCoordinates();
-        x_max = coordinates[0];
-        y_max = coordinates[1];
-        x_min = x_max;
-        y_min = y_max;
+        xMax = coordinates[0];
+        yMax = coordinates[1];
+        xMin = xMax;
+        yMin = yMax;
 
         if (coordinates[0] == 0 && coordinates[1] == 0){  // position of Settlement A is not yet set
             return;
         }
 
         coordinates = positionB.getCoordinates();
-        x_max += coordinates[0];
-        x_min -= coordinates[0];
-        y_max += coordinates[1];
-        y_min -= coordinates[1];
+        xMax += coordinates[0];
+        xMin -= coordinates[0];
+        yMax += coordinates[1];
+        yMin -= coordinates[1];
 
         if (coordinates[0] == 0 && coordinates[1] == 0){  // position of Settlement B is not yet set
             return;
         }
 
-        this.coordinates = new double[]{x_max/2, y_max/2};
-        this.rationAngle = StrictMath.atan2(y_min, x_min); // No need to assert that since no Road will be placed on 0,0
+        this.coordinates = new double[]{xMax/2, yMax/2};
+        this.rationAngle = StrictMath.atan2(yMin, xMin); // No need to assert that since no Road will be placed on 0,0
 
     }
 

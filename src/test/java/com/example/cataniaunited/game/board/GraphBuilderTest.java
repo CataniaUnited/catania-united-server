@@ -41,7 +41,8 @@ public class GraphBuilderTest {
 
     @Test
     void constructorWithEmptyTileListShouldThrowException() {
-        assertThrows(IllegalArgumentException.class, () -> new GraphBuilder(new ArrayList<>(), validSizeOfBoard),
+        List<Tile> emptyList = new ArrayList<>();
+        assertThrows(IllegalArgumentException.class, () -> new GraphBuilder(emptyList, validSizeOfBoard),
                 "Tile list cannot be null or empty.");
     }
 
