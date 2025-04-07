@@ -127,6 +127,16 @@ public class GameBoardTest {
         );
     }
 
+    @Test
+    void generateBoardThrowsExceptionIfGeneratingGraphBeforeTileList(){
+        GameBoard gameBoard = new GameBoard(4);
+        gameBoard.tileList = null;
+        assertThrows(IllegalStateException.class,
+                gameBoard::generateBoard,
+                "Should throw for undefined tileList players"
+        );
+    }
+
     @Disabled
     @ParameterizedTest
     @MethodSource("benchMarkTestProvider")
