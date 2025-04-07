@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Quarkus WebSocket Demo</title>
+</head>
+<body>
+<h1>WebSocket Lobby Demo</h1>
+
+<p>
+    <label>Username: <input id="usernameInput" type="text" placeholder="Enter a username" /></label>
+    <button id="setUsernameButton">Set Username</button>
+</p>
+
+<p>
+    <button id="createLobbyButton">Create Lobby</button>
+</p>
+
+<h2>Server Messages:</h2>
+<pre id="serverMessages"></pre>
+
+<script>
+    const socketUrl = "ws://" + window.location.host + "/game";
+    const socket = new WebSocket(socketUrl);
+
+    socket.onopen = () => {
+      appendMessage("WebSocket connected!");
+    };
+
+    socket.onmessage = (event) => {
+      // We try to parse every incoming message as JSON:
+      try {
+        const data = JSON.parse(event.data);
+        appendMessage("Received JSON: " + JSON.stringify(data));
+
+        // You can branch on data.type if you want:
+        if (data.type === "LOBBY_UPDATED") {
+          appendMessage("Players: " + data.players.join(", "));
+        }
+      } catch (err) {
+        // If it's not valid JSON, we just show it raw
+        appendMessage("Received text (non-JSON): " + event.data);
+      }
+    };
+
+    socket.onerror = (err) => {
+      appendMessage("WebSocket error: " + err);
+    };
+
+    socket.onclose = () => {
+      appendMessage("WebSocket closed.");
+    };
+
+    document.getElementById("setUsernameButton").addEventListener("click", () => {
+      const usernameValue = document.getElementById("usernameInput").value;
+      if (usernameValue) {
+        const msg = {
+          type: "SET_USERNAME",
+          player: usernameValue
+        };
+        socket.send(JSON.stringify(msg));
+        appendMessage("Sent SET_USERNAME message with player: " + usernameValue);
+      } else {
+        appendMessage("Please enter a username before sending.");
+      }
+    });
+
+    document.getElementById("createLobbyButton").addEventListener("click", () => {
+      const usernameValue = document.getElementById("usernameInput").value || "Anonymous";
+      const msg = {
+        type: "CREATE_LOBBY",
+        player: usernameValue
+      };
+      socket.send(JSON.stringify(msg));
+      appendMessage("Sent CREATE_LOBBY message with player: " + usernameValue);
+    });
+
+    function appendMessage(text) {
+      const preEl = document.getElementById("serverMessages");
+      preEl.textContent += text + "\n";
+    }
+</script>
+</body>
+</html>

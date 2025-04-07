@@ -287,11 +287,11 @@ public class StandardTileListBuilder implements TileListBuilder{
         BigDecimal multiplicationResult;
 
         trigResult = StrictMath.cos(theta);
-        multiplicationResult = new BigDecimal(r).multiply(new BigDecimal(trigResult));
+        multiplicationResult = BigDecimal.valueOf(r).multiply(BigDecimal.valueOf(trigResult));
         coordinates[0] = multiplicationResult.doubleValue();
 
         trigResult = StrictMath.sin(theta);
-        multiplicationResult = new BigDecimal(r).multiply(new BigDecimal(trigResult));
+        multiplicationResult = BigDecimal.valueOf(r).multiply(BigDecimal.valueOf(trigResult));
         coordinates[1] = multiplicationResult.doubleValue();
         coordinates[1] = (flipYAxis) ? -coordinates[1] : coordinates[1];
 
