@@ -134,8 +134,8 @@ public class StandardTileListBuilder implements TileListBuilder{
             // get indices of current Layer
             indexOfFirstTileOfThisLayer = calculateAmountOfTilesForLayerK(layerIndex); // index of current Tile regarding tileList
             indexOfFirstTileOfPreviousLayer = calculateAmountOfTilesForLayerK(layerIndex-1); // amount of tiles placed before-1 to get index
-            indexOfMiddleTileOfThisLayer = getIndexOfMiddleElementOfLayerK.apply(layerIndex);
-            indexOfMiddleTileOfPreviousLayer = getIndexOfMiddleElementOfLayerK.apply(layerIndex-1);
+            indexOfMiddleTileOfThisLayer = getIndexOfMiddleElementOfLayerK.applyAsInt(layerIndex);
+            indexOfMiddleTileOfPreviousLayer = getIndexOfMiddleElementOfLayerK.applyAsInt(layerIndex-1);
 
             // calculate next tiles on diagonal
             addCoordinatesToMainDiagonal(indexOfFirstTileOfThisLayer,
