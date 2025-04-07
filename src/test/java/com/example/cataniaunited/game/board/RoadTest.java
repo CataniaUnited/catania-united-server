@@ -171,8 +171,8 @@ public class RoadTest {
 
     @Test
     void toStringOutputsCorrectString() {
-        when(mockPositionA.getID()).thenReturn(123);
-        when(mockPositionB.getID()).thenReturn(456);
+        when(mockPositionA.getId()).thenReturn(123);
+        when(mockPositionB.getId()).thenReturn(456);
 
         when(mockPositionA.getCoordinates()).thenReturn(new double[]{2.0, 4.0});
         when(mockPositionB.getCoordinates()).thenReturn(new double[]{6.0, 8.0});

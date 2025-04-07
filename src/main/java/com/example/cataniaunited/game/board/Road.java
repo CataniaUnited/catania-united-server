@@ -40,25 +40,28 @@ public class Road implements Placable{
             return; // position has already been set
         }
 
-        double xMax, yMax, xMin, yMin;
-        double[] coordinates;
-        coordinates = positionA.getCoordinates();
-        xMax = coordinates[0];
-        yMax = coordinates[1];
+        double xMax;
+        double yMax;
+        double xMin;
+        double yMin;
+        double[] coordinatesOfPositions;
+        coordinatesOfPositions = positionA.getCoordinates();
+        xMax = coordinatesOfPositions[0];
+        yMax = coordinatesOfPositions[1];
         xMin = xMax;
         yMin = yMax;
 
-        if (coordinates[0] == 0 && coordinates[1] == 0){  // position of Settlement A is not yet set
+        if (coordinatesOfPositions[0] == 0 && coordinatesOfPositions[1] == 0){  // position of Settlement A is not yet set
             return;
         }
 
-        coordinates = positionB.getCoordinates();
-        xMax += coordinates[0];
-        xMin -= coordinates[0];
-        yMax += coordinates[1];
-        yMin -= coordinates[1];
+        coordinatesOfPositions = positionB.getCoordinates();
+        xMax += coordinatesOfPositions[0];
+        xMin -= coordinatesOfPositions[0];
+        yMax += coordinatesOfPositions[1];
+        yMin -= coordinatesOfPositions[1];
 
-        if (coordinates[0] == 0 && coordinates[1] == 0){  // position of Settlement B is not yet set
+        if (coordinatesOfPositions[0] == 0 && coordinatesOfPositions[1] == 0){  // position of Settlement B is not yet set
             return;
         }
 
@@ -70,6 +73,6 @@ public class Road implements Placable{
     @Override
     public String toString() {
         return "Road:{owner: %s; (%s, %s); position: (%s); angle: %f}"
-                .formatted(owner, positionA.getID(), positionB.getID(), Arrays.toString(coordinates), rationAngle);
+                .formatted(owner, positionA.getId(), positionB.getId(), Arrays.toString(coordinates), rationAngle);
     }
 }

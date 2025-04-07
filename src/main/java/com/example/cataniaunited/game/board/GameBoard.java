@@ -1,10 +1,10 @@
 package com.example.cataniaunited.game.board;
 
 import com.example.cataniaunited.api.GameWebSocket;
-import com.example.cataniaunited.game.board.tileListBuilder.StandardTileListBuilder;
-import com.example.cataniaunited.game.board.tileListBuilder.Tile;
-import com.example.cataniaunited.game.board.tileListBuilder.TileListBuilder;
-import com.example.cataniaunited.game.board.tileListBuilder.TileListDirector;
+import com.example.cataniaunited.game.board.tile_list_builder.StandardTileListBuilder;
+import com.example.cataniaunited.game.board.tile_list_builder.Tile;
+import com.example.cataniaunited.game.board.tile_list_builder.TileListBuilder;
+import com.example.cataniaunited.game.board.tile_list_builder.TileListDirector;
 import org.jboss.logging.Logger;
 
 import java.util.List;

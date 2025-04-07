@@ -1,5 +1,5 @@
 package com.example.cataniaunited.game.board;
-import com.example.cataniaunited.game.board.tileListBuilder.Tile;
+import com.example.cataniaunited.game.board.tile_list_builder.Tile;
 import com.example.cataniaunited.game.buildings.Building;
 
 import java.util.ArrayList;
@@ -12,21 +12,21 @@ public class SettlementPosition implements Placable {
 
     double[] coordinates = new double[2];
 
-    final int ID;
+    final int id;
 
 
     public SettlementPosition(int id){
-        ID = id;
+        this.id = id;
     }
 
-    public int getID() {
-        return ID;
+    public int getId() {
+        return id;
     }
 
     @Override
     public String toString() {
         return String.format("SettlementPosition{" +
-                "ID='" + ID + '\'' +
+                "ID='" + id + '\'' +
                 ", (%s; %s)" +
                 ", tiles=" + tiles +
                 ", roads=" + roads +
@@ -52,7 +52,7 @@ public class SettlementPosition implements Placable {
         }
 
         if (tiles.size() >= 3) {
-            throw new IllegalStateException("Cannot assign more than 3 Tiles to SettlementPosition " + ID);
+            throw new IllegalStateException("Cannot assign more than 3 Tiles to SettlementPosition " + id);
         }
         tiles.add(tileToAdd);
     }
@@ -64,7 +64,7 @@ public class SettlementPosition implements Placable {
         }
 
         if (roads.size() >= 3) {
-            throw new IllegalStateException("Cannot connect more than 3 Roads to SettlementPosition " + ID);
+            throw new IllegalStateException("Cannot connect more than 3 Roads to SettlementPosition " + id);
         }
         this.roads.add(road);
     }

@@ -1,6 +1,6 @@
 package com.example.cataniaunited.game.board;
 
-import com.example.cataniaunited.game.board.tileListBuilder.Tile;
+import com.example.cataniaunited.game.board.tile_list_builder.Tile;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -49,7 +49,7 @@ public class SettlementPositionTest {
 
     @Test
     void testConstructorInitialization() {
-        assertEquals(STANDARD_ID, settlementPosition.getID(), "ID should be set by constructor");
+        assertEquals(STANDARD_ID, settlementPosition.getId(), "ID should be set by constructor");
         assertArrayEquals(new double[]{0.0, 0.0}, settlementPosition.getCoordinates(), 0.001, "Initial coordinates should be [0.0, 0.0]");
         assertTrue(settlementPosition.getTiles().isEmpty(), "Initial tiles list should be empty");
         assertTrue(settlementPosition.getRoads().isEmpty(), "Initial roads list should be empty");
@@ -57,7 +57,7 @@ public class SettlementPositionTest {
 
     @Test
     void getIdReturnsCorrectId() {
-        assertEquals(STANDARD_ID, settlementPosition.getID());
+        assertEquals(STANDARD_ID, settlementPosition.getId());
     }
 
     @Test

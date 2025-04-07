@@ -1,10 +1,11 @@
-package com.example.cataniaunited.game.board.tileListBuilder;
+package com.example.cataniaunited.game.board.tile_list_builder;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
+import java.util.function.IntUnaryOperator;
 
 public class StandardTileListBuilder implements TileListBuilder{
 
@@ -18,7 +19,6 @@ public class StandardTileListBuilder implements TileListBuilder{
     double[] southEastAddition;
 
     // precomputed values of the angle to get to the midpoint of the starting tile of the next layer
-    // calculated by the formula k * PI / 3;
     // to prevent rounding errors used Bigdecimal to compute the values and then transformed them to with k.doubleValue()
     private static final double NORTH_WEST_ANGLE = 2.0943951023931957; // k = 2
     private static final double SOUTH_EAST_ANGLE = 5.235987755982989; // k = 5
@@ -109,7 +109,10 @@ public class StandardTileListBuilder implements TileListBuilder{
             throw new IllegalStateException("Tiles must be built before calculating coordinates.");
         }
 
-        Function<Integer, Integer> getIndexOfMiddleElementOfLayerK = (k) -> (calculateAmountOfTilesForLayerK(k+1) - calculateAmountOfTilesForLayerK(k))/2 + calculateAmountOfTilesForLayerK(k);
+        IntUnaryOperator getIndexOfMiddleElementOfLayerK = k ->
+                (calculateAmountOfTilesForLayerK(k + 1) - calculateAmountOfTilesForLayerK(k)) / 2
+                        + calculateAmountOfTilesForLayerK(k);
+
         // set coordinates of center Tile
         tileList.get(0).setCoordinates(0, 0);
 
@@ -122,7 +125,11 @@ public class StandardTileListBuilder implements TileListBuilder{
         changeStartingPositionForSouthWestHalfAndMiddleRow(2, 0, 5, 10, -1, false);
 
         // set coordinates for tiles in every row
-        int indexOfFirstTileOfThisLayer, indexOfFirstTileOfPreviousLayer, indexOfMiddleTileOfThisLayer, indexOfMiddleTileOfPreviousLayer;
+        int indexOfFirstTileOfThisLayer;
+        int indexOfFirstTileOfPreviousLayer;
+        int indexOfMiddleTileOfThisLayer;
+        int indexOfMiddleTileOfPreviousLayer;
+
         for(int layerIndex = 1; layerIndex < sizeOfBoard; layerIndex++){
             // get indices of current Layer
             indexOfFirstTileOfThisLayer = calculateAmountOfTilesForLayerK(layerIndex); // index of current Tile regarding tileList
@@ -241,7 +248,8 @@ public class StandardTileListBuilder implements TileListBuilder{
                                              int indexOfFirstTileOfPreviousLayer,
                                              int indexOfMiddleTileOfThisLayer,
                                              int indexOfMiddleTileOfPreviousLayer){
-        double x, y;
+        double x;
+        double y;
         double[] previousCoordinates;
 
         // -------------- set south-east tile --------------

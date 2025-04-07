@@ -1,4 +1,4 @@
-package com.example.cataniaunited.game.board.tileListBuilder;
+package com.example.cataniaunited.game.board.tile_list_builder;
 
 import com.example.cataniaunited.game.board.Placable;
 

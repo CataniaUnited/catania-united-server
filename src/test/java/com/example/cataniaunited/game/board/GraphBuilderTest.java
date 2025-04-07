@@ -1,6 +1,6 @@
 package com.example.cataniaunited.game.board;
 
-import com.example.cataniaunited.game.board.tileListBuilder.*;
+import com.example.cataniaunited.game.board.tile_list_builder.*;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -11,7 +11,6 @@ import org.junit.jupiter.params.provider.Arguments;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;

@@ -1,7 +1,6 @@
 package com.example.cataniaunited.game.board;
 
-import com.example.cataniaunited.game.board.tileListBuilder.Tile;
-import io.quarkus.test.junit.ArtifactTypeUtil;
+import com.example.cataniaunited.game.board.tile_list_builder.Tile;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;

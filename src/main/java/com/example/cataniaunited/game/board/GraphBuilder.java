@@ -1,7 +1,7 @@
 package com.example.cataniaunited.game.board;
 
-import com.example.cataniaunited.game.board.tileListBuilder.StandardTileListBuilder;
-import com.example.cataniaunited.game.board.tileListBuilder.Tile;
+import com.example.cataniaunited.game.board.tile_list_builder.StandardTileListBuilder;
+import com.example.cataniaunited.game.board.tile_list_builder.Tile;
 
 import java.util.*;
 
@@ -320,15 +320,15 @@ public class GraphBuilder {
     }
 
     private void addCoordinatesToNodeWith2TilesAnd1Neighbor(SettlementPosition node){
-        List<Tile> tileList = node.getTiles();
+        List<Tile> tilesOfNodeList = node.getTiles();
         List<SettlementPosition> neighbors = node.getNeighbours();
 
 
 
 
-        SettlementPosition minNode = Collections.min(neighbors, Comparator.comparingInt(SettlementPosition::getID));
+        SettlementPosition minNode = Collections.min(neighbors, Comparator.comparingInt(SettlementPosition::getId));
 
-        double[] coordinates = calculateCoordinatesThruReflectingAPointAcrossTheMidpointOfTwoOtherPoints(tileList.get(0), tileList.get(1), minNode);
+        double[] coordinates = calculateCoordinatesThruReflectingAPointAcrossTheMidpointOfTwoOtherPoints(tilesOfNodeList.get(0), tilesOfNodeList.get(1), minNode);
 
         node.setCoordinates(coordinates[0], coordinates[1]);
     }
@@ -349,11 +349,11 @@ public class GraphBuilder {
     private void addCoordinatesToNodeWith1Tiles1NeighbourAnd1NodeAsNeighbourFromPreviousNode(SettlementPosition node){
         List<SettlementPosition> neighbours = node.getNeighbours();
 
-        SettlementPosition neighbour = Collections.min(neighbours, Comparator.comparingInt(SettlementPosition::getID));
+        SettlementPosition neighbour = Collections.min(neighbours, Comparator.comparingInt(SettlementPosition::getId));
 
         List<SettlementPosition> distance2Connection = neighbour.getNeighbours();
 
-        SettlementPosition reflectionNode = Collections.min(distance2Connection, Comparator.comparingInt(SettlementPosition::getID));
+        SettlementPosition reflectionNode = Collections.min(distance2Connection, Comparator.comparingInt(SettlementPosition::getId));
 
 
         Tile tile = node.getTiles().get(0);

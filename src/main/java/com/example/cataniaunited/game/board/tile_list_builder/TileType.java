@@ -1,4 +1,4 @@
-package com.example.cataniaunited.game.board.tileListBuilder;
+package com.example.cataniaunited.game.board.tile_list_builder;
 
 public enum TileType {
     WHEAT,
