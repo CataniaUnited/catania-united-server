@@ -4,7 +4,7 @@ import com.example.cataniaunited.game.board.Placable;
 
 public class Tile implements Placable {
     final TileType type;
-    final int value = 0; // To set later
+    int value = 0; // To set later
 
     double[] coordinates = new double[2];
 
@@ -38,6 +38,13 @@ public class Tile implements Placable {
         }
 
         this.id = id;
+    }
+
+    public void setValue(int value) {
+        if (this.value != 0){
+            return;
+        }
+        this.value = value;
     }
 
     public int getId() {

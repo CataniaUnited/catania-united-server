@@ -9,6 +9,8 @@ public interface TileListBuilder {
 
     void buildTiles();
 
+    void addValues();
+
     void shuffleTiles();
 
     void assignTileIds();

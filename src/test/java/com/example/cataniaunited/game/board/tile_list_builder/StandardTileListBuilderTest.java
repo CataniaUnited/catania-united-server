@@ -10,6 +10,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -37,8 +38,7 @@ class StandardTileListBuilderTest {
         assertEquals(0, builder.sizeOfBoard, "sizeOfBoard should be 0 after reset");
         assertEquals(0, builder.sizeOfHex, "sizeOfHex should be 0 after reset");
         assertTrue(builder.flipYAxis, "flipYAxis should be true after reset");
-        assertNotNull(builder.tileList, "tileList should be non-null (empty list) after reset");
-        assertTrue(builder.tileList.isEmpty(), "tileList should be empty after reset");
+        assertNull(builder.tileList, "tileList should be null after reset");
         assertEquals(0, builder.amountOfTilesOnBoard, "amountOfTilesOnBoard should be 0 after reset");
         assertEquals(0.0, builder.distanceBetweenTiles, 0.001, "distanceBetweenTiles should be 0 after reset");
         assertNull(builder.northWestAddition, "northWestAddition should be null after reset");
@@ -160,6 +160,112 @@ class StandardTileListBuilderTest {
         builder.reset();
         assertThrows(IllegalStateException.class, () -> builder.shuffleTiles(), "shuffle should throw exception if the builder is not configured");
     }
+
+    @Test
+    void addValuesThrowsExceptionIfTilesNotBuilt() {
+        assertThrows(IllegalStateException.class, () -> builder.addValues(), "addValues should throw exception if tiles are not built");
+    }
+
+
+    @Test
+    void addValuesThrowsExceptionIfNotConfigured() {
+        builder.reset();
+        assertThrows(IllegalStateException.class, () -> builder.addValues(), "addValues should throw exception if the builder is not configured");
+    }
+
+
+    @Test
+    void addValuesAssignsValuesToNonWasteTilesOnly() {
+        builder.buildTiles();
+        builder.addValues();
+
+
+        int nonWasteWithValueCount = 0;
+        Tile wasteTile = null;
+
+
+        for (Tile tile : builder.tileList) {
+            if (tile.getType() == TileType.WASTE) {
+                assertEquals(0, tile.getValue(), "WASTE tile should not have a value assigned");
+                wasteTile = tile;
+            } else {
+                assertTrue(tile.getValue() >= 2 && tile.getValue() <= 12 && tile.getValue() != 7,
+                        "Non-WASTE tile should have a value between 2-12 (excluding 7)");
+                nonWasteWithValueCount++;
+            }
+        }
+
+
+        assertNotNull(wasteTile, "A WASTE tile should exist in the list");
+        assertEquals(builder.tileList.size() - 1, nonWasteWithValueCount, "Exactly N-1 tiles should have values assigned");
+    }
+
+
+    @Test
+    void addValuesAssignsCorrectValueDistributionForStandardBoard() {
+        builder.setConfiguration(TEST_BOARD_SIZE_3, TEST_HEX_SIZE, true);
+        builder.buildTiles();
+        builder.addValues();
+
+
+        Map<Integer, Long> valueCounts = builder.tileList.stream()
+                .filter(tile -> tile.getType() != TileType.WASTE)
+                .map(Tile::getValue)
+                .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
+
+
+        assertEquals(18, valueCounts.values().stream().mapToLong(Long::longValue).sum(), "Should be 18 values assigned in total");
+        assertFalse(valueCounts.containsKey(7), "Value 7 should not be assigned");
+
+
+        long countOfOnes = valueCounts.values().stream().filter(count -> count == 1).count();
+        long countOfTwos = valueCounts.values().stream().filter(count -> count == 2).count();
+
+
+        assertEquals(10, valueCounts.size(), "Should be 10 distinct values (2-6, 8-12)"); // Ensure all expected keys are present or accounted for
+        assertEquals(2, countOfOnes, "Exactly 2 values should appear once");
+        assertEquals(8, countOfTwos, "Exactly 8 values should appear twice");
+
+
+        for (int val = 2; val <= 12; val++) {
+            if (val == 7) continue;
+            long count = valueCounts.getOrDefault(val, 0L);
+            assertTrue(count == 1 || count == 2, "Value " + val + " should appear 1 or 2 times, but appeared " + count);
+        }
+    }
+
+
+    @Test
+    void addValuesAssignsCorrectValueDistributionForSmallBoard() {
+        // To small to assigne each value at least once
+        builder.setConfiguration(TEST_BOARD_SIZE_2, TEST_HEX_SIZE, true);
+        builder.buildTiles();
+        builder.addValues();
+
+
+        Map<Integer, Long> valueCounts = builder.tileList.stream()
+                .filter(tile -> tile.getType() != TileType.WASTE)
+                .map(Tile::getValue)
+                .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
+
+
+        assertEquals(6, valueCounts.values().stream().mapToLong(Long::longValue).sum(), "Should be 6 values assigned in total");
+        assertFalse(valueCounts.containsKey(7), "Value 7 should not be assigned");
+
+        long countOfOnes = valueCounts.values().stream().filter(count -> count == 1).count();
+
+
+        assertEquals(6, valueCounts.size(), "Should be 6 distinct values assigned");
+        assertEquals(6, countOfOnes, "Exactly 6 values should appear once");
+
+
+        for (int val = 2; val <= 12; val++) {
+            if (val == 7) continue;
+            long count = valueCounts.getOrDefault(val, 0L);
+            assertTrue(count == 0 || count == 1, "Value " + val + " should appear 0 or 1 time, but appeared " + count);
+        }
+    }
+
 
     @Test
     void assignTileIdsAssignsSequentialIds() {

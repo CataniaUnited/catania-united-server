@@ -21,6 +21,7 @@ public class TileListDirector {
         builder.reset();
         builder.setConfiguration(sizeOfBoard, sizeOfHex, flipYAxis);
         builder.buildTiles();
+        builder.addValues();
         builder.shuffleTiles();
         builder.assignTileIds();
         builder.calculateTilePositions();

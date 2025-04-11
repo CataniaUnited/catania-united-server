@@ -33,7 +33,7 @@ public class StandardTileListBuilder implements TileListBuilder{
         this.sizeOfBoard = 0;
         this.sizeOfHex = 0;
         this.flipYAxis = true;
-        this.tileList = new ArrayList<>();
+        this.tileList = null;
         this.amountOfTilesOnBoard = 0;
         this.distanceBetweenTiles = 0;
         this.northWestAddition = null;
@@ -77,6 +77,49 @@ public class StandardTileListBuilder implements TileListBuilder{
             tileList.add(new Tile(currentTileType));
         }
     }
+
+    @Override
+    public void addValues() {
+        if (this.tileList == null || this.tileList.isEmpty()) {
+            throw new IllegalStateException("Tiles must be built before shuffling.");
+        }
+
+        int amountOfValuesToCreate = tileList.size() - 1; // -1, because of Dessert
+        int valueAmount = amountOfValuesToCreate / 10; // How often each value is used at least
+
+        List<Integer> valueList = new ArrayList<>(amountOfValuesToCreate);
+        List<Integer> overHeadList = new ArrayList<>(10); // There are 10 different numbers 2 to 12 without 7
+
+        int val = 2;
+        while (val <= 12) { // add each value valueAmount Times
+            for (int i = 0; i < valueAmount; i++) {
+                valueList.add(val);
+            }
+            overHeadList.add(val); // add value to overHeadList to have some values in the backlog
+            // ... in case that the amount of tiles isn't a clean multiplicative of 10 we can still give them a random
+            // value without unbalancing the distribution
+
+            val++;
+            if (val == 7) { // except for 7
+                val++;
+            }
+        }
+
+        Collections.shuffle(valueList);
+        Collections.shuffle(overHeadList);
+
+        valueList.addAll(overHeadList); // Add the overHeadList to the end of the Value list to guarantee that there are enough values to add
+
+        int index = 0;
+        for (Tile tile: tileList){
+            if (tile.type == TileType.WASTE){
+                continue;
+            }
+
+            tile.setValue(valueList.get(index++));
+        }
+    }
+
 
     @Override
     public void shuffleTiles() {
