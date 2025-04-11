@@ -40,6 +40,24 @@ class TileTest {
         assertEquals(tile.id, tile.getId(), "getId() doesn't return id");
     }
 
+
+    @Test
+    void testSetValueInitializesValueCorrectly(){
+        assertEquals(0, tile.value, "value should be initialized at 0");
+        tile.setValue(5);
+        assertEquals(5, tile.getValue(), "value should update the first time");
+        assertEquals(5, tile.value, "internal value should match");
+    }
+
+    @Test
+    void testSetValueDoesNotUpdateIfAlreadySet(){
+        tile.setValue(8);
+        assertEquals(8, tile.getValue(), "Value should be set initially");
+
+        tile.setValue(10);
+        assertEquals(8, tile.getValue(), "Value should not update the second time");
+        assertEquals(8, tile.value, "Internal value should remain unchanged");
+    }
     @Test
     void testIdSetterInitializesValueCorrectly(){
         assertEquals(0, tile.id, "id should be initialized at 0");

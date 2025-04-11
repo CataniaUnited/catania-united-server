@@ -58,6 +58,7 @@ class TileListDirectorTest {
         inOrder.verify(mockBuilder).reset();
         inOrder.verify(mockBuilder).setConfiguration(3, 10, true);
         inOrder.verify(mockBuilder).buildTiles();
+        inOrder.verify(mockBuilder).addValues();
         inOrder.verify(mockBuilder).shuffleTiles();
         inOrder.verify(mockBuilder).assignTileIds();
         inOrder.verify(mockBuilder).calculateTilePositions();
