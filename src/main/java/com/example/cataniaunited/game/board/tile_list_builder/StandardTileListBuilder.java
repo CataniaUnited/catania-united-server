@@ -33,7 +33,7 @@ public class StandardTileListBuilder implements TileListBuilder{
         this.sizeOfBoard = 0;
         this.sizeOfHex = 0;
         this.flipYAxis = true;
-        this.tileList = null;
+        this.tileList = new ArrayList<>();
         this.amountOfTilesOnBoard = 0;
         this.distanceBetweenTiles = 0;
         this.northWestAddition = null;
