@@ -38,7 +38,7 @@ class StandardTileListBuilderTest {
         assertEquals(0, builder.sizeOfBoard, "sizeOfBoard should be 0 after reset");
         assertEquals(0, builder.sizeOfHex, "sizeOfHex should be 0 after reset");
         assertTrue(builder.flipYAxis, "flipYAxis should be true after reset");
-        assertNull(builder.tileList, "tileList should be null after reset");
+        assertTrue(builder.tileList.isEmpty(), "tileList should be empty after reset");
         assertEquals(0, builder.amountOfTilesOnBoard, "amountOfTilesOnBoard should be 0 after reset");
         assertEquals(0.0, builder.distanceBetweenTiles, 0.001, "distanceBetweenTiles should be 0 after reset");
         assertNull(builder.northWestAddition, "northWestAddition should be null after reset");
