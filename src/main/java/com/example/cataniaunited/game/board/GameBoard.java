@@ -1,6 +1,5 @@
 package com.example.cataniaunited.game.board;
 
-import com.example.cataniaunited.api.GameWebSocket;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.board.tile_list_builder.StandardTileListBuilder;
 import com.example.cataniaunited.game.board.tile_list_builder.Tile;

@@ -51,7 +51,7 @@ class GameServiceTest {
     }
 
     @Test
-    void createGameBoardShouldThrowGameException() throws GameException {
+    void createGameBoardShouldThrowGameException() {
         GameException ge = assertThrows(GameException.class, () -> gameService.createGameboard(lobbyMock.getLobbyId()));
         assertEquals("Lobby with id %s not found".formatted(lobbyMock.getLobbyId()), ge.getMessage());
     }
