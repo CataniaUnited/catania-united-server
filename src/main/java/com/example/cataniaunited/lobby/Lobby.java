@@ -1,4 +1,4 @@
-package com.example.cataniaunited.service;
+package com.example.cataniaunited.lobby;
 
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;

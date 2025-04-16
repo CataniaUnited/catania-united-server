@@ -8,6 +8,7 @@ import java.util.*;
 public class GraphBuilder {
     final List<Tile> tileList;
     List<SettlementPosition> nodeList;
+    List<Road> roadList;
     int sizeOfBoard;
 
     int nodeId=0;
@@ -32,6 +33,7 @@ public class GraphBuilder {
         // Initialize node list with expected capacity
         int totalAmountOfSettlementPositions = calculateTotalSettlementPositions(sizeOfBoard);
         this.nodeList = new ArrayList<>(totalAmountOfSettlementPositions);
+        this.roadList = new ArrayList<>(totalAmountOfSettlementPositions);
     }
 
     /**
@@ -56,6 +58,13 @@ public class GraphBuilder {
         calculateRoadCoordinates();
 
         return nodeList;
+    }
+
+    public List<Road> getRoadList() {
+        if (roadList == null  || roadList.isEmpty()) {
+            throw new IllegalStateException("Build graph before accessing road list.");
+        }
+        return roadList;
     }
 
     /**
@@ -242,9 +251,10 @@ public class GraphBuilder {
      * @param b Settlementposition b
      */
     private void createRoadBetweenTwoSettlements(SettlementPosition a, SettlementPosition b){
-        Road roadToAdd = new Road(a, b);
+        Road roadToAdd = new Road(a, b, roadList.size()+1);
         a.addRoad(roadToAdd);
         b.addRoad(roadToAdd);
+        roadList.add(roadToAdd);
     }
 
     private void calculateRoadCoordinates(){

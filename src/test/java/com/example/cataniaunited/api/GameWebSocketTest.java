@@ -2,10 +2,15 @@ package com.example.cataniaunited.api;
 
 import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.dto.MessageType;
+import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.game.GameService;
+import com.example.cataniaunited.game.board.GameBoard;
+import com.example.cataniaunited.lobby.LobbyService;
 import com.example.cataniaunited.player.PlayerService;
-import com.example.cataniaunited.service.LobbyService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.test.common.http.TestHTTPResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.mockito.InjectSpy;
@@ -13,7 +18,11 @@ import io.quarkus.websockets.next.BasicWebSocketConnector;
 import io.quarkus.websockets.next.OpenConnections;
 import io.quarkus.websockets.next.WebSocketConnection;
 import jakarta.inject.Inject;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.net.URI;
 import java.time.Duration;
@@ -22,12 +31,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 @QuarkusTest
 public class GameWebSocketTest {
@@ -44,8 +59,18 @@ public class GameWebSocketTest {
     @InjectSpy
     LobbyService lobbyService;
 
+    @InjectSpy
+    GameService gameService;
+
+    ObjectMapper objectMapper;
+
+    @BeforeEach
+    void setup() {
+        objectMapper = new ObjectMapper();
+    }
+
     @Test
-    void testWebSocketOnOpen() throws InterruptedException {
+    void testWebSocketOnOpen() throws InterruptedException, JsonProcessingException {
         List<String> receivedMessages = new ArrayList<>();
         CountDownLatch messageLatch = new CountDownLatch(1);
         var openConnections = connections.listAll().size();
@@ -62,13 +87,17 @@ public class GameWebSocketTest {
         boolean allMessagesReceived = messageLatch.await(5, TimeUnit.SECONDS);
 
         assertTrue(allMessagesReceived, "Not all messages were received in time!");
-        assertEquals("Connection successful", receivedMessages.getFirst());
+
         assertEquals(openConnections + 1, connections.listAll().size());
+        MessageDTO responseMessage = objectMapper.readValue(receivedMessages.getLast(), MessageDTO.class);
+
+        assertEquals(MessageType.CONNECTION_SUCCESSFUL, responseMessage.getType());
+        assertNotNull(responseMessage.getMessageNode("playerId").textValue());
+        verify(playerService).addPlayer(any());
     }
 
     @Test
     void testWebSocketSendMessage() throws InterruptedException, JsonProcessingException {
-        var objectMapper = new ObjectMapper();
         var messageDto = new MessageDTO();
         messageDto.setType(MessageType.CREATE_LOBBY); // Send CREATE_LOBBY request
         messageDto.setPlayer("Player 1");
@@ -105,7 +134,7 @@ public class GameWebSocketTest {
     }
 
     @Test
-    void testWebSocketOnClose() throws InterruptedException {
+    void testWebSocketOnClose() throws InterruptedException, JsonProcessingException {
         List<String> receivedMessages = new ArrayList<>();
         // Expecting 2 messages
         CountDownLatch messageLatch = new CountDownLatch(2);
@@ -136,19 +165,21 @@ public class GameWebSocketTest {
         assertEquals(1, connections.listAll().size());
         assertTrue(allMessagesReceived, "Not all messages were received in time!");
         assertEquals(2, receivedMessages.size());
-        assertEquals("Client disconnected", receivedMessages.getLast());
+
+        MessageDTO responseMessage = objectMapper.readValue(receivedMessages.getLast(), MessageDTO.class);
+        assertEquals(MessageType.CLIENT_DISCONNECTED, responseMessage.getType()); // Expect LOBBY_CREATED response
+        assertNotNull(responseMessage.getMessageNode("playerId").textValue());
+        verify(playerService).removePlayer(any());
     }
 
     @Test
-    void testUnknownCommand() throws InterruptedException, JsonProcessingException {
-        var objectMapper = new ObjectMapper();
+    void testInvalidCommand() throws InterruptedException, JsonProcessingException {
         var unknownMessageDto = new MessageDTO();
         unknownMessageDto.setPlayer("Player 1");
-        // Set a non-null type so the switch statement can work. This will cause the default branch.
         unknownMessageDto.setType(MessageType.ERROR);
 
         List<String> receivedMessages = new ArrayList<>();
-        CountDownLatch messageLatch = new CountDownLatch(1);
+        CountDownLatch messageLatch = new CountDownLatch(2);
 
         var webSocketClientConnection = BasicWebSocketConnector.create()
                 .baseUri(serverUri)
@@ -167,18 +198,49 @@ public class GameWebSocketTest {
         boolean allMessagesReceived = messageLatch.await(5, TimeUnit.SECONDS);
 
         assertTrue(allMessagesReceived, "Not all messages were received in time!");
-        assertEquals(1, receivedMessages.size());
+        assertEquals(2, receivedMessages.size());
 
-        MessageDTO responseMessage = objectMapper.readValue(receivedMessages.get(0), MessageDTO.class);
+        MessageDTO responseMessage = objectMapper.readValue(receivedMessages.getLast(), MessageDTO.class);
 
         assertEquals(MessageType.ERROR, responseMessage.getType());
-        assertEquals("Server", responseMessage.getPlayer());
-        assertEquals("Unknown command", responseMessage.getLobbyId());
+        assertEquals("Invalid client command", responseMessage.getMessageNode("error").textValue());
+    }
+
+    @Test
+    void testInvalidClientMessage() throws InterruptedException, JsonProcessingException {
+        List<String> receivedMessages = new ArrayList<>();
+        CountDownLatch messageLatch = new CountDownLatch(2);
+
+        var webSocketClientConnection = BasicWebSocketConnector.create()
+                .baseUri(serverUri)
+                .path("/game")
+                .onTextMessage((connection, message) -> {
+                    if (message.startsWith("{")) {
+                        receivedMessages.add(message);
+                        messageLatch.countDown();
+                    }
+                })
+                .connectAndAwait();
+
+        String sentMessage = objectMapper
+                .createObjectNode()
+                .put("type", "INVALID")
+                .toString();
+        webSocketClientConnection.sendTextAndAwait(sentMessage);
+
+        boolean allMessagesReceived = messageLatch.await(5, TimeUnit.SECONDS);
+
+        assertTrue(allMessagesReceived, "Not all messages were received in time!");
+        assertEquals(2, receivedMessages.size());
+
+        MessageDTO responseMessage = objectMapper.readValue(receivedMessages.getLast(), MessageDTO.class);
+
+        assertEquals(MessageType.ERROR, responseMessage.getType());
+        assertEquals("Unexpected error", responseMessage.getMessageNode("error").textValue());
     }
 
     @Test
     void testSetUsernameCode() throws InterruptedException, JsonProcessingException {
-        ObjectMapper objectMapper = new ObjectMapper();
         //Receiving two messages, since change is broadcast as well as returned directly
         CountDownLatch latch = new CountDownLatch(2);
         List<String> receivedMessages = new ArrayList<>();
@@ -212,8 +274,7 @@ public class GameWebSocketTest {
     @Test
     void testSetUsernameOfNonExistingPlayer() throws JsonProcessingException, InterruptedException {
         doReturn(null).when(playerService).getPlayerByConnection(any(WebSocketConnection.class));
-        ObjectMapper objectMapper = new ObjectMapper();
-        CountDownLatch latch = new CountDownLatch(1);
+        CountDownLatch latch = new CountDownLatch(2);
         List<String> receivedMessages = new ArrayList<>();
 
         var client = BasicWebSocketConnector.create()
@@ -234,15 +295,13 @@ public class GameWebSocketTest {
 
         assertTrue(latch.await(5, TimeUnit.SECONDS), "Did not receive all messages");
 
-        MessageDTO received = objectMapper.readValue(receivedMessages.getFirst(), MessageDTO.class);
+        MessageDTO received = objectMapper.readValue(receivedMessages.getLast(), MessageDTO.class);
         assertEquals(MessageType.ERROR, received.getType());
-        assertEquals("Server", received.getPlayer());
-        assertEquals("No player session", received.getLobbyId());
+        assertEquals("No player session", received.getMessageNode("error").textValue());
     }
 
     @Test
     void testJoinLobbySuccess() throws InterruptedException, JsonProcessingException {
-        ObjectMapper objectMapper = new ObjectMapper();
         MessageDTO joinLobbyMessage = new MessageDTO(MessageType.JOIN_LOBBY, "Player 1", "abc123");
 
         doReturn(true).when(lobbyService).joinLobbyByCode("abc123", "Player 1");
@@ -251,7 +310,7 @@ public class GameWebSocketTest {
                 .baseUri(serverUri)
                 .path("/game")
                 .onTextMessage((connection, message) -> {
-                    if(message.startsWith("{")){
+                    if (message.startsWith("{")) {
                         latch.countDown();
                     }
                 })
@@ -263,7 +322,6 @@ public class GameWebSocketTest {
 
     @Test
     void testJoinLobbyFailure() throws InterruptedException, JsonProcessingException {
-        ObjectMapper objectMapper = new ObjectMapper();
         MessageDTO joinLobbyMessage = new MessageDTO(MessageType.JOIN_LOBBY, "Player 1", "invalidLobbyId");
 
         doReturn(false).when(lobbyService).joinLobbyByCode("invalidLobbyId", "Player 1");
@@ -272,7 +330,7 @@ public class GameWebSocketTest {
                 .baseUri(serverUri)
                 .path("/game")
                 .onTextMessage((connection, message) -> {
-                    if(message.startsWith("{")){
+                    if (message.startsWith("{")) {
                         latch.countDown();
                     }
                 })
@@ -281,5 +339,198 @@ public class GameWebSocketTest {
 
         assertTrue(latch.await(5, TimeUnit.SECONDS), "Did not receive ERROR message in time");
 
+    }
+
+    @Test
+    void testPlacementOfSettlement() throws GameException, JsonProcessingException, InterruptedException {
+        //Setup Players, Lobby and Gameboard
+        String player1 = "Player1";
+        String player2 = "Player2";
+        String lobbyId = lobbyService.createLobby(player1);
+        lobbyService.joinLobbyByCode(lobbyId, player2);
+        GameBoard gameBoard = gameService.createGameboard(lobbyId);
+
+        assertNull(gameBoard.getSettlementPositionGraph().getFirst().getBuildingOwner());
+        //Create message DTO
+        int positionId = gameBoard.getSettlementPositionGraph().getFirst().getId();
+        ObjectNode placeSettlementMessageNode = objectMapper
+                .createObjectNode()
+                .put("settlementPositionId", positionId);
+
+        var placeSettlementMessageDTO = new MessageDTO(MessageType.PLACE_SETTLEMENT, player2, lobbyId, placeSettlementMessageNode);
+
+        List<String> receivedMessages = new ArrayList<>();
+        CountDownLatch messageLatch = new CountDownLatch(3);
+
+        var webSocketClientConnection = BasicWebSocketConnector.create()
+                .baseUri(serverUri)
+                .path("/game")
+                .onTextMessage((connection, message) -> {
+                    if (message.startsWith("{")) {
+                        receivedMessages.add(message);
+                        messageLatch.countDown();
+                    }
+                })
+                .connectAndAwait();
+
+        String sentMessage = objectMapper.writeValueAsString(placeSettlementMessageDTO);
+        webSocketClientConnection.sendTextAndAwait(sentMessage);
+
+        boolean allMessagesReceived = messageLatch.await(5, TimeUnit.SECONDS);
+
+        assertTrue(allMessagesReceived, "Not all messages were received in time!");
+
+        MessageDTO responseMessage = objectMapper.readValue(receivedMessages.getLast(), MessageDTO.class);
+        assertEquals(MessageType.PLACE_SETTLEMENT, responseMessage.getType());
+        assertEquals(player2, responseMessage.getPlayer());
+        assertEquals(lobbyId, responseMessage.getLobbyId());
+
+        var actualSettlementPosition = gameService.getGameboardByLobbyId(lobbyId).getSettlementPositionGraph().getFirst();
+        assertEquals(player2, actualSettlementPosition.getBuildingOwner());
+        verify(gameService).placeSettlement(lobbyId, player2, actualSettlementPosition.getId());
+    }
+
+    @ParameterizedTest
+    @MethodSource("invalidPlaceSettlementMessageNodes")
+    void placementOfSettlementShouldFailForInvalidMessageNode(ObjectNode placeSettlementMessageNode) throws GameException, JsonProcessingException, InterruptedException {
+        //Setup Players, Lobby and Gameboard
+        String player1 = "Player1";
+        String player2 = "Player2";
+        String lobbyId = lobbyService.createLobby(player1);
+        lobbyService.joinLobbyByCode(lobbyId, player2);
+        gameService.createGameboard(lobbyId);
+
+        //Create message DTO
+        var placeSettlementMessageDTO = new MessageDTO(MessageType.PLACE_SETTLEMENT, player2, lobbyId, placeSettlementMessageNode);
+
+        List<String> receivedMessages = new ArrayList<>();
+        CountDownLatch messageLatch = new CountDownLatch(2);
+
+        var webSocketClientConnection = BasicWebSocketConnector.create()
+                .baseUri(serverUri)
+                .path("/game")
+                .onTextMessage((connection, message) -> {
+                    if (message.startsWith("{")) {
+                        receivedMessages.add(message);
+                        messageLatch.countDown();
+                    }
+                })
+                .connectAndAwait();
+
+        String sentMessage = objectMapper.writeValueAsString(placeSettlementMessageDTO);
+        webSocketClientConnection.sendTextAndAwait(sentMessage);
+
+        boolean allMessagesReceived = messageLatch.await(5, TimeUnit.SECONDS);
+
+        assertTrue(allMessagesReceived, "Not all messages were received in time!");
+
+        MessageDTO responseMessage = objectMapper.readValue(receivedMessages.getLast(), MessageDTO.class);
+        assertEquals(MessageType.ERROR, responseMessage.getType());
+        assertEquals("Invalid settlement position id: id = %s".formatted(placeSettlementMessageDTO.getMessageNode("settlementPositionId").toString()), responseMessage.getMessageNode("error").textValue());
+
+        verify(gameService, never()).placeSettlement(anyString(), anyString(), anyInt());
+    }
+
+    @Test
+    void testPlacementOfRoad() throws GameException, JsonProcessingException, InterruptedException {
+        //Setup Players, Lobby and Gameboard
+        String player1 = "Player1";
+        String player2 = "Player2";
+        String lobbyId = lobbyService.createLobby(player1);
+        lobbyService.joinLobbyByCode(lobbyId, player2);
+        GameBoard gameBoard = gameService.createGameboard(lobbyId);
+
+        assertNull(gameBoard.getRoadList().getFirst().getOwnerPlayerId());
+        //Create message DTO
+        int positionId = gameBoard.getRoadList().getFirst().getId();
+        ObjectNode placeRoadMessageNode = objectMapper
+                .createObjectNode()
+                .put("roadId", positionId);
+
+        var placeRoadMessageDTO = new MessageDTO(MessageType.PLACE_ROAD, player2, lobbyId, placeRoadMessageNode);
+
+        List<String> receivedMessages = new ArrayList<>();
+        CountDownLatch messageLatch = new CountDownLatch(3);
+
+        var webSocketClientConnection = BasicWebSocketConnector.create()
+                .baseUri(serverUri)
+                .path("/game")
+                .onTextMessage((connection, message) -> {
+                    if (message.startsWith("{")) {
+                        receivedMessages.add(message);
+                        messageLatch.countDown();
+                    }
+                })
+                .connectAndAwait();
+
+        String sentMessage = objectMapper.writeValueAsString(placeRoadMessageDTO);
+        webSocketClientConnection.sendTextAndAwait(sentMessage);
+
+        boolean allMessagesReceived = messageLatch.await(5, TimeUnit.SECONDS);
+
+        assertTrue(allMessagesReceived, "Not all messages were received in time!");
+
+        MessageDTO responseMessage = objectMapper.readValue(receivedMessages.getLast(), MessageDTO.class);
+        assertEquals(MessageType.PLACE_ROAD, responseMessage.getType());
+        assertEquals(player2, responseMessage.getPlayer());
+        assertEquals(lobbyId, responseMessage.getLobbyId());
+
+        var actualRoad = gameService.getGameboardByLobbyId(lobbyId).getRoadList().getFirst();
+        assertEquals(player2, actualRoad.getOwnerPlayerId());
+        verify(gameService).placeRoad(lobbyId, player2, actualRoad.getId());
+    }
+
+    @ParameterizedTest
+    @MethodSource("invalidPlaceRoadMessageNodes")
+    void placementOfRoadShouldFailForInvalidMessageNode(ObjectNode placeRoadMessageNode) throws GameException, JsonProcessingException, InterruptedException {
+        //Setup Players, Lobby and Gameboard
+        String player1 = "Player1";
+        String player2 = "Player2";
+        String lobbyId = lobbyService.createLobby(player1);
+        lobbyService.joinLobbyByCode(lobbyId, player2);
+        gameService.createGameboard(lobbyId);
+        //Create message DTO
+        var placeRoadMessageDTO = new MessageDTO(MessageType.PLACE_ROAD, player2, lobbyId, placeRoadMessageNode);
+
+        List<String> receivedMessages = new ArrayList<>();
+        CountDownLatch messageLatch = new CountDownLatch(2);
+
+        var webSocketClientConnection = BasicWebSocketConnector.create()
+                .baseUri(serverUri)
+                .path("/game")
+                .onTextMessage((connection, message) -> {
+                    if (message.startsWith("{")) {
+                        receivedMessages.add(message);
+                        messageLatch.countDown();
+                    }
+                })
+                .connectAndAwait();
+
+        String sentMessage = objectMapper.writeValueAsString(placeRoadMessageDTO);
+        webSocketClientConnection.sendTextAndAwait(sentMessage);
+
+        boolean allMessagesReceived = messageLatch.await(5, TimeUnit.SECONDS);
+
+        assertTrue(allMessagesReceived, "Not all messages were received in time!");
+
+        MessageDTO responseMessage = objectMapper.readValue(receivedMessages.getLast(), MessageDTO.class);
+        assertEquals(MessageType.ERROR, responseMessage.getType());
+        assertEquals("Invalid road id: id = %s".formatted(placeRoadMessageDTO.getMessageNode("roadId")), responseMessage.getMessageNode("error").textValue());
+
+        verify(gameService, never()).placeSettlement(anyString(), anyString(), anyInt());
+    }
+
+    static Stream<Arguments> invalidPlaceSettlementMessageNodes() {
+        return Stream.of(
+                Arguments.of(JsonNodeFactory.instance.objectNode().put("settlementPositionId", "NoInteger")),
+                Arguments.of(JsonNodeFactory.instance.objectNode().put("roadId", "1"))
+        );
+    }
+
+    static Stream<Arguments> invalidPlaceRoadMessageNodes() {
+        return Stream.of(
+                Arguments.of(JsonNodeFactory.instance.objectNode().put("roadId", "NoInteger")),
+                Arguments.of(JsonNodeFactory.instance.objectNode().put("settlementPositionId", "1"))
+        );
     }
 }
