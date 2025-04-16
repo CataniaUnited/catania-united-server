@@ -193,11 +193,10 @@ class RoadTest {
     }
 
     @Test
-    void setOwnerPlayerIdShouldThrowErrorOnPlayerMismatch() throws GameException {
+    void setOwnerPlayerIdShouldThrowErrorIfRoadIsAlreadyPlaced() throws GameException {
         String playerId = "Player1";
-        String secondPlayerId = "Player2";
         road.setOwnerPlayerId(playerId);
-        GameException ge = assertThrows(GameException.class, () -> road.setOwnerPlayerId(secondPlayerId));
-        assertEquals("Player ID mismatch when placing road: roadId = %s, playerId = %s".formatted(road.id, secondPlayerId), ge.getMessage());
+        GameException ge = assertThrows(GameException.class, () -> road.setOwnerPlayerId(playerId));
+        assertEquals("Road cannot be placed twice: roadId = %s, playerId = %s".formatted(road.id, playerId), ge.getMessage());
     }
 }

@@ -258,6 +258,6 @@ class SettlementPositionTest {
         String secondPlayerId = "Player2";
         Settlement settlement2 = new Settlement(secondPlayerId);
         GameException ge = assertThrows(GameException.class, () -> settlementPosition.setBuilding(settlement2));
-        assertEquals("Player ID mismatch when placing building: positionId = %s, playerId = %s".formatted(settlementPosition.id, secondPlayerId), ge.getMessage());
+        assertEquals("Player mismatch when placing building: positionId = %s, playerId = %s".formatted(settlementPosition.id, secondPlayerId), ge.getMessage());
     }
 }

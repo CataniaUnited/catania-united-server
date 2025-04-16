@@ -78,7 +78,7 @@ public class SettlementPosition implements Placable {
 
     public void setBuilding(Building building) throws GameException {
         if (this.building != null && !this.building.getOwnerPlayerId().equals(building.getOwnerPlayerId())) {
-            throw new GameException("Player ID mismatch when placing building: positionId = %s, playerId = %s", id, building.getOwnerPlayerId());
+            throw new GameException("Player mismatch when placing building: positionId = %s, playerId = %s", id, building.getOwnerPlayerId());
         }
         this.building = building;
     }

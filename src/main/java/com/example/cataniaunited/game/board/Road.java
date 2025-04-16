@@ -25,8 +25,8 @@ public class Road implements Placable {
             throw new GameException("Owner Id of road must not be empty");
         }
 
-        if (this.ownerPlayerId != null && !this.ownerPlayerId.equals(ownerPlayerId)) {
-            throw new GameException("Player ID mismatch when placing road: roadId = %s, playerId = %s", id, ownerPlayerId);
+        if (!Util.isEmpty(this.ownerPlayerId)) {
+            throw new GameException("Road cannot be placed twice: roadId = %s, playerId = %s", id, ownerPlayerId);
         }
         this.ownerPlayerId = ownerPlayerId;
     }
