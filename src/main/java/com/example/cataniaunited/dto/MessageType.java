@@ -1,11 +1,19 @@
 package com.example.cataniaunited.dto;
 
 public enum MessageType {
-    CREATE_LOBBY,
-    LOBBY_CREATED,
-    JOIN_LOBBY,
-    PLAYER_JOINED,
-    SET_USERNAME,
-    LOBBY_UPDATED,
+
+    //Server Messages
+    CONNECTION_SUCCESSFUL,
+    CLIENT_DISCONNECTED,
     ERROR,
+    LOBBY_UPDATED,
+    PLAYER_JOINED,
+    LOBBY_CREATED,
+
+    //Client Messages
+    CREATE_LOBBY,
+    JOIN_LOBBY,
+    SET_USERNAME,
+    PLACE_SETTLEMENT,
+    PLACE_ROAD
 }

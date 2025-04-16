@@ -1,4 +1,6 @@
 package com.example.cataniaunited.game.board;
+
+import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.board.tile_list_builder.Tile;
 import com.example.cataniaunited.game.buildings.Building;
 
@@ -14,8 +16,7 @@ public class SettlementPosition implements Placable {
 
     final int id;
 
-
-    public SettlementPosition(int id){
+    public SettlementPosition(int id) {
         this.id = id;
     }
 
@@ -33,7 +34,7 @@ public class SettlementPosition implements Placable {
                 '}', this.coordinates[0], this.coordinates[1]);
     }
 
-    public List<SettlementPosition> getNeighbours(){
+    public List<SettlementPosition> getNeighbours() {
         return roads.stream().map(r -> r.getNeighbour(this)).toList();
     }
 
@@ -45,7 +46,7 @@ public class SettlementPosition implements Placable {
         return List.copyOf(roads);
     }
 
-    public void addTile(Tile tileToAdd){
+    public void addTile(Tile tileToAdd) {
         // If already added, do nothing
         if (tiles.contains(tileToAdd)) {
             return;
@@ -73,6 +74,17 @@ public class SettlementPosition implements Placable {
         if (this.coordinates[0] == 0 && this.coordinates[1] == 0) {
             this.coordinates = new double[]{x, y};
         }
+    }
+
+    public void setBuilding(Building building) throws GameException {
+        if (this.building != null && !this.building.getOwnerPlayerId().equals(building.getOwnerPlayerId())) {
+            throw new GameException("Player mismatch when placing building: positionId = %s, playerId = %s", id, building.getOwnerPlayerId());
+        }
+        this.building = building;
+    }
+
+    public String getBuildingOwner(){
+        return this.building == null ? null : building.getOwnerPlayerId();
     }
 
     public double[] getCoordinates() {

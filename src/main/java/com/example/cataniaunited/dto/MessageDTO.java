@@ -1,22 +1,40 @@
 package com.example.cataniaunited.dto;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
 import java.util.List;
+import java.util.Optional;
 
 public class MessageDTO {
 
     private MessageType type;
     private String player;
     private String lobbyId;
-
     private List<String> players;
+    //Generic JSON Object
+    private ObjectNode message;
 
     public MessageDTO() {
+    }
+
+    public MessageDTO(MessageType type, ObjectNode message) {
+        this.type = type;
+        this.message = message;
     }
 
     public MessageDTO(MessageType type, String player, String lobbyId) {
         this.type = type;
         this.player = player;
         this.lobbyId = lobbyId;
+    }
+
+    public MessageDTO(MessageType type, String player, String lobbyId, ObjectNode message) {
+        this.type = type;
+        this.player = player;
+        this.lobbyId = lobbyId;
+        this.message = message;
     }
 
     public MessageDTO(MessageType type, String player, String lobbyId, List<String> players) {
@@ -55,7 +73,26 @@ public class MessageDTO {
         return players;
     }
 
-    public void setPlayers(List<String> players) {
-        this.players = players;
+    public ObjectNode getMessage() {
+        return message;
+    }
+
+    /**
+     * Returns the json node of this message with the given name.
+     * If no node is found, an empty object node is returned to prevent NullPointerException
+     */
+    public JsonNode getMessageNode(String nodeName) {
+        return Optional.ofNullable(message.get(nodeName)).orElse(JsonNodeFactory.instance.objectNode());
+    }
+
+    @Override
+    public String toString() {
+        return "MessageDTO{" +
+                "type=" + type +
+                ", player='" + player + '\'' +
+                ", lobbyId='" + lobbyId + '\'' +
+                ", players=" + players +
+                ", message=" + message +
+                '}';
     }
 }

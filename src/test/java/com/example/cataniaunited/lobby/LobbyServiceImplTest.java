@@ -1,5 +1,6 @@
-package com.example.cataniaunited.service;
+package com.example.cataniaunited.lobby;
 
+import com.example.cataniaunited.exception.GameException;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
@@ -66,7 +67,7 @@ class LobbyServiceImplTest {
     }
 
     @Test
-    void testJoinLobbyByValidCode (){
+    void testJoinLobbyByValidCode () throws GameException {
         String hostPlayer = "HostPlayer";
         String joiningPlayer = "NewPlayer";
 

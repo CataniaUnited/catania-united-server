@@ -1,5 +1,6 @@
-package com.example.cataniaunited.service;
+package com.example.cataniaunited.lobby;
 
+import com.example.cataniaunited.exception.GameException;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.jboss.logging.Logger;
 
@@ -70,8 +71,13 @@ public class LobbyServiceImpl implements LobbyService {
     }
 
     @Override
-    public Lobby getLobbyById(String lobbyId) {
-        return lobbies.get(lobbyId);
+    public Lobby getLobbyById(String lobbyId) throws GameException {
+        Lobby lobby = lobbies.get(lobbyId);
+        if (lobby == null) {
+            logger.errorf("Lobby not found: id = %s", lobbyId);
+            throw new GameException("Lobby with id %s not found", lobbyId);
+        }
+        return lobby;
     }
 
     @Override
