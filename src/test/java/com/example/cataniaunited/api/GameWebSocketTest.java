@@ -89,7 +89,7 @@ public class GameWebSocketTest {
         assertTrue(allMessagesReceived, "Not all messages were received in time!");
 
         assertEquals(openConnections + 1, connections.listAll().size());
-        MessageDTO responseMessage = objectMapper.readValue(receivedMessages.getLast(), MessageDTO.class);
+        MessageDTO responseMessage = objectMapper.readValue(receivedMessages.get(receivedMessages.size() - 1), MessageDTO.class);
 
         assertEquals(MessageType.CONNECTION_SUCCESSFUL, responseMessage.getType());
         assertNotNull(responseMessage.getMessageNode("playerId").textValue());
@@ -126,7 +126,7 @@ public class GameWebSocketTest {
         assertTrue(allMessagesReceived, "Not all messages were received in time!");
         assertEquals(2, receivedMessages.size());
 
-        MessageDTO responseMessage = objectMapper.readValue(receivedMessages.getLast(), MessageDTO.class);
+        MessageDTO responseMessage = objectMapper.readValue(receivedMessages.get(receivedMessages.size() - 1), MessageDTO.class);
 
         assertEquals(MessageType.LOBBY_CREATED, responseMessage.getType()); // Expect LOBBY_CREATED response
         assertEquals("Player 1", responseMessage.getPlayer()); // Player should remain the same
@@ -166,7 +166,7 @@ public class GameWebSocketTest {
         assertTrue(allMessagesReceived, "Not all messages were received in time!");
         assertEquals(2, receivedMessages.size());
 
-        MessageDTO responseMessage = objectMapper.readValue(receivedMessages.getLast(), MessageDTO.class);
+        MessageDTO responseMessage = objectMapper.readValue(receivedMessages.get(receivedMessages.size() - 1), MessageDTO.class);
         assertEquals(MessageType.CLIENT_DISCONNECTED, responseMessage.getType()); // Expect LOBBY_CREATED response
         assertNotNull(responseMessage.getMessageNode("playerId").textValue());
         verify(playerService).removePlayer(any());
@@ -200,7 +200,7 @@ public class GameWebSocketTest {
         assertTrue(allMessagesReceived, "Not all messages were received in time!");
         assertEquals(2, receivedMessages.size());
 
-        MessageDTO responseMessage = objectMapper.readValue(receivedMessages.getLast(), MessageDTO.class);
+        MessageDTO responseMessage = objectMapper.readValue(receivedMessages.get(receivedMessages.size() - 1), MessageDTO.class);
 
         assertEquals(MessageType.ERROR, responseMessage.getType());
         assertEquals("Invalid client command", responseMessage.getMessageNode("error").textValue());
@@ -233,7 +233,7 @@ public class GameWebSocketTest {
         assertTrue(allMessagesReceived, "Not all messages were received in time!");
         assertEquals(2, receivedMessages.size());
 
-        MessageDTO responseMessage = objectMapper.readValue(receivedMessages.getLast(), MessageDTO.class);
+        MessageDTO responseMessage = objectMapper.readValue(receivedMessages.get(receivedMessages.size() - 1), MessageDTO.class);
 
         assertEquals(MessageType.ERROR, responseMessage.getType());
         assertEquals("Unexpected error", responseMessage.getMessageNode("error").textValue());
@@ -264,7 +264,7 @@ public class GameWebSocketTest {
         assertTrue(latch.await(5, TimeUnit.SECONDS), "Did not receive LOBBY_UPDATED in time");
         assertEquals(2, receivedMessages.size());
 
-        MessageDTO received = objectMapper.readValue(receivedMessages.getLast(), MessageDTO.class);
+        MessageDTO received = objectMapper.readValue(receivedMessages.get(receivedMessages.size() - 1), MessageDTO.class);
         assertEquals(MessageType.LOBBY_UPDATED, received.getType());
         assertEquals("Chicken", received.getPlayer());
         assertNotNull(received.getPlayers());
@@ -295,7 +295,7 @@ public class GameWebSocketTest {
 
         assertTrue(latch.await(5, TimeUnit.SECONDS), "Did not receive all messages");
 
-        MessageDTO received = objectMapper.readValue(receivedMessages.getLast(), MessageDTO.class);
+        MessageDTO received = objectMapper.readValue(receivedMessages.get(receivedMessages.size() - 1), MessageDTO.class);
         assertEquals(MessageType.ERROR, received.getType());
         assertEquals("No player session", received.getMessageNode("error").textValue());
     }
@@ -350,9 +350,9 @@ public class GameWebSocketTest {
         lobbyService.joinLobbyByCode(lobbyId, player2);
         GameBoard gameBoard = gameService.createGameboard(lobbyId);
 
-        assertNull(gameBoard.getSettlementPositionGraph().getFirst().getBuildingOwner());
+        assertNull(gameBoard.getSettlementPositionGraph().get(0).getBuildingOwner());
         //Create message DTO
-        int positionId = gameBoard.getSettlementPositionGraph().getFirst().getId();
+        int positionId = gameBoard.getSettlementPositionGraph().get(0).getId();
         ObjectNode placeSettlementMessageNode = objectMapper
                 .createObjectNode()
                 .put("settlementPositionId", positionId);
@@ -380,12 +380,12 @@ public class GameWebSocketTest {
 
         assertTrue(allMessagesReceived, "Not all messages were received in time!");
 
-        MessageDTO responseMessage = objectMapper.readValue(receivedMessages.getLast(), MessageDTO.class);
+        MessageDTO responseMessage = objectMapper.readValue(receivedMessages.get(receivedMessages.size() - 1), MessageDTO.class);
         assertEquals(MessageType.PLACE_SETTLEMENT, responseMessage.getType());
         assertEquals(player2, responseMessage.getPlayer());
         assertEquals(lobbyId, responseMessage.getLobbyId());
 
-        var actualSettlementPosition = gameService.getGameboardByLobbyId(lobbyId).getSettlementPositionGraph().getFirst();
+        var actualSettlementPosition = gameService.getGameboardByLobbyId(lobbyId).getSettlementPositionGraph().get(0);
         assertEquals(player2, actualSettlementPosition.getBuildingOwner());
         verify(gameService).placeSettlement(lobbyId, player2, actualSettlementPosition.getId());
     }
@@ -424,7 +424,7 @@ public class GameWebSocketTest {
 
         assertTrue(allMessagesReceived, "Not all messages were received in time!");
 
-        MessageDTO responseMessage = objectMapper.readValue(receivedMessages.getLast(), MessageDTO.class);
+        MessageDTO responseMessage = objectMapper.readValue(receivedMessages.get(receivedMessages.size() - 1), MessageDTO.class);
         assertEquals(MessageType.ERROR, responseMessage.getType());
         assertEquals("Invalid settlement position id: id = %s".formatted(placeSettlementMessageDTO.getMessageNode("settlementPositionId").toString()), responseMessage.getMessageNode("error").textValue());
 
@@ -440,9 +440,9 @@ public class GameWebSocketTest {
         lobbyService.joinLobbyByCode(lobbyId, player2);
         GameBoard gameBoard = gameService.createGameboard(lobbyId);
 
-        assertNull(gameBoard.getRoadList().getFirst().getOwnerPlayerId());
+        assertNull(gameBoard.getRoadList().get(0).getOwnerPlayerId());
         //Create message DTO
-        int positionId = gameBoard.getRoadList().getFirst().getId();
+        int positionId = gameBoard.getRoadList().get(0).getId();
         ObjectNode placeRoadMessageNode = objectMapper
                 .createObjectNode()
                 .put("roadId", positionId);
@@ -470,12 +470,12 @@ public class GameWebSocketTest {
 
         assertTrue(allMessagesReceived, "Not all messages were received in time!");
 
-        MessageDTO responseMessage = objectMapper.readValue(receivedMessages.getLast(), MessageDTO.class);
+        MessageDTO responseMessage = objectMapper.readValue(receivedMessages.get(receivedMessages.size() - 1), MessageDTO.class);
         assertEquals(MessageType.PLACE_ROAD, responseMessage.getType());
         assertEquals(player2, responseMessage.getPlayer());
         assertEquals(lobbyId, responseMessage.getLobbyId());
 
-        var actualRoad = gameService.getGameboardByLobbyId(lobbyId).getRoadList().getFirst();
+        var actualRoad = gameService.getGameboardByLobbyId(lobbyId).getRoadList().get(0);
         assertEquals(player2, actualRoad.getOwnerPlayerId());
         verify(gameService).placeRoad(lobbyId, player2, actualRoad.getId());
     }
@@ -513,7 +513,7 @@ public class GameWebSocketTest {
 
         assertTrue(allMessagesReceived, "Not all messages were received in time!");
 
-        MessageDTO responseMessage = objectMapper.readValue(receivedMessages.getLast(), MessageDTO.class);
+        MessageDTO responseMessage = objectMapper.readValue(receivedMessages.get(receivedMessages.size() - 1), MessageDTO.class);
         assertEquals(MessageType.ERROR, responseMessage.getType());
         assertEquals("Invalid road id: id = %s".formatted(placeRoadMessageDTO.getMessageNode("roadId")), responseMessage.getMessageNode("error").textValue());
 

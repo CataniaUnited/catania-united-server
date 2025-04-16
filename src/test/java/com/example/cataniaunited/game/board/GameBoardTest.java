@@ -170,7 +170,7 @@ class GameBoardTest {
     @Test
     void testPlaceSettlement() throws GameException {
         GameBoard gameBoard = new GameBoard(2);
-        var settlementPosition = gameBoard.getSettlementPositionGraph().getFirst();
+        var settlementPosition = gameBoard.getSettlementPositionGraph().get(0);
         String playerId = "Player1";
         gameBoard.placeSettlement(playerId, settlementPosition.getId());
         assertNotNull(settlementPosition.building);
@@ -197,7 +197,7 @@ class GameBoardTest {
     @MethodSource("invalidPlayerIds")
     void placeSettlementShouldThrowExceptionIfPlayerIdIsEmpty(String playerId){
         GameBoard gameBoard = new GameBoard(2);
-        int positionId = gameBoard.getSettlementPositionGraph().getFirst().getId();
+        int positionId = gameBoard.getSettlementPositionGraph().get(0).getId();
         GameException ge = assertThrows(GameException.class, () -> gameBoard.placeSettlement(playerId, positionId));
         assertEquals("Owner Id of building must not be empty", ge.getMessage());
     }
@@ -205,7 +205,7 @@ class GameBoardTest {
     @Test
     void testPlaceRoad() throws GameException {
         GameBoard gameBoard = new GameBoard(2);
-        var road = gameBoard.roadList.getFirst();
+        var road = gameBoard.roadList.get(0);
         String playerId = "Player1";
         gameBoard.placeRoad(playerId, road.getId());
         assertEquals(playerId, road.ownerPlayerId);
@@ -230,7 +230,7 @@ class GameBoardTest {
     @MethodSource("invalidPlayerIds")
     void placeRoadShouldThrowExceptionIfPlayerIdIsEmpty(String playerId){
         GameBoard gameBoard = new GameBoard(2);
-        var road = gameBoard.roadList.getFirst();
+        var road = gameBoard.roadList.get(0);
         GameException ge = assertThrows(GameException.class, () -> gameBoard.placeRoad(playerId, road.getId()));
         assertEquals("Owner Id of road must not be empty", ge.getMessage());
     }
