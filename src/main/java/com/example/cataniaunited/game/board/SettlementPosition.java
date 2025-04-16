@@ -3,6 +3,9 @@ package com.example.cataniaunited.game.board;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.board.tile_list_builder.Tile;
 import com.example.cataniaunited.game.buildings.Building;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -90,4 +93,28 @@ public class SettlementPosition implements Placable {
     public double[] getCoordinates() {
         return coordinates.clone();
     }
+
+    @Override
+    public ObjectNode toJson() {
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode settlementPositionNode = mapper.createObjectNode();
+
+        settlementPositionNode.put("id", this.id);
+
+
+        settlementPositionNode.put("building", String.valueOf(this.building)); // type of Building
+
+
+        if (this.coordinates != null && this.coordinates.length == 2) {
+            ArrayNode coordsNode = mapper.createArrayNode();
+            coordsNode.add(this.coordinates[0]); // Add x
+            coordsNode.add(this.coordinates[1]); // Add y
+            settlementPositionNode.set("coordinates", coordsNode);
+        } else {
+            settlementPositionNode.putNull("coordinates");
+        }
+
+        return settlementPositionNode;
+    }
+
 }

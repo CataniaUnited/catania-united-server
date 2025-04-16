@@ -4,10 +4,12 @@ import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.lobby.Lobby;
 import com.example.cataniaunited.lobby.LobbyService;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 @ApplicationScoped
@@ -34,6 +36,11 @@ public class GameService {
     public void placeRoad(String lobbyId, String playerId, int roadId) throws GameException {
         GameBoard gameboard = getGameboardByLobbyId(lobbyId);
         gameboard.placeRoad(playerId, roadId);
+    }
+
+    public ObjectNode getJson(String lobbyId) throws GameException{
+        GameBoard gameBoard = getGameboardByLobbyId(lobbyId);
+        return gameBoard.getJson();
     }
 
     public GameBoard getGameboardByLobbyId(String lobbyId) throws GameException {

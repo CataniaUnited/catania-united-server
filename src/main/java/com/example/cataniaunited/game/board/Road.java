@@ -2,6 +2,9 @@ package com.example.cataniaunited.game.board;
 
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.util.Util;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.util.Arrays;
 
@@ -96,4 +99,33 @@ public class Road implements Placable {
         return "Road:{owner: %s; (%s, %s); position: (%s); angle: %f}"
                 .formatted(ownerPlayerId, positionA.getId(), positionB.getId(), Arrays.toString(coordinates), rationAngle);
     }
+
+    @Override
+    public ObjectNode toJson() {
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode roadNode = mapper.createObjectNode();
+
+        roadNode.put("id", this.id);
+
+        if (this.ownerPlayerId != null) {
+            roadNode.put("owner", this.ownerPlayerId);
+        } else {
+            roadNode.putNull("owner");
+        }
+
+
+        if (this.coordinates != null && this.coordinates.length == 2) {
+            ArrayNode coordsNode = mapper.createArrayNode();
+            coordsNode.add(this.coordinates[0]); // Add x
+            coordsNode.add(this.coordinates[1]); // Add y
+            roadNode.set("coordinates", coordsNode);
+        } else {
+            roadNode.putNull("coordinates");
+        }
+
+        roadNode.put("rationAngle", this.rationAngle);
+
+        return roadNode;
+    }
+
 }
