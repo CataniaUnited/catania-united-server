@@ -1,5 +1,6 @@
 package com.example.cataniaunited.game.board;
 
+import com.example.cataniaunited.exception.GameException;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -12,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -33,7 +35,7 @@ class RoadTest {
         mockPositionB = mock(SettlementPosition.class);
 
 
-        road = new Road(mockPositionA, mockPositionB);
+        road = new Road(mockPositionA, mockPositionB, 1);
     }
 
     @Test
@@ -181,5 +183,21 @@ class RoadTest {
         String toString = road.toString();
         String expectedString = "Road:{owner: null; (123, 456); position: ([4.0, 6.0]); angle: -2.356194}";
         assertEquals(expectedString, toString, "String does not match");
+    }
+
+    @Test
+    void testSetOwnerPlayerId() throws GameException {
+        String playerId = "Player1";
+        road.setOwnerPlayerId(playerId);
+        assertEquals(playerId, road.ownerPlayerId);
+    }
+
+    @Test
+    void setOwnerPlayerIdShouldThrowErrorOnPlayerMismatch() throws GameException {
+        String playerId = "Player1";
+        String secondPlayerId = "Player2";
+        road.setOwnerPlayerId(playerId);
+        GameException ge = assertThrows(GameException.class, () -> road.setOwnerPlayerId(secondPlayerId));
+        assertEquals("Player ID mismatch when placing road: roadId = %s, playerId = %s".formatted(road.id, secondPlayerId), ge.getMessage());
     }
 }

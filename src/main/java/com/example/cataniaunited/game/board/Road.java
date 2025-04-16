@@ -1,27 +1,41 @@
 package com.example.cataniaunited.game.board;
 
-import com.example.cataniaunited.player.Player;
+import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.util.Util;
 
 import java.util.Arrays;
 
-public class Road implements Placable{
-    Player owner;
+public class Road implements Placable {
+    String ownerPlayerId;
     final SettlementPosition positionA;
     final SettlementPosition positionB;
+    final int id;
 
     double[] coordinates = new double[2];
     double rationAngle;
 
-    public Road(SettlementPosition positionA, SettlementPosition positionB){
+    public Road(SettlementPosition positionA, SettlementPosition positionB, int id) {
         this.positionA = positionA;
         this.positionB = positionB;
+        this.id = id;
     }
 
-    public SettlementPosition getNeighbour(SettlementPosition currentSettlement){
-        if (this.positionA == currentSettlement){
+    public void setOwnerPlayerId(String ownerPlayerId) throws GameException {
+        if(Util.isEmpty(ownerPlayerId)) {
+            throw new GameException("Owner Id of road must not be empty");
+        }
+
+        if (this.ownerPlayerId != null && !this.ownerPlayerId.equals(ownerPlayerId)) {
+            throw new GameException("Player ID mismatch when placing road: roadId = %s, playerId = %s", id, ownerPlayerId);
+        }
+        this.ownerPlayerId = ownerPlayerId;
+    }
+
+    public SettlementPosition getNeighbour(SettlementPosition currentSettlement) {
+        if (this.positionA == currentSettlement) {
             return positionB;
         }
-        if (this.positionB == currentSettlement){
+        if (this.positionB == currentSettlement) {
             return positionA;
         }
         return null;
@@ -35,8 +49,12 @@ public class Road implements Placable{
         return rationAngle;
     }
 
-    public void setCoordinatesAndRotationAngle(){
-        if (!Arrays.equals(coordinates, new double[]{0, 0})){
+    public int getId() {
+        return id;
+    }
+
+    public void setCoordinatesAndRotationAngle() {
+        if (!Arrays.equals(coordinates, new double[]{0, 0})) {
             return; // position has already been set
         }
 
@@ -51,7 +69,7 @@ public class Road implements Placable{
         xMin = xMax;
         yMin = yMax;
 
-        if (coordinatesOfPositions[0] == 0 && coordinatesOfPositions[1] == 0){  // position of Settlement A is not yet set
+        if (coordinatesOfPositions[0] == 0 && coordinatesOfPositions[1] == 0) {  // position of Settlement A is not yet set
             return;
         }
 
@@ -61,18 +79,21 @@ public class Road implements Placable{
         yMax += coordinatesOfPositions[1];
         yMin -= coordinatesOfPositions[1];
 
-        if (coordinatesOfPositions[0] == 0 && coordinatesOfPositions[1] == 0){  // position of Settlement B is not yet set
+        if (coordinatesOfPositions[0] == 0 && coordinatesOfPositions[1] == 0) {  // position of Settlement B is not yet set
             return;
         }
 
-        this.coordinates = new double[]{xMax/2, yMax/2};
+        this.coordinates = new double[]{xMax / 2, yMax / 2};
         this.rationAngle = StrictMath.atan2(yMin, xMin); // No need to assert that since no Road will be placed on 0,0
+    }
 
+    public String getOwnerPlayerId() {
+        return ownerPlayerId;
     }
 
     @Override
     public String toString() {
         return "Road:{owner: %s; (%s, %s); position: (%s); angle: %f}"
-                .formatted(owner, positionA.getId(), positionB.getId(), Arrays.toString(coordinates), rationAngle);
+                .formatted(ownerPlayerId, positionA.getId(), positionB.getId(), Arrays.toString(coordinates), rationAngle);
     }
 }

@@ -1,6 +1,8 @@
 package com.example.cataniaunited.game.board;
 
+import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.board.tile_list_builder.Tile;
+import com.example.cataniaunited.game.buildings.Settlement;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -163,6 +165,78 @@ class GameBoardTest {
                 Arguments.of(10000),
                 Arguments.of(100000)
         );
+    }
+
+    @Test
+    void testPlaceSettlement() throws GameException {
+        GameBoard gameBoard = new GameBoard(2);
+        var settlementPosition = gameBoard.getSettlementPositionGraph().getFirst();
+        String playerId = "Player1";
+        gameBoard.placeSettlement(playerId, settlementPosition.getId());
+        assertNotNull(settlementPosition.building);
+        assertEquals(Settlement.class, settlementPosition.building.getClass());
+        assertEquals(playerId, settlementPosition.building.getOwnerPlayerId());
+    }
+
+    @Test
+    void placeSettlementShouldThrowExceptionIfPositionIsLessThanZero() {
+        GameBoard gameBoard = new GameBoard(2);
+        GameException ge = assertThrows(GameException.class, () -> gameBoard.placeSettlement("Player1", -1));
+        assertEquals("Settlement position not found: id = %s".formatted(-1), ge.getMessage());
+    }
+
+    @Test
+    void placeSettlementShouldThrowExceptionIfPositionIsBiggerThanSize() {
+        GameBoard gameBoard = new GameBoard(2);
+        int positionId = gameBoard.getSettlementPositionGraph().size() + 1;
+        GameException ge = assertThrows(GameException.class, () -> gameBoard.placeSettlement("Player1", positionId));
+        assertEquals("Settlement position not found: id = %s".formatted(positionId), ge.getMessage());
+    }
+
+    @ParameterizedTest
+    @MethodSource("invalidPlayerIds")
+    void placeSettlementShouldThrowExceptionIfPlayerIdIsEmpty(String playerId){
+        GameBoard gameBoard = new GameBoard(2);
+        int positionId = gameBoard.getSettlementPositionGraph().getFirst().getId();
+        GameException ge = assertThrows(GameException.class, () -> gameBoard.placeSettlement(playerId, positionId));
+        assertEquals("Owner Id of building must not be empty", ge.getMessage());
+    }
+
+    @Test
+    void testPlaceRoad() throws GameException {
+        GameBoard gameBoard = new GameBoard(2);
+        var road = gameBoard.roadList.getFirst();
+        String playerId = "Player1";
+        gameBoard.placeRoad(playerId, road.getId());
+        assertEquals(playerId, road.ownerPlayerId);
+    }
+
+    @Test
+    void placeRoadShouldThrowExceptionIfRoadIdIsLessThanZero() {
+        GameBoard gameBoard = new GameBoard(2);
+        GameException ge = assertThrows(GameException.class, () -> gameBoard.placeRoad("Player1", -1));
+        assertEquals("Road not found: id = %s".formatted(-1), ge.getMessage());
+    }
+
+    @Test
+    void placeRoadShouldThrowExceptionIfRoadIdIsGreaterThanSize() {
+        GameBoard gameBoard = new GameBoard(2);
+        int roadId = gameBoard.roadList.size() + 1;
+        GameException ge = assertThrows(GameException.class, () -> gameBoard.placeRoad("Player1", roadId));
+        assertEquals("Road not found: id = %s".formatted(roadId), ge.getMessage());
+    }
+
+    @ParameterizedTest
+    @MethodSource("invalidPlayerIds")
+    void placeRoadShouldThrowExceptionIfPlayerIdIsEmpty(String playerId){
+        GameBoard gameBoard = new GameBoard(2);
+        var road = gameBoard.roadList.getFirst();
+        GameException ge = assertThrows(GameException.class, () -> gameBoard.placeRoad(playerId, road.getId()));
+        assertEquals("Owner Id of road must not be empty", ge.getMessage());
+    }
+
+    static Stream<Arguments> invalidPlayerIds(){
+        return Stream.of(null, Arguments.of(""));
     }
 
     @Disabled("test used for debugging purposes, passes automatically")

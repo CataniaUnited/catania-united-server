@@ -1,4 +1,4 @@
-package com.example.cataniaunited.service;
+package com.example.cataniaunited.lobby;
 
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
