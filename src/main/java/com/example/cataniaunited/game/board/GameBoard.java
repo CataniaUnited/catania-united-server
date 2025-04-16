@@ -12,7 +12,7 @@ import org.jboss.logging.Logger;
 import java.util.List;
 
 public class GameBoard {
-    private static final Logger logger = Logger.getLogger(GameWebSocket.class);
+    private static final Logger logger = Logger.getLogger(GameBoard.class);
     static final int DEFAULT_TILES_PER_PLAYER_GOAL = 6;
     static final int SIZE_OF_HEX = 10;
     final int sizeOfBoard;

@@ -21,7 +21,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @QuarkusTest
-public class GameServiceTest {
+class GameServiceTest {
 
     @InjectSpy
     GameService gameService;
@@ -34,7 +34,7 @@ public class GameServiceTest {
     Lobby lobbyMock;
 
     @BeforeEach
-    public void init() {
+    void init() {
         gameboardMock = mock(GameBoard.class);
         lobbyMock = mock(Lobby.class);
         when(lobbyMock.getLobbyId()).thenReturn("12345");
@@ -57,7 +57,7 @@ public class GameServiceTest {
     }
 
     @Test
-    void getGameboardByLobbyIdShouldThrowGameExceptionForNonExistingLobby() throws GameException {
+    void getGameboardByLobbyIdShouldThrowGameExceptionForNonExistingLobby() {
         String invalidLobbyId = "invalidLobbyId";
         GameException ge = assertThrows(GameException.class, () -> gameService.getGameboardByLobbyId(invalidLobbyId));
         assertEquals("Gameboard for Lobby not found: id = %s".formatted(invalidLobbyId), ge.getMessage());

@@ -45,7 +45,7 @@ public class GameService {
         return gameboard;
     }
 
-    void addGameboardToList(String lobbyId, GameBoard gameboard) throws GameException {
+    void addGameboardToList(String lobbyId, GameBoard gameboard) {
         lobbyToGameboardMap.put(lobbyId, gameboard);
     }
 }

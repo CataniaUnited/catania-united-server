@@ -6,7 +6,7 @@ import com.example.cataniaunited.util.Util;
 public abstract class Building {
     protected final String ownerPlayerId;
 
-    public Building(String playerId) throws GameException {
+    protected Building(String playerId) throws GameException {
         if(Util.isEmpty(playerId)) {
             throw new GameException("Owner Id of building must not be empty");
         }

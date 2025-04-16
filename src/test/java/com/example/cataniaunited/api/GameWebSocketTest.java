@@ -88,6 +88,7 @@ public class GameWebSocketTest {
 
         assertTrue(allMessagesReceived, "Not all messages were received in time!");
 
+        assertEquals(openConnections + 1, connections.listAll().size());
         MessageDTO responseMessage = objectMapper.readValue(receivedMessages.getLast(), MessageDTO.class);
 
         assertEquals(MessageType.CONNECTION_SUCCESSFUL, responseMessage.getType());
