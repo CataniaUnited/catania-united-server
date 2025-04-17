@@ -23,4 +23,8 @@ public class Lobby {
     public void addPlayer(String player){
         players.add(player);
     }
+
+    public boolean removePlayer(String player){
+        return players.remove(player);
+    }
 }
