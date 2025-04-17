@@ -9,6 +9,7 @@ public class Player {
 
     private String username;
     private final String uniqueId;
+    private PlayerColor color;
     private final String connectionId;
 
     public Player() {
@@ -45,12 +46,21 @@ public class Player {
         return uniqueId;
     }
 
+    public PlayerColor getColor(){
+        return color;
+    }
+
+    public void setColor(PlayerColor color){
+        this.color = color;
+    }
+
     @Override
     public String toString() {
         return "Player{" +
                 "username='" + username + '\'' +
                 ", uniqueId='" + uniqueId + '\'' +
                 ", connectionId='" + connectionId + '\'' +
+                ", color=" + color + '\'' +
                 '}';
     }
 }
