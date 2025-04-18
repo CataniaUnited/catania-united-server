@@ -1,6 +1,8 @@
 package com.example.cataniaunited.lobby;
 
 import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.player.Player;
+import com.example.cataniaunited.player.PlayerColor;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.jboss.logging.Logger;
 
@@ -13,7 +15,12 @@ public class LobbyServiceImpl implements LobbyService {
 
     private static final Logger logger = Logger.getLogger(LobbyServiceImpl.class);
     private final Map<String, Lobby> lobbies = new ConcurrentHashMap<>();
+    private final List<PlayerColor> availableColors = new ArrayList<>();
     private static final SecureRandom secureRandom = new SecureRandom();
+
+    public LobbyServiceImpl(){
+        Collections.addAll(availableColors, PlayerColor.values());
+    }
 
     @Override
     public String createLobby(String hostPlayer) {
@@ -58,16 +65,39 @@ public class LobbyServiceImpl implements LobbyService {
     }
 
     @Override
-    public boolean joinLobbyByCode(String lobbyId, String player) {
+    public boolean joinLobbyByCode(String lobbyId, String username) {
         Lobby lobby = lobbies.get(lobbyId);
         if(lobby != null){
+            if(availableColors.isEmpty()){
+                logger.warnf("No colors available for new players.");
+                return false;
+            }
+            Player player = new Player(username);
+
+            Collections.shuffle(availableColors);
+            PlayerColor assignedColor = availableColors.remove(0);
+            player.setColor(assignedColor);
+
             lobby.addPlayer(player);
-            logger.infof("Player %s joined lobby %s", player, lobbyId);
+            logger.infof("Player %s joined lobby %s with color %s", username, lobbyId, assignedColor);
             return true;
         }
 
         logger.warnf("Invalid or expired lobby ID: %s", lobbyId);
         return false;
+    }
+
+    public void removePlayerFromLobby(String lobbyId, String username){
+        Lobby lobby = lobbies.get(lobbyId);
+        if(lobby != null){
+            Player removedPlayer = lobby.removePlayer(username);
+
+            if(removedPlayer != null){
+                availableColors.add(removedPlayer.getColor());
+                logger.infof("Player %s left lobby %s. Color %s is now available.",
+                        username, lobbyId, removedPlayer.getColor());
+            }
+        }
     }
 
     @Override
@@ -83,6 +113,8 @@ public class LobbyServiceImpl implements LobbyService {
     @Override
     public void clearLobbies() {
         lobbies.clear();
+        availableColors.clear();
+        Collections.addAll(availableColors, PlayerColor.values());
         logger.info("All lobbies have been cleared.");
     }
 }
