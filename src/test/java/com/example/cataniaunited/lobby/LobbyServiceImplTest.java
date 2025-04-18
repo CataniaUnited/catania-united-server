@@ -115,6 +115,18 @@ class LobbyServiceImplTest {
     }
 
     @Test
+    void testJoinLobbyFailsWhenNoColorsAvailable (){
+        String lobbyId = lobbyService.createLobby("HostPlayer");
+
+        for (int i = 0; i < PlayerColor.values().length; i++) {
+            lobbyService.joinLobbyByCode(lobbyId, "Player" + i);
+        }
+
+        boolean joined = lobbyService.joinLobbyByCode(lobbyId, "ExtraPlayer");
+        assertFalse(joined, "Player should not be able to join when no colors are available");
+    }
+
+    @Test
     void testRemovePlayerFromLobby() throws GameException {
         String lobbyId = lobbyService.createLobby("HostPlayer");
         lobbyService.joinLobbyByCode(lobbyId, "Player1");
@@ -135,6 +147,16 @@ class LobbyServiceImplTest {
         lobbyService.removePlayerFromLobby(lobbyId, "Player1");
 
         assertEquals(PlayerColor.values().length-1, colorPoolSizeBefore + 1);
+    }
+
+    @Test
+    void testRemovePlayerNotInLobby() {
+        String lobbyId = lobbyService.createLobby("HostPlayer");
+
+        lobbyService.removePlayerFromLobby(lobbyId, "GhostPlayer");
+
+        Lobby lobby = assertDoesNotThrow(() -> lobbyService.getLobbyById(lobbyId));
+        assertFalse(lobby.getPlayers().contains("GhostPlayer"));
     }
 
 }
