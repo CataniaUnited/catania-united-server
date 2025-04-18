@@ -23,6 +23,10 @@ public class Lobby {
         return players.keySet();
     }
 
+    public Collection<Player> getPlayerObjects(){
+        return players.values();
+    }
+
     public void addPlayer(Player player){
        players.put(player.getUsername(), player);
     }
