@@ -4,6 +4,7 @@ import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.GameService;
+import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.lobby.LobbyService;
 import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerService;
@@ -62,9 +63,10 @@ public class GameWebSocket {
                 case CREATE_LOBBY -> createLobby(message);
                 case JOIN_LOBBY -> joinLobby(message, connection);
                 case SET_USERNAME -> setUsername(message, connection);
+                case CREATE_GAME_BOARD -> createGameBoard(message, connection);
                 case PLACE_SETTLEMENT -> placeSettlement(message, connection);
                 case PLACE_ROAD -> placeRoad(message, connection);
-                case ERROR, CONNECTION_SUCCESSFUL, CLIENT_DISCONNECTED, LOBBY_CREATED, LOBBY_UPDATED, PLAYER_JOINED ->
+                case ERROR, CONNECTION_SUCCESSFUL, CLIENT_DISCONNECTED, LOBBY_CREATED, LOBBY_UPDATED, PLAYER_JOINED, GAME_BOARD_JSON  ->
                         throw new GameException("Invalid client command");
             };
         } catch (GameException ge) {
@@ -135,5 +137,12 @@ public class GameWebSocket {
         ObjectNode errorNode = JsonNodeFactory.instance.objectNode();
         errorNode.put("error", errorMessage);
         return new MessageDTO(MessageType.ERROR, errorNode);
+    }
+
+    Uni<MessageDTO> createGameBoard(MessageDTO message, WebSocketConnection connection) throws GameException {
+        GameBoard board = gameService.createGameboard(message.getLobbyId());
+        MessageDTO updateJson =  new MessageDTO(MessageType.GAME_BOARD_JSON, board.getJson());
+        return connection.broadcast().sendText(updateJson).chain(i -> Uni.createFrom().item(updateJson));
+
     }
 }
