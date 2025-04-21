@@ -1,7 +1,6 @@
 package com.example.cataniaunited.lobby;
 
 import com.example.cataniaunited.exception.GameException;
-import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerColor;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.jboss.logging.Logger;
@@ -65,7 +64,7 @@ public class LobbyServiceImpl implements LobbyService {
     }
 
     @Override
-    public boolean joinLobbyByCode(String lobbyId, String player) {//TODO: Work in progress
+    public boolean joinLobbyByCode(String lobbyId, String player) {
         Lobby lobby = lobbies.get(lobbyId);
         if(lobby != null){
             if(availableColors.isEmpty()){
@@ -75,9 +74,9 @@ public class LobbyServiceImpl implements LobbyService {
 
             Collections.shuffle(availableColors);
             PlayerColor assignedColor = availableColors.remove(0);
-            //player.setColor(assignedColor);
-
             lobby.addPlayer(player);
+            lobby.setPlayerColor(player, assignedColor);
+
             logger.infof("Player %s joined lobby %s with color %s", player, lobbyId, assignedColor);
             return true;
         }
@@ -86,8 +85,22 @@ public class LobbyServiceImpl implements LobbyService {
         return false;
     }
 
-    public void removePlayerFromLobby(String lobbyId, String player){ //TODO: Work in progress
+    public void removePlayerFromLobby(String lobbyId, String player){
+        Lobby lobby = lobbies.get(lobbyId);
+        if(lobby != null){
+            PlayerColor color = lobby.getPlayerColor(player);
 
+            if(color != null){
+                availableColors.add(color);
+                logger.infof("Color %s returned to pool from player %s", color, player);
+            }
+
+            lobby.removePlayer(player);
+            lobby.removePlayerColor(player);
+
+            logger.infof("Player %s removed from lobby %s", player, lobbyId);
+        }
+        logger.warnf("Attempted to remove player from non-existing lobby: %s", lobbyId);
     }
 
     @Override

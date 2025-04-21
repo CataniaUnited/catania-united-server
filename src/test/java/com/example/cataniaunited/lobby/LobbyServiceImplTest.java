@@ -1,7 +1,6 @@
 package com.example.cataniaunited.lobby;
 
 import com.example.cataniaunited.exception.GameException;
-import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerColor;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
@@ -67,7 +66,7 @@ class LobbyServiceImplTest {
             ids.add(id);
         }
     }
-    /*
+
     @Test
     void testJoinLobbyByValidCode () throws GameException {
         String hostPlayer = "HostPlayer";
@@ -102,13 +101,9 @@ class LobbyServiceImplTest {
         lobbyService.joinLobbyByCode(lobbyId, "Player1");
 
         Lobby lobby = lobbyService.getLobbyById(lobbyId);
-        assertTrue(lobby.getPlayerNames().contains("Player1"));
+        assertTrue(lobby.getPlayers().contains("Player1"));
 
-        PlayerColor color = lobby.getPlayerObjects().stream()
-                .filter(p -> p.getUsername().equals("Player1"))
-                .findFirst()
-                .map(Player::getColor)
-                .orElse(null);
+        PlayerColor color = lobby.getPlayerColor("Player1");
 
         assertNotNull(color);
         assertFalse(lobbyService.getOpenLobbies().isEmpty());
@@ -132,10 +127,10 @@ class LobbyServiceImplTest {
         lobbyService.joinLobbyByCode(lobbyId, "Player1");
 
         Lobby lobby = lobbyService.getLobbyById(lobbyId);
-        assertTrue(lobby.getPlayerNames().contains("Player1"));
+        assertTrue(lobby.getPlayers().contains("Player1"));
 
         lobbyService.removePlayerFromLobby(lobbyId, "Player1");
-        assertFalse(lobby.getPlayerNames().contains("Player1"));
+        assertFalse(lobby.getPlayers().contains("Player1"));
     }
 
     @Test
@@ -157,6 +152,6 @@ class LobbyServiceImplTest {
 
         Lobby lobby = assertDoesNotThrow(() -> lobbyService.getLobbyById(lobbyId));
         assertFalse(lobby.getPlayers().contains("GhostPlayer"));
-    }*/
+    }
 
 }
