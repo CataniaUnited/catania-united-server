@@ -65,21 +65,20 @@ public class LobbyServiceImpl implements LobbyService {
     }
 
     @Override
-    public boolean joinLobbyByCode(String lobbyId, String username) {
+    public boolean joinLobbyByCode(String lobbyId, String player) {//TODO: Work in progress
         Lobby lobby = lobbies.get(lobbyId);
         if(lobby != null){
             if(availableColors.isEmpty()){
                 logger.warnf("No colors available for new players.");
                 return false;
             }
-            Player player = new Player(username);
 
             Collections.shuffle(availableColors);
             PlayerColor assignedColor = availableColors.remove(0);
-            player.setColor(assignedColor);
+            //player.setColor(assignedColor);
 
             lobby.addPlayer(player);
-            logger.infof("Player %s joined lobby %s with color %s", username, lobbyId, assignedColor);
+            logger.infof("Player %s joined lobby %s with color %s", player, lobbyId, assignedColor);
             return true;
         }
 
@@ -87,17 +86,8 @@ public class LobbyServiceImpl implements LobbyService {
         return false;
     }
 
-    public void removePlayerFromLobby(String lobbyId, String username){
-        Lobby lobby = lobbies.get(lobbyId);
-        if(lobby != null){
-            Player removedPlayer = lobby.removePlayer(username);
+    public void removePlayerFromLobby(String lobbyId, String player){ //TODO: Work in progress
 
-            if(removedPlayer != null){
-                availableColors.add(removedPlayer.getColor());
-                logger.infof("Player %s left lobby %s. Color %s is now available.",
-                        username, lobbyId, removedPlayer.getColor());
-            }
-        }
     }
 
     @Override

@@ -1,18 +1,15 @@
 package com.example.cataniaunited.lobby;
 
-import com.example.cataniaunited.player.Player;
-
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 public class Lobby {
     private final String lobbyId;
-    private final Map<String, Player> players = new ConcurrentHashMap<>();
+    private final Set<String> players = new CopyOnWriteArraySet<>();
 
     public Lobby(String lobbyId, String hostPlayer) {
         this.lobbyId = lobbyId;
-        Player host = new Player(hostPlayer);
-        players.put(host.getUsername(), host);
+        this.players.add(hostPlayer);
     }
 
     public String getLobbyId() {
@@ -20,18 +17,24 @@ public class Lobby {
     }
 
     public Set<String> getPlayers() {
-        return players.keySet();
+        return players;
+    }
+    /*
+    public List<String> getPlayerNames() {
+        return players.values().stream()
+                .map(Player::getUsername)
+                .toList();
     }
 
     public Collection<Player> getPlayerObjects(){
         return players.values();
+    }*/
+
+    public void addPlayer(String player){
+       players.add(player);
     }
 
-    public void addPlayer(Player player){
-       players.put(player.getUsername(), player);
-    }
-
-    public Player removePlayer(String username){
-        return players.remove(username);
+    public boolean removePlayer(String player){
+        return players.remove(player);
     }
 }
