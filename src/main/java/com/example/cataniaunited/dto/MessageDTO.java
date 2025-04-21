@@ -44,6 +44,16 @@ public class MessageDTO {
         this.players = players;
     }
 
+    public MessageDTO(MessageType type, String player, String lobbyId, int dice1, int dice2) {
+        this.type = type;
+        this.player = player;
+        this.lobbyId = lobbyId;
+        this.message = JsonNodeFactory.instance.objectNode()
+                .put("dice1", dice1)
+                .put("dice2", dice2)
+                .put("total", dice1 + dice2);
+    }
+
     public MessageType getType() {
         return type;
     }
