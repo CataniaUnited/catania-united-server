@@ -321,6 +321,42 @@ public class GameWebSocketTest {
     }
 
     @Test
+    void testPlayerJoinedLobbySuccess() throws JsonProcessingException, InterruptedException {
+        String player = "TestPlayer";
+        String lobbyId = "xyz123";
+
+        doReturn(true).when(lobbyService).joinLobbyByCode(lobbyId, player);
+
+        MessageDTO joinLobbyMessage = new MessageDTO(MessageType.JOIN_LOBBY, player, lobbyId);
+
+        List<String> receivedMessages = new ArrayList<>();
+        CountDownLatch messageLatch = new CountDownLatch(2);
+
+        var webSocketClientConnection = BasicWebSocketConnector.create()
+                .baseUri(serverUri)
+                .path("/game")
+                .onTextMessage((connection, message) -> {
+                    if(message.startsWith("{")){
+                        receivedMessages.add(message);
+                        messageLatch.countDown();
+                    }
+                })
+                .connectAndAwait();
+
+        String sentMessage = objectMapper.writeValueAsString(joinLobbyMessage);
+        webSocketClientConnection.sendTextAndAwait(sentMessage);
+
+        assertTrue(messageLatch.await(5, TimeUnit.SECONDS), "Not all messages were received in time!");
+        assertEquals(2, receivedMessages.size());
+
+        MessageDTO responseMessage = objectMapper.readValue(receivedMessages.getLast(), MessageDTO.class);
+
+        assertEquals(MessageType.PLAYER_JOINED, responseMessage.getType());
+        assertEquals(player, responseMessage.getPlayer());
+        assertEquals(lobbyId, responseMessage.getLobbyId());
+    }
+
+    @Test
     void testJoinLobbyFailure() throws InterruptedException, JsonProcessingException {
         MessageDTO joinLobbyMessage = new MessageDTO(MessageType.JOIN_LOBBY, "Player 1", "invalidLobbyId");
 
