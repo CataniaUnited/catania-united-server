@@ -34,6 +34,10 @@ public class Lobby {
         return players.remove(player);
     }
 
+    public List<PlayerColor> getAvailableColors(){
+        return availableColors;
+    }
+
     public void setPlayerColor(String player, PlayerColor color){
         playerColors.put(player, color);
     }
