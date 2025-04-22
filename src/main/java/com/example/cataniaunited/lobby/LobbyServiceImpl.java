@@ -14,12 +14,8 @@ public class LobbyServiceImpl implements LobbyService {
 
     private static final Logger logger = Logger.getLogger(LobbyServiceImpl.class);
     private final Map<String, Lobby> lobbies = new ConcurrentHashMap<>();
-    private final List<PlayerColor> availableColors = new ArrayList<>();
     private static final SecureRandom secureRandom = new SecureRandom();
 
-    public LobbyServiceImpl(){
-        Collections.addAll(availableColors, PlayerColor.values());
-    }
 
     @Override
     public String createLobby(String hostPlayer) {
@@ -67,13 +63,11 @@ public class LobbyServiceImpl implements LobbyService {
     public boolean joinLobbyByCode(String lobbyId, String player) {
         Lobby lobby = lobbies.get(lobbyId);
         if(lobby != null){
-            if(availableColors.isEmpty()){
-                logger.warnf("No colors available for new players.");
+            PlayerColor assignedColor = lobby.assignAvailableColor();
+            if(assignedColor == null){
+                logger.warnf("No colors available for new players in lobby %s.", lobbyId);
                 return false;
             }
-
-            Collections.shuffle(availableColors);
-            PlayerColor assignedColor = availableColors.remove(0);
             lobby.addPlayer(player);
             lobby.setPlayerColor(player, assignedColor);
 
@@ -91,7 +85,7 @@ public class LobbyServiceImpl implements LobbyService {
             PlayerColor color = lobby.getPlayerColor(player);
 
             if(color != null){
-                availableColors.add(color);
+                lobby.restoreColor(color);
                 logger.infof("Color %s returned to pool from player %s", color, player);
             }
 
@@ -116,8 +110,6 @@ public class LobbyServiceImpl implements LobbyService {
     @Override
     public void clearLobbies() {
         lobbies.clear();
-        availableColors.clear();
-        Collections.addAll(availableColors, PlayerColor.values());
         logger.info("All lobbies have been cleared.");
     }
 }
