@@ -115,7 +115,7 @@ class GameServiceTest {
         ObjectNode expectedJson = new ObjectMapper().createObjectNode().put("test", "data"); // Create a dummy JSON node
         when(gameboardMock.getJson()).thenReturn(expectedJson);
         doReturn(gameboardMock).when(gameService).getGameboardByLobbyId(lobbyId);
-        ObjectNode actualJson = gameService.getJsonByLobbyId(lobbyId);
+        ObjectNode actualJson = gameService.getGameboardJsonByLobbyId(lobbyId);
         verify(gameService).getGameboardByLobbyId(lobbyId);
         verify(gameboardMock).getJson();
         assertNotNull(actualJson);
@@ -129,7 +129,7 @@ class GameServiceTest {
         doThrow(new GameException(expectedErrorMessage))
                 .when(gameService).getGameboardByLobbyId(invalidLobbyId);
         GameException exception = assertThrows(GameException.class, () -> {
-            gameService.getJsonByLobbyId(invalidLobbyId);
+            gameService.getGameboardJsonByLobbyId(invalidLobbyId);
         }, "Should throw GameException when gameboard is not found");
         assertEquals(expectedErrorMessage, exception.getMessage());
         verify(gameService).getGameboardByLobbyId(invalidLobbyId);

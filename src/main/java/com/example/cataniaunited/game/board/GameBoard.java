@@ -130,7 +130,7 @@ public class GameBoard {
 
         // Add the arrays to the main board node
         boardNode.set("tiles", tilesNode);
-        boardNode.set("settlementpositions", positionsNode);
+        boardNode.set("settlementPositions", positionsNode);
         boardNode.set("roads", roadsNode);
 
         boardNode.put("ringsOfBoard", this.sizeOfBoard);

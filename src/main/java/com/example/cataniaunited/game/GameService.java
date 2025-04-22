@@ -37,7 +37,7 @@ public class GameService {
         gameboard.placeRoad(playerId, roadId);
     }
 
-    public ObjectNode getJsonByLobbyId(String lobbyId) throws GameException{
+    public ObjectNode getGameboardJsonByLobbyId(String lobbyId) throws GameException{
         GameBoard gameBoard = getGameboardByLobbyId(lobbyId);
         return gameBoard.getJson();
     }

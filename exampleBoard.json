@@ -172,7 +172,7 @@
          ]
       }
    ],
-   "settlementpositions":[
+   "settlementPositions":[
       {
          "id":1,
          "building":"null",

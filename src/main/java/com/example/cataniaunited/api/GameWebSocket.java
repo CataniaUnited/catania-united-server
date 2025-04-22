@@ -63,7 +63,7 @@ public class GameWebSocket {
                 case CREATE_LOBBY -> createLobby(message);
                 case JOIN_LOBBY -> joinLobby(message, connection);
                 case SET_USERNAME -> setUsername(message, connection);
-                case CREATE_GAME_BOARD -> createGameBoard(message, connection);
+                case CREATE_GAME_BOARD -> createGameBoard(message, connection); // TODO: Remove after regular game start is implemented
                 case PLACE_SETTLEMENT -> placeSettlement(message, connection);
                 case PLACE_ROAD -> placeRoad(message, connection);
                 case ERROR, CONNECTION_SUCCESSFUL, CLIENT_DISCONNECTED, LOBBY_CREATED, LOBBY_UPDATED, PLAYER_JOINED, GAME_BOARD_JSON  ->
@@ -141,7 +141,7 @@ public class GameWebSocket {
 
     Uni<MessageDTO> createGameBoard(MessageDTO message, WebSocketConnection connection) throws GameException {
         GameBoard board = gameService.createGameboard(message.getLobbyId());
-        MessageDTO updateJson =  new MessageDTO(MessageType.GAME_BOARD_JSON, board.getJson());
+        MessageDTO updateJson =  new MessageDTO(MessageType.GAME_BOARD_JSON, null, message.getLobbyId(), board.getJson());
         return connection.broadcast().sendText(updateJson).chain(i -> Uni.createFrom().item(updateJson));
 
     }

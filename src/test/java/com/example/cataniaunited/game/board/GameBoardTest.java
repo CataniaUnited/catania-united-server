@@ -254,7 +254,7 @@ class GameBoardTest {
 
         // Check top-level keys exist
         assertTrue(boardJson.has("tiles"), "JSON should contain 'tiles' field");
-        assertTrue(boardJson.has("settlementpositions"), "JSON should contain 'settlementpositions' field");
+        assertTrue(boardJson.has("settlementPositions"), "JSON should contain 'settlementPositions' field");
         assertTrue(boardJson.has("roads"), "JSON should contain 'roads' field");
         assertTrue(boardJson.has("ringsOfBoard"), "JSON should contain 'ringsOfBoard' field");
         assertTrue(boardJson.has("sizeOfHex"), "JSON should contain 'sizeOfHex' field");
@@ -265,7 +265,7 @@ class GameBoardTest {
 
         // Check array types
         assertTrue(boardJson.get("tiles").isArray(), "'tiles' field should be a JSON array");
-        assertTrue(boardJson.get("settlementpositions").isArray(), "'settlementpositions' field should be a JSON array");
+        assertTrue(boardJson.get("settlementPositions").isArray(), "'settlementPositions' field should be a JSON array");
         assertTrue(boardJson.get("roads").isArray(), "'roads' field should be a JSON array");
     }
 
@@ -289,11 +289,11 @@ class GameBoardTest {
 
         // Get the arrays from JSON
         JsonNode tilesNode = boardJson.get("tiles");
-        JsonNode positionsNode = boardJson.get("settlementpositions");
+        JsonNode positionsNode = boardJson.get("settlementPositions");
         JsonNode roadsNode = boardJson.get("roads");
 
         assertTrue(tilesNode.isArray(), "'tiles' node should be an array");
-        assertTrue(positionsNode.isArray(), "'settlementpositions' node should be an array");
+        assertTrue(positionsNode.isArray(), "'settlementPositions' node should be an array");
         assertTrue(roadsNode.isArray(), "'roads' node should be an array");
 
         // Compare sizes
