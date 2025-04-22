@@ -56,7 +56,7 @@ class RoadTest {
 
     @Test
     void getRationAngleReturnsInitialZeroBeforeCalculation() {
-        assertEquals(0.0, road.getRationAngle(), 0.001, "Initial angle should be 0.0");
+        assertEquals(0.0, road.getRotationAngle(), 0.001, "Initial angle should be 0.0");
     }
 
     @Test
@@ -80,7 +80,7 @@ class RoadTest {
         double expectedAngle = StrictMath.atan2(angleY, angleX); // atan2(-40, -20)
 
         assertArrayEquals(expectedCoords, road.getCoordinates(), 0.001, "Calculated coordinates are incorrect");
-        assertEquals(expectedAngle, road.getRationAngle(), 0.001, "Calculated angle is incorrect");
+        assertEquals(expectedAngle, road.getRotationAngle(), 0.001, "Calculated angle is incorrect");
     }
 
     @Test
@@ -94,7 +94,7 @@ class RoadTest {
         road.setCoordinatesAndRotationAngle();
 
         double[] coordsAfterFirstCall = road.getCoordinates().clone();
-        double angleAfterFirstCall = road.getRationAngle();
+        double angleAfterFirstCall = road.getRotationAngle();
 
         // Setup done, test
         // Change given Coords
@@ -106,7 +106,7 @@ class RoadTest {
 
         // Assert: State should be unchanged from after the first call
         assertArrayEquals(coordsAfterFirstCall, road.getCoordinates(), 0.001, "Coordinates should not change on second call");
-        assertEquals(angleAfterFirstCall, road.getRationAngle(), 0.001, "Angle should not change on second call");
+        assertEquals(angleAfterFirstCall, road.getRotationAngle(), 0.001, "Angle should not change on second call");
 
         // Verify that the method didn't even try to calculate the coords but returned after the first check if position has already been set
         verify(mockPositionA, times(1)).getCoordinates();
@@ -124,7 +124,7 @@ class RoadTest {
 
         // No change in position
         assertArrayEquals(new double[]{0.0, 0.0}, road.getCoordinates(), 0.001, "Coordinates should remain zero");
-        assertEquals(0.0, road.getRationAngle(), 0.001, "Angle should remain zero");
+        assertEquals(0.0, road.getRotationAngle(), 0.001, "Angle should remain zero");
 
         // Verify getCoordinates was called on A, but not on B
         verify(mockPositionA, times(1)).getCoordinates();
@@ -141,7 +141,7 @@ class RoadTest {
 
         // No change in position
         assertArrayEquals(new double[]{0.0, 0.0}, road.getCoordinates(), 0.001, "Coordinates should remain zero");
-        assertEquals(0.0, road.getRationAngle(), 0.001, "Angle should remain zero");
+        assertEquals(0.0, road.getRotationAngle(), 0.001, "Angle should remain zero");
 
         // Verify getCoordinates was called on both A and B but method returned early.
         verify(mockPositionA, times(1)).getCoordinates();
@@ -220,8 +220,8 @@ class RoadTest {
         assertEquals(0.0, coordsArray.get(1).asDouble(), 0.0001, "Initial Y coordinate should be 0.0 in JSON");
 
         // Check Angle
-        assertTrue(jsonNode.has("rationAngle"), "JSON should contain 'rationAngle' field");
-        assertEquals(0.0, jsonNode.get("rationAngle").asDouble(), 0.0001, "Initial rationAngle should be 0.0 in JSON");
+        assertTrue(jsonNode.has("rotationAngle"), "JSON should contain 'rotationAngle' field");
+        assertEquals(0.0, jsonNode.get("rotationAngle").asDouble(), 0.0001, "Initial rotationAngle should be 0.0 in JSON");
     }
 
     @Test
@@ -248,8 +248,8 @@ class RoadTest {
         assertEquals(0.0, coordsArray.get(1).asDouble(), 0.0001);
 
         // Check Angle (should still be initial)
-        assertTrue(jsonNode.has("rationAngle"), "JSON should contain 'rationAngle' field");
-        assertEquals(0.0, jsonNode.get("rationAngle").asDouble(), 0.0001);
+        assertTrue(jsonNode.has("rotationAngle"), "JSON should contain 'rotationAngle' field");
+        assertEquals(0.0, jsonNode.get("rotationAngle").asDouble(), 0.0001);
     }
 
     @Test
@@ -294,7 +294,7 @@ class RoadTest {
         assertEquals(expectedY, coordsArray.get(1).asDouble(), 0.0001, "Calculated Y coordinate should be correct in JSON");
 
         // Check Angle
-        assertTrue(jsonNode.has("rationAngle"), "JSON should contain 'rationAngle' field");
-        assertEquals(expectedAngle, jsonNode.get("rationAngle").asDouble(), 0.0001, "Calculated rationAngle should be correct in JSON");
+        assertTrue(jsonNode.has("rotationAngle"), "JSON should contain 'rotationAngle' field");
+        assertEquals(expectedAngle, jsonNode.get("rotationAngle").asDouble(), 0.0001, "Calculated rotationAngle should be correct in JSON");
     }
 }

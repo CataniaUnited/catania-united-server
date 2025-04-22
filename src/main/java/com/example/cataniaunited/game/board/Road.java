@@ -15,7 +15,7 @@ public class Road implements Placable {
     final int id;
 
     double[] coordinates = new double[2];
-    double rationAngle;
+    double rotationAngle;
 
     public Road(SettlementPosition positionA, SettlementPosition positionB, int id) {
         this.positionA = positionA;
@@ -48,8 +48,8 @@ public class Road implements Placable {
         return coordinates.clone();
     }
 
-    public double getRationAngle() {
-        return rationAngle;
+    public double getRotationAngle() {
+        return rotationAngle;
     }
 
     public int getId() {
@@ -87,7 +87,7 @@ public class Road implements Placable {
         }
 
         this.coordinates = new double[]{xMax / 2, yMax / 2};
-        this.rationAngle = StrictMath.atan2(yMin, xMin); // No need to assert that since no Road will be placed on 0,0
+        this.rotationAngle = StrictMath.atan2(yMin, xMin); // No need to assert that since no Road will be placed on 0,0
     }
 
     public String getOwnerPlayerId() {
@@ -97,7 +97,7 @@ public class Road implements Placable {
     @Override
     public String toString() {
         return "Road:{owner: %s; (%s, %s); position: (%s); angle: %f}"
-                .formatted(ownerPlayerId, positionA.getId(), positionB.getId(), Arrays.toString(coordinates), rationAngle);
+                .formatted(ownerPlayerId, positionA.getId(), positionB.getId(), Arrays.toString(coordinates), rotationAngle);
     }
 
     @Override
@@ -119,7 +119,7 @@ public class Road implements Placable {
         coordsNode.add(this.coordinates[1]); // Add y
         roadNode.set("coordinates", coordsNode);
 
-        roadNode.put("rationAngle", this.rationAngle);
+        roadNode.put("rotationAngle", this.rotationAngle);
 
         return roadNode;
     }
