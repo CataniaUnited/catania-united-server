@@ -86,7 +86,7 @@ public class SettlementPosition implements Placable {
         this.building = building;
     }
 
-    public String getBuildingOwner(){
+    public String getBuildingOwner() {
         return this.building == null ? null : building.getOwnerPlayerId();
     }
 
@@ -105,14 +105,11 @@ public class SettlementPosition implements Placable {
         settlementPositionNode.put("building", String.valueOf(this.building)); // type of Building
 
 
-        if (this.coordinates != null && this.coordinates.length == 2) {
-            ArrayNode coordsNode = mapper.createArrayNode();
-            coordsNode.add(this.coordinates[0]); // Add x
-            coordsNode.add(this.coordinates[1]); // Add y
-            settlementPositionNode.set("coordinates", coordsNode);
-        } else {
-            settlementPositionNode.putNull("coordinates");
-        }
+        ArrayNode coordsNode = mapper.createArrayNode();
+        coordsNode.add(this.coordinates[0]); // Add x
+        coordsNode.add(this.coordinates[1]); // Add y
+        settlementPositionNode.set("coordinates", coordsNode);
+
 
         return settlementPositionNode;
     }

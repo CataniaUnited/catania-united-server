@@ -40,9 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 @QuarkusTest
 public class GameWebSocketTest {
@@ -533,4 +531,115 @@ public class GameWebSocketTest {
                 Arguments.of(JsonNodeFactory.instance.objectNode().put("settlementPositionId", "1"))
         );
     }
+
+    @Test
+    void testCreateGameBoard() throws InterruptedException, JsonProcessingException, GameException {
+        String lobbyId = "lobby123";
+        String playerId = "playerABC";
+        MessageDTO createBoardMsg = new MessageDTO(MessageType.CREATE_GAME_BOARD, playerId, lobbyId);
+
+
+        GameBoard mockGameBoard = mock(GameBoard.class);
+        ObjectNode expectedBoardJson = objectMapper.createObjectNode().put("boardData", "testValue");
+        when(mockGameBoard.getJson()).thenReturn(expectedBoardJson);
+
+        doReturn(mockGameBoard).when(gameService).createGameboard(lobbyId);
+
+        List<String> receivedMessages = new ArrayList<>();
+        CountDownLatch gameBoardMessageLatch = new CountDownLatch(1);
+
+        var client = BasicWebSocketConnector.create()
+                .baseUri(serverUri)
+                .path("/game")
+                .onTextMessage((connection, message) -> {
+                    if (message.startsWith("{")) {
+                        try {
+                            MessageDTO receivedDto = objectMapper.readValue(message, MessageDTO.class);
+                            receivedMessages.add(message);
+                            if (receivedDto.getType() == MessageType.GAME_BOARD_JSON) {
+                                gameBoardMessageLatch.countDown();
+                            }
+                        } catch (JsonProcessingException ignored) {}
+                    }
+                })
+                .connectAndAwait();
+
+        String sentMessage = objectMapper.writeValueAsString(createBoardMsg);
+        client.sendTextAndAwait(sentMessage); // Send the CREATE_GAME_BOARD message
+
+
+        assertTrue(gameBoardMessageLatch.await(5, TimeUnit.SECONDS), "Did not receive GAME_BOARD_JSON message in time");
+        verify(gameService).createGameboard(lobbyId);
+        verify(mockGameBoard).getJson();
+
+        MessageDTO responseMessage = receivedMessages.stream()
+                .map(msgStr -> {
+                    try {
+                        return objectMapper.readValue(msgStr, MessageDTO.class);
+                    } catch (JsonProcessingException e) { return null; }
+                })
+                .filter(dto -> dto != null && dto.getType() == MessageType.GAME_BOARD_JSON)
+                .findFirst()
+                .orElse(null);
+
+        assertNotNull(responseMessage, "GAME_BOARD_JSON message should have been received");
+        assertEquals(MessageType.GAME_BOARD_JSON, responseMessage.getType());
+        assertNull(responseMessage.getPlayer(), "Player field should be null for GAME_BOARD_JSON");
+        assertNull(responseMessage.getLobbyId(), "LobbyId field should be null for GAME_BOARD_JSON");
+        assertNotNull(responseMessage.getMessage(), "Message payload (board JSON) should not be null");
+        assertEquals(expectedBoardJson, responseMessage.getMessage(), "Board JSON in message should match expected");
+    }
+
+    @Test
+    void testCreateGameBoardWhereGameServiceThrowsException() throws InterruptedException, JsonProcessingException, GameException {
+        String lobbyId = "lobby456";
+        String playerId = "playerXYZ";
+        String expectedErrorMessage = "Failed to create board for this lobby";
+        MessageDTO createBoardMsg = new MessageDTO(MessageType.CREATE_GAME_BOARD, playerId, lobbyId);
+
+
+        doThrow(new GameException(expectedErrorMessage)).when(gameService).createGameboard(lobbyId);
+
+        List<String> receivedMessages = new ArrayList<>();
+        CountDownLatch errorMessageLatch = new CountDownLatch(1);
+
+        var client = BasicWebSocketConnector.create()
+                .baseUri(serverUri)
+                .path("/game")
+                .onTextMessage((connection, message) -> {
+                    if (message.startsWith("{")) {
+                        try {
+                            MessageDTO receivedDto = objectMapper.readValue(message, MessageDTO.class);
+                            receivedMessages.add(message);
+                            if (receivedDto.getType() == MessageType.ERROR) {
+                                errorMessageLatch.countDown();
+                            }
+                        } catch (JsonProcessingException ignored) {}
+                    }
+                })
+                .connectAndAwait();
+
+        String sentMessage = objectMapper.writeValueAsString(createBoardMsg);
+        client.sendTextAndAwait(sentMessage); // Send the CREATE_GAME_BOARD message
+
+
+        assertTrue(errorMessageLatch.await(5, TimeUnit.SECONDS), "Did not receive ERROR message in time");
+        verify(gameService).createGameboard(lobbyId);
+        MessageDTO responseMessage = receivedMessages.stream()
+                .map(msgStr -> {
+                    try {
+                        return objectMapper.readValue(msgStr, MessageDTO.class);
+                    } catch (JsonProcessingException e) { return null; }
+                })
+                .filter(dto -> dto != null && dto.getType() == MessageType.ERROR)
+                .findFirst()
+                .orElse(null);
+
+        assertNotNull(responseMessage, "ERROR message should have been received");
+        assertEquals(MessageType.ERROR, responseMessage.getType());
+        assertNotNull(responseMessage.getMessage(), "Error payload should not be null");
+        assertTrue(responseMessage.getMessage().has("error"), "Error payload should have 'error' field");
+        assertEquals(expectedErrorMessage, responseMessage.getMessageNode("error").asText(), "Error message text should match");
+    }
+
 }

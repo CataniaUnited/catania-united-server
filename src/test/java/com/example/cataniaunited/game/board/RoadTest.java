@@ -1,19 +1,15 @@
 package com.example.cataniaunited.game.board;
 
 import com.example.cataniaunited.exception.GameException;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Locale;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -24,6 +20,7 @@ import static org.mockito.Mockito.when;
 class RoadTest {
     SettlementPosition mockPositionA;
     SettlementPosition mockPositionB;
+    final int ROAD_ID = 12;
     Road road;
 
     @BeforeEach
@@ -35,7 +32,7 @@ class RoadTest {
         mockPositionB = mock(SettlementPosition.class);
 
 
-        road = new Road(mockPositionA, mockPositionB, 1);
+        road = new Road(mockPositionA, mockPositionB, ROAD_ID);
     }
 
     @Test
@@ -198,5 +195,106 @@ class RoadTest {
         road.setOwnerPlayerId(playerId);
         GameException ge = assertThrows(GameException.class, () -> road.setOwnerPlayerId(playerId));
         assertEquals("Road cannot be placed twice: roadId = %s, playerId = %s".formatted(road.id, playerId), ge.getMessage());
+    }
+
+    @Test
+    void testToJsonInitialState() {
+        ObjectNode jsonNode = road.toJson();
+
+        assertNotNull(jsonNode, "toJson() should return a non-null ObjectNode");
+
+        // Check ID
+        assertTrue(jsonNode.has("id"), "JSON should contain 'id' field");
+        assertEquals(ROAD_ID, jsonNode.get("id").asInt(), "ID should match the initial ID in JSON");
+
+        // Check Owner (should be JSON null)
+        assertTrue(jsonNode.has("owner"), "JSON should contain 'owner' field");
+        assertTrue(jsonNode.get("owner").isNull(), "Initial owner should be null in JSON");
+
+        // Check Coordinates
+        assertTrue(jsonNode.has("coordinates"), "JSON should contain 'coordinates' field");
+        assertTrue(jsonNode.get("coordinates").isArray(), "Coordinates should be a JSON array");
+        ArrayNode coordsArray = (ArrayNode) jsonNode.get("coordinates");
+        assertEquals(2, coordsArray.size(), "Coordinates array should have 2 elements");
+        assertEquals(0.0, coordsArray.get(0).asDouble(), 0.0001, "Initial X coordinate should be 0.0 in JSON");
+        assertEquals(0.0, coordsArray.get(1).asDouble(), 0.0001, "Initial Y coordinate should be 0.0 in JSON");
+
+        // Check Angle
+        assertTrue(jsonNode.has("rationAngle"), "JSON should contain 'rationAngle' field");
+        assertEquals(0.0, jsonNode.get("rationAngle").asDouble(), 0.0001, "Initial rationAngle should be 0.0 in JSON");
+    }
+
+    @Test
+    void testToJsonWithOwner() throws GameException {
+        String expectedOwner = "PlayerX";
+        road.setOwnerPlayerId(expectedOwner);
+
+        ObjectNode jsonNode = road.toJson();
+
+        assertNotNull(jsonNode, "toJson() should return a non-null ObjectNode");
+
+        // Check ID
+        assertEquals(ROAD_ID, jsonNode.get("id").asInt());
+
+        // Check Owner (should be the player ID string)
+        assertTrue(jsonNode.has("owner"), "JSON should contain 'owner' field");
+        assertFalse(jsonNode.get("owner").isNull(), "Owner should not be null after setting");
+        assertEquals(expectedOwner, jsonNode.get("owner").asText(), "Owner should match the set player ID in JSON");
+
+        // Check Coordinates (should still be initial)
+        assertTrue(jsonNode.has("coordinates"), "JSON should contain 'coordinates' field");
+        ArrayNode coordsArray = (ArrayNode) jsonNode.get("coordinates");
+        assertEquals(0.0, coordsArray.get(0).asDouble(), 0.0001);
+        assertEquals(0.0, coordsArray.get(1).asDouble(), 0.0001);
+
+        // Check Angle (should still be initial)
+        assertTrue(jsonNode.has("rationAngle"), "JSON should contain 'rationAngle' field");
+        assertEquals(0.0, jsonNode.get("rationAngle").asDouble(), 0.0001);
+    }
+
+    @Test
+    void testToJsonAfterCoordinateCalculationAndOwner() throws GameException {
+        String expectedOwner = "Player33";
+
+        // Mock getCoordinates from SettlementPosition for calculation
+        double[] coordsA = {5.0, -10.0};
+        double[] coordsB = {15.0, 10.0};
+        when(mockPositionA.getCoordinates()).thenReturn(coordsA);
+        when(mockPositionB.getCoordinates()).thenReturn(coordsB);
+
+        // Set owner and calculate coordinates/angle
+        road.setOwnerPlayerId(expectedOwner);
+        road.setCoordinatesAndRotationAngle();
+
+        // Expected calculated values
+        double expectedX = (coordsA[0] + coordsB[0]) / 2.0; // (5 + 15) / 2 = 10.0
+        double expectedY = (coordsA[1] + coordsB[1]) / 2.0; // (-10 + 10) / 2 = 0.0
+        double angleX = coordsA[0] - coordsB[0]; // 5 - 15 = -10
+        double angleY = coordsA[1] - coordsB[1]; // -10 - 10 = -20
+        double expectedAngle = StrictMath.atan2(angleY, angleX); // atan2(-20, -10)
+
+        // Call toJson
+        ObjectNode jsonNode = road.toJson();
+
+        assertNotNull(jsonNode, "toJson() should return a non-null ObjectNode");
+
+        // Check ID
+        assertEquals(ROAD_ID, jsonNode.get("id").asInt());
+
+        // Check Owner
+        assertTrue(jsonNode.has("owner"), "JSON should contain 'owner' field");
+        assertEquals(expectedOwner, jsonNode.get("owner").asText(), "Owner should match the set player ID in JSON");
+
+        // Check Coordinates
+        assertTrue(jsonNode.has("coordinates"), "JSON should contain 'coordinates' field");
+        assertTrue(jsonNode.get("coordinates").isArray(), "Coordinates should be a JSON array");
+        ArrayNode coordsArray = (ArrayNode) jsonNode.get("coordinates");
+        assertEquals(2, coordsArray.size(), "Coordinates array should have 2 elements");
+        assertEquals(expectedX, coordsArray.get(0).asDouble(), 0.0001, "Calculated X coordinate should be correct in JSON");
+        assertEquals(expectedY, coordsArray.get(1).asDouble(), 0.0001, "Calculated Y coordinate should be correct in JSON");
+
+        // Check Angle
+        assertTrue(jsonNode.has("rationAngle"), "JSON should contain 'rationAngle' field");
+        assertEquals(expectedAngle, jsonNode.get("rationAngle").asDouble(), 0.0001, "Calculated rationAngle should be correct in JSON");
     }
 }

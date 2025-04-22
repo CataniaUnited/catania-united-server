@@ -4,6 +4,8 @@ import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.lobby.Lobby;
 import com.example.cataniaunited.lobby.LobbyService;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.mockito.InjectSpy;
 import org.junit.jupiter.api.BeforeEach;
@@ -11,14 +13,9 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @QuarkusTest
 class GameServiceTest {
@@ -110,5 +107,31 @@ class GameServiceTest {
         doReturn(gameboardMock).when(gameService).getGameboardByLobbyId(lobbyId);
         gameService.placeRoad(lobbyId, playerId, settlementPositionId);
         verify(gameboardMock).placeRoad(playerId, settlementPositionId);
+    }
+
+    @Test
+    void testGetJsonByValidLobbyId() throws GameException {
+        String lobbyId = lobbyMock.getLobbyId(); // Use the ID from the mock setup
+        ObjectNode expectedJson = new ObjectMapper().createObjectNode().put("test", "data"); // Create a dummy JSON node
+        when(gameboardMock.getJson()).thenReturn(expectedJson);
+        doReturn(gameboardMock).when(gameService).getGameboardByLobbyId(lobbyId);
+        ObjectNode actualJson = gameService.getJsonByLobbyId(lobbyId);
+        verify(gameService).getGameboardByLobbyId(lobbyId);
+        verify(gameboardMock).getJson();
+        assertNotNull(actualJson);
+        assertSame(expectedJson, actualJson, "The returned JSON should be the one from the GameBoard");
+    }
+
+    @Test
+    void testGetJsonByInvalidLobbyId() throws GameException {
+        String invalidLobbyId = "nonExistentLobby";
+        String expectedErrorMessage = "Gameboard for Lobby not found: id = %s".formatted(invalidLobbyId);
+        doThrow(new GameException(expectedErrorMessage))
+                .when(gameService).getGameboardByLobbyId(invalidLobbyId);
+        GameException exception = assertThrows(GameException.class, () -> {
+            gameService.getJsonByLobbyId(invalidLobbyId);
+        }, "Should throw GameException when gameboard is not found");
+        assertEquals(expectedErrorMessage, exception.getMessage());
+        verify(gameService).getGameboardByLobbyId(invalidLobbyId);
     }
 }

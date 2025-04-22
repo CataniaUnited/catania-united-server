@@ -24,7 +24,7 @@ public class Road implements Placable {
     }
 
     public void setOwnerPlayerId(String ownerPlayerId) throws GameException {
-        if(Util.isEmpty(ownerPlayerId)) {
+        if (Util.isEmpty(ownerPlayerId)) {
             throw new GameException("Owner Id of road must not be empty");
         }
 
@@ -114,14 +114,10 @@ public class Road implements Placable {
         }
 
 
-        if (this.coordinates != null && this.coordinates.length == 2) {
-            ArrayNode coordsNode = mapper.createArrayNode();
-            coordsNode.add(this.coordinates[0]); // Add x
-            coordsNode.add(this.coordinates[1]); // Add y
-            roadNode.set("coordinates", coordsNode);
-        } else {
-            roadNode.putNull("coordinates");
-        }
+        ArrayNode coordsNode = mapper.createArrayNode();
+        coordsNode.add(this.coordinates[0]); // Add x
+        coordsNode.add(this.coordinates[1]); // Add y
+        roadNode.set("coordinates", coordsNode);
 
         roadNode.put("rationAngle", this.rationAngle);
 

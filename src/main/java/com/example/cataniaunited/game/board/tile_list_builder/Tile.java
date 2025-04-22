@@ -13,7 +13,7 @@ public class Tile implements Placable {
 
     int id;
 
-    public Tile(TileType type){
+    public Tile(TileType type) {
         this.type = type;
     }
 
@@ -44,7 +44,7 @@ public class Tile implements Placable {
     }
 
     public void setValue(int value) {
-        if (this.value != 0){
+        if (this.value != 0) {
             return;
         }
         this.value = value;
@@ -57,10 +57,10 @@ public class Tile implements Placable {
     @Override
     public String toString() {
         return String.format(
-        "Tile{" +
-                "id=" + id + "," +
-                "coordinates=(%f, %f)" +
-        '}', this.coordinates[0], this.coordinates[1]);
+                "Tile{" +
+                        "id=" + id + "," +
+                        "coordinates=(%f, %f)" +
+                        '}', this.coordinates[0], this.coordinates[1]);
     }
 
     @Override
@@ -78,15 +78,10 @@ public class Tile implements Placable {
 
         tileNode.put("value", this.value);
 
-
-        if (this.coordinates != null && this.coordinates.length == 2) {
-            ArrayNode coordsNode = mapper.createArrayNode();
-            coordsNode.add(this.coordinates[0]); // Add x
-            coordsNode.add(this.coordinates[1]); // Add y
-            tileNode.set("coordinates", coordsNode);
-        } else {
-            tileNode.putNull("coordinates");
-        }
+        ArrayNode coordsNode = mapper.createArrayNode();
+        coordsNode.add(this.coordinates[0]); // Add x
+        coordsNode.add(this.coordinates[1]); // Add y
+        tileNode.set("coordinates", coordsNode);
 
         return tileNode;
     }
