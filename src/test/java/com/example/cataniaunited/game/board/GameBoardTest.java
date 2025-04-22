@@ -317,15 +317,12 @@ class GameBoardTest {
         }
     }
 
-    @Disabled("test used for debugging purposes, passes automatically")
+    //@Disabled("test used for debugging purposes, passes automatically")
     @Test
     void debuggingTest(){
         GameBoard board = new GameBoard(4);
         board.generateBoard();
-        List<SettlementPosition> graph = board.getSettlementPositionGraph();
-        for (SettlementPosition node: graph){
-            System.out.println(node);
-        }
+        System.out.println(board.getJson());
         assertTrue(true);
     }
 
