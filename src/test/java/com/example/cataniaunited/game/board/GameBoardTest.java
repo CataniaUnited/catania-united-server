@@ -4,7 +4,6 @@ import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.board.tile_list_builder.Tile;
 import com.example.cataniaunited.game.buildings.Settlement;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Disabled;

@@ -38,7 +38,7 @@ public class GameBoard {
         long endtime = System.nanoTime();
 
         // Something went wrong
-        if (this.tileList == null || this.settlementPositionGraph == null) {
+        if (this.tileList == null || this.settlementPositionGraph == null || this.roadList == null) {
             logger.errorf("Board generation failed for %d players.", playerCount);
             throw new IllegalStateException("Board generation resulted in null lists.");
         }
@@ -112,24 +112,20 @@ public class GameBoard {
         ArrayNode roadsNode = mapper.createArrayNode();
 
         // Add tiles
-        if (this.tileList != null) {
-            for (Tile tile : this.tileList) {
-                tilesNode.add(tile.toJson());
-            }
+        for (Tile tile : this.tileList) {
+            tilesNode.add(tile.toJson());
         }
+
 
         // Add Settlement positions
-        if (this.settlementPositionGraph != null) {
-            for (SettlementPosition position : this.settlementPositionGraph) {
-                positionsNode.add(position.toJson());
-            }
+        for (SettlementPosition position : this.settlementPositionGraph) {
+            positionsNode.add(position.toJson());
         }
 
+
         // Add roads
-        if (this.roadList != null) {
-            for (Road road : this.roadList) {
-                roadsNode.add(road.toJson());
-            }
+        for (Road road : this.roadList) {
+            roadsNode.add(road.toJson());
         }
 
         // Add the arrays to the main board node

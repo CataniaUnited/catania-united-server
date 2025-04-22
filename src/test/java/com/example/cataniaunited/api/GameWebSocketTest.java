@@ -33,10 +33,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -559,7 +556,9 @@ public class GameWebSocketTest {
                             if (receivedDto.getType() == MessageType.GAME_BOARD_JSON) {
                                 gameBoardMessageLatch.countDown();
                             }
-                        } catch (JsonProcessingException ignored) {}
+                        } catch (JsonProcessingException ignored) {
+                            fail("A json Processing Exception occurred");
+                        }
                     }
                 })
                 .connectAndAwait();
@@ -614,7 +613,9 @@ public class GameWebSocketTest {
                             if (receivedDto.getType() == MessageType.ERROR) {
                                 errorMessageLatch.countDown();
                             }
-                        } catch (JsonProcessingException ignored) {}
+                        } catch (JsonProcessingException ignored) {
+                            fail("A json Processing Exception occurred");
+                        }
                     }
                 })
                 .connectAndAwait();

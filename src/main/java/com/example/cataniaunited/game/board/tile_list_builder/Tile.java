@@ -70,11 +70,7 @@ public class Tile implements Placable {
 
         tileNode.put("id", this.id);
 
-        if (this.type != null) {
-            tileNode.put("type", this.type.name());
-        } else {
-            tileNode.putNull("type");
-        }
+        tileNode.put("type", this.type.name());
 
         tileNode.put("value", this.value);
 

@@ -18,9 +18,9 @@ import static org.mockito.Mockito.when;
 
 @QuarkusTest
 class RoadTest {
-    SettlementPosition mockPositionA;
-    SettlementPosition mockPositionB;
-    final int ROAD_ID = 12;
+    static SettlementPosition mockPositionA;
+    static SettlementPosition mockPositionB;
+    private static final int ROAD_ID = 12;
     Road road;
 
     @BeforeEach
