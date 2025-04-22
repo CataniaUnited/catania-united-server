@@ -533,4 +533,36 @@ public class GameWebSocketTest {
                 Arguments.of(JsonNodeFactory.instance.objectNode().put("settlementPositionId", "1"))
         );
     }
+
+    @Test
+    void testRollDiceWebSocket() throws Exception {
+        String player1 = "DiceMaster";
+        String lobbyId = lobbyService.createLobby(player1);
+
+        ObjectNode diceNode = objectMapper.createObjectNode().put("diceRoll", 8);
+        MessageDTO diceRollMessage = new MessageDTO(MessageType.ROLL_DICE, player1, lobbyId, diceNode);
+
+        List<String> receivedMessages = new ArrayList<>();
+        CountDownLatch latch = new CountDownLatch(2); // 1 for connection success, 1 for dice result
+
+        var client = BasicWebSocketConnector.create()
+                .baseUri(serverUri)
+                .path("/game")
+                .onTextMessage((connection, message) -> {
+                    if (message.startsWith("{")) {
+                        receivedMessages.add(message);
+                        latch.countDown();
+                    }
+                })
+                .connectAndAwait();
+
+        client.sendTextAndAwait(objectMapper.writeValueAsString(diceRollMessage));
+
+        assertTrue(latch.await(5, TimeUnit.SECONDS), "Did not receive dice roll result in time");
+        MessageDTO diceResult = objectMapper.readValue(receivedMessages.getLast(), MessageDTO.class);
+
+        assertEquals(MessageType.DICE_RESULT, diceResult.getType());
+        assertEquals(player1, diceResult.getPlayer());
+        assertEquals(8, diceResult.getMessageNode("diceRoll").asInt());
+    }
 }
