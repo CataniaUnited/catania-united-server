@@ -27,4 +27,9 @@ public class VictoryPointService {
                 .count();
         return settlementPoints;
     }
+
+    public boolean checkForWin(String lobbyId, String playerId) throws GameException {
+        int victoryPoints = calculateVictoryPoints(lobbyId, playerId);
+        return victoryPoints >= 10;
+    }
 }
