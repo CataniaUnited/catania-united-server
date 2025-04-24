@@ -27,8 +27,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.net.URI;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
@@ -66,7 +66,7 @@ public class GameWebSocketTest {
 
     @Test
     void testWebSocketOnOpen() throws InterruptedException, JsonProcessingException {
-        List<String> receivedMessages = new ArrayList<>();
+       List<String> receivedMessages = new CopyOnWriteArrayList<>();
         CountDownLatch messageLatch = new CountDownLatch(1);
         var openConnections = connections.listAll().size();
         BasicWebSocketConnector.create()
@@ -98,7 +98,7 @@ public class GameWebSocketTest {
         messageDto.setPlayer("Player 1");
         messageDto.setLobbyId("1");
 
-        List<String> receivedMessages = new ArrayList<>();
+       List<String> receivedMessages = new CopyOnWriteArrayList<>();
         // Expecting 2 messages
         CountDownLatch messageLatch = new CountDownLatch(2);
 
@@ -130,7 +130,7 @@ public class GameWebSocketTest {
 
     @Test
     void testWebSocketOnClose() throws InterruptedException, JsonProcessingException {
-        List<String> receivedMessages = new ArrayList<>();
+       List<String> receivedMessages = new CopyOnWriteArrayList<>();
         // Expecting 2 messages
         CountDownLatch messageLatch = new CountDownLatch(2);
 
@@ -173,7 +173,7 @@ public class GameWebSocketTest {
         unknownMessageDto.setPlayer("Player 1");
         unknownMessageDto.setType(MessageType.ERROR);
 
-        List<String> receivedMessages = new ArrayList<>();
+       List<String> receivedMessages = new CopyOnWriteArrayList<>();
         CountDownLatch messageLatch = new CountDownLatch(2);
 
         var webSocketClientConnection = BasicWebSocketConnector.create()
@@ -203,7 +203,7 @@ public class GameWebSocketTest {
 
     @Test
     void testInvalidClientMessage() throws InterruptedException, JsonProcessingException {
-        List<String> receivedMessages = new ArrayList<>();
+       List<String> receivedMessages = new CopyOnWriteArrayList<>();
         CountDownLatch messageLatch = new CountDownLatch(2);
 
         var webSocketClientConnection = BasicWebSocketConnector.create()
@@ -238,7 +238,7 @@ public class GameWebSocketTest {
     void testSetUsernameCode() throws InterruptedException, JsonProcessingException {
         //Receiving two messages, since change is broadcast as well as returned directly
         CountDownLatch latch = new CountDownLatch(2);
-        List<String> receivedMessages = new ArrayList<>();
+       List<String> receivedMessages = new CopyOnWriteArrayList<>();
 
         var client = BasicWebSocketConnector.create()
                 .baseUri(serverUri)
@@ -270,7 +270,7 @@ public class GameWebSocketTest {
     void testSetUsernameOfNonExistingPlayer() throws JsonProcessingException, InterruptedException {
         doReturn(null).when(playerService).getPlayerByConnection(any(WebSocketConnection.class));
         CountDownLatch latch = new CountDownLatch(2);
-        List<String> receivedMessages = new ArrayList<>();
+       List<String> receivedMessages = new CopyOnWriteArrayList<>();
 
         var client = BasicWebSocketConnector.create()
                 .baseUri(serverUri)
@@ -324,7 +324,7 @@ public class GameWebSocketTest {
 
         MessageDTO joinLobbyMessage = new MessageDTO(MessageType.JOIN_LOBBY, player, lobbyId);
 
-        List<String> receivedMessages = new ArrayList<>();
+       List<String> receivedMessages = new CopyOnWriteArrayList<>();
         CountDownLatch messageLatch = new CountDownLatch(2);
 
         var webSocketClientConnection = BasicWebSocketConnector.create()
@@ -344,7 +344,7 @@ public class GameWebSocketTest {
         assertTrue(messageLatch.await(5, TimeUnit.SECONDS), "Not all messages were received in time!");
         assertEquals(2, receivedMessages.size());
 
-        MessageDTO responseMessage = objectMapper.readValue(receivedMessages.getLast(), MessageDTO.class);
+        MessageDTO responseMessage = objectMapper.readValue(receivedMessages.get(receivedMessages.size()-1), MessageDTO.class);
 
         assertEquals(MessageType.PLAYER_JOINED, responseMessage.getType());
         assertEquals(player, responseMessage.getPlayer());
@@ -390,7 +390,7 @@ public class GameWebSocketTest {
 
         var placeSettlementMessageDTO = new MessageDTO(MessageType.PLACE_SETTLEMENT, player2, lobbyId, placeSettlementMessageNode);
 
-        List<String> receivedMessages = new ArrayList<>();
+       List<String> receivedMessages = new CopyOnWriteArrayList<>();
         CountDownLatch messageLatch = new CountDownLatch(3);
 
         var webSocketClientConnection = BasicWebSocketConnector.create()
@@ -434,7 +434,7 @@ public class GameWebSocketTest {
         //Create message DTO
         var placeSettlementMessageDTO = new MessageDTO(MessageType.PLACE_SETTLEMENT, player2, lobbyId, placeSettlementMessageNode);
 
-        List<String> receivedMessages = new ArrayList<>();
+       List<String> receivedMessages = new CopyOnWriteArrayList<>();
         CountDownLatch messageLatch = new CountDownLatch(2);
 
         var webSocketClientConnection = BasicWebSocketConnector.create()
@@ -480,7 +480,7 @@ public class GameWebSocketTest {
 
         var placeRoadMessageDTO = new MessageDTO(MessageType.PLACE_ROAD, player2, lobbyId, placeRoadMessageNode);
 
-        List<String> receivedMessages = new ArrayList<>();
+       List<String> receivedMessages = new CopyOnWriteArrayList<>();
         CountDownLatch messageLatch = new CountDownLatch(3);
 
         var webSocketClientConnection = BasicWebSocketConnector.create()
@@ -523,7 +523,7 @@ public class GameWebSocketTest {
         //Create message DTO
         var placeRoadMessageDTO = new MessageDTO(MessageType.PLACE_ROAD, player2, lobbyId, placeRoadMessageNode);
 
-        List<String> receivedMessages = new ArrayList<>();
+       List<String> receivedMessages = new CopyOnWriteArrayList<>();
         CountDownLatch messageLatch = new CountDownLatch(2);
 
         var webSocketClientConnection = BasicWebSocketConnector.create()
@@ -578,7 +578,7 @@ public class GameWebSocketTest {
 
         doReturn(mockGameBoard).when(gameService).createGameboard(lobbyId);
 
-        List<String> receivedMessages = new ArrayList<>();
+        List<String> receivedMessages = new CopyOnWriteArrayList<>();
         CountDownLatch gameBoardMessageLatch = new CountDownLatch(1);
 
         var client = BasicWebSocketConnector.create()
@@ -635,7 +635,7 @@ public class GameWebSocketTest {
 
         doThrow(new GameException(expectedErrorMessage)).when(gameService).createGameboard(lobbyId);
 
-        List<String> receivedMessages = new ArrayList<>();
+       List<String> receivedMessages = new CopyOnWriteArrayList<>();
         CountDownLatch errorMessageLatch = new CountDownLatch(1);
 
         var client = BasicWebSocketConnector.create()
