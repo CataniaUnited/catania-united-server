@@ -2,6 +2,7 @@ package com.example.cataniaunited.game;
 
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.board.GameBoard;
+import com.example.cataniaunited.game.board.SettlementPosition;
 import io.quarkus.test.InjectMock;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -40,6 +41,39 @@ public class VictoryPointServiceTest {
 
         assertEquals(0, points);
         verify(gameService).getGameboardByLobbyId("lobby1");
+    }
+
+    @Test
+    void testCalculateVictoryPoints_oneSettlement_returnsOnePoint() throws GameException {
+        SettlementPosition position = mock(SettlementPosition.class);
+        when(position.getBuildingOwner()).thenReturn("player1");
+
+        when(gameService.getGameboardByLobbyId("lobby1")).thenReturn(mockGameBoard);
+        when(mockGameBoard.getSettlementPositionGraph()).thenReturn(List.of(position));
+
+        int points = victoryPointService.calculateVictoryPoints("lobby1", "player1");
+        assertEquals(1, points);
+        verify(gameService).getGameboardByLobbyId("lobby1");
+    }
+
+    @Test
+    void testCalculateVictoryPoints_multipleSettlements() throws GameException {
+        SettlementPosition position1 = mock(SettlementPosition.class);
+        SettlementPosition position2 = mock(SettlementPosition.class);
+        SettlementPosition position3 = mock(SettlementPosition.class);
+
+        when(position1.getBuildingOwner()).thenReturn("player1");
+        when(position2.getBuildingOwner()).thenReturn("player2");
+        when(position3.getBuildingOwner()).thenReturn("player1");
+
+        when(gameService.getGameboardByLobbyId("lobby1")).thenReturn(mockGameBoard);
+        when(mockGameBoard.getSettlementPositionGraph()).thenReturn(List.of(position1, position2, position3));
+
+        int points1 = victoryPointService.calculateVictoryPoints("lobby1", "player1");
+        int points2 = victoryPointService.calculateVictoryPoints("lobby1", "player2");
+
+        assertEquals(2, points1);
+        assertEquals(1, points2);
     }
 
 
