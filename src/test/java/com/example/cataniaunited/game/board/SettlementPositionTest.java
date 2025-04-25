@@ -2,7 +2,10 @@ package com.example.cataniaunited.game.board;
 
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.board.tile_list_builder.Tile;
+import com.example.cataniaunited.game.buildings.Building;
 import com.example.cataniaunited.game.buildings.Settlement;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -259,5 +262,75 @@ class SettlementPositionTest {
         Settlement settlement2 = new Settlement(secondPlayerId);
         GameException ge = assertThrows(GameException.class, () -> settlementPosition.setBuilding(settlement2));
         assertEquals("Player mismatch when placing building: positionId = %s, playerId = %s".formatted(settlementPosition.id, secondPlayerId), ge.getMessage());
+    }
+
+    @Test
+    void testToJsonInitialState() {
+
+        ObjectNode jsonNode = settlementPosition.toJson();
+
+        assertNotNull(jsonNode, "toJson() should return a non-null ObjectNode");
+
+        // Check ID
+        assertTrue(jsonNode.has("id"), "JSON should contain 'id' field");
+        assertEquals(STANDARD_ID, jsonNode.get("id").asInt(), "ID should match the initial ID in JSON");
+
+        // Check Building (should be the string "null")
+        assertTrue(jsonNode.has("building"), "JSON should contain 'building' field");
+        // String.valueOf(null) results in the string "null"
+        assertEquals("null", jsonNode.get("building").asText(), "Initial building should be represented as 'null' string in JSON");
+
+        // Check Coordinates
+        assertTrue(jsonNode.has("coordinates"), "JSON should contain 'coordinates' field");
+        assertTrue(jsonNode.get("coordinates").isArray(), "Coordinates should be a JSON array");
+        ArrayNode coordsArray = (ArrayNode) jsonNode.get("coordinates");
+        assertEquals(2, coordsArray.size(), "Coordinates array should have 2 elements");
+        assertEquals(0.0, coordsArray.get(0).asDouble(), 0.0001, "Initial X coordinate should be 0.0 in JSON");
+        assertEquals(0.0, coordsArray.get(1).asDouble(), 0.0001, "Initial Y coordinate should be 0.0 in JSON");
+
+        // Check that tiles and roads are NOT included
+        assertFalse(jsonNode.has("tiles"), "JSON should not contain 'tiles' field");
+        assertFalse(jsonNode.has("roads"), "JSON should not contain 'roads' field");
+    }
+
+    @Test
+    void testToJsonWithCoordinatesAndBuildingSet() throws GameException {
+        double expectedX = -25.5;
+        double expectedY = 100.1;
+        String buildingOwner = "Player1";
+        String expectedBuildingString = "Settlement{owner=" + buildingOwner + "}";
+
+        // Use a mock Building
+        Building mockBuilding = mock(Building.class);
+        when(mockBuilding.toString()).thenReturn(expectedBuildingString);
+        when(mockBuilding.getOwnerPlayerId()).thenReturn(buildingOwner);
+
+        settlementPosition.setCoordinates(expectedX, expectedY);
+        settlementPosition.setBuilding(mockBuilding);
+
+
+        ObjectNode jsonNode = settlementPosition.toJson();
+
+        assertNotNull(jsonNode, "toJson() should return a non-null ObjectNode");
+
+        // Check ID
+        assertTrue(jsonNode.has("id"), "JSON should contain 'id' field");
+        assertEquals(STANDARD_ID, jsonNode.get("id").asInt(), "ID should match the initial ID in JSON");
+
+        // Check Building (should be the string from building.toString())
+        assertTrue(jsonNode.has("building"), "JSON should contain 'building' field");
+        assertEquals(expectedBuildingString, jsonNode.get("building").asText(), "Building string should match the building's toString() output");
+
+        // Check Coordinates
+        assertTrue(jsonNode.has("coordinates"), "JSON should contain 'coordinates' field");
+        assertTrue(jsonNode.get("coordinates").isArray(), "Coordinates should be a JSON array");
+        ArrayNode coordsArray = (ArrayNode) jsonNode.get("coordinates");
+        assertEquals(2, coordsArray.size(), "Coordinates array should have 2 elements");
+        assertEquals(expectedX, coordsArray.get(0).asDouble(), 0.0001, "X coordinate should match the set value in JSON");
+        assertEquals(expectedY, coordsArray.get(1).asDouble(), 0.0001, "Y coordinate should match the set value in JSON");
+
+        // Check that tiles and roads are NOT included
+        assertFalse(jsonNode.has("tiles"), "JSON should not contain 'tiles' field");
+        assertFalse(jsonNode.has("roads"), "JSON should not contain 'roads' field");
     }
 }

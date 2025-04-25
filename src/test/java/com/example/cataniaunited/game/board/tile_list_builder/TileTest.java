@@ -1,5 +1,7 @@
 package com.example.cataniaunited.game.board.tile_list_builder;
 
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -113,6 +115,73 @@ class TileTest {
         tile.setId(id);
         String expected = String.format("Tile{id=%d,coordinates=(%f, %f)}", id, x, y);
         assertEquals(expected, tile.toString(), "toString() format should be correct");
+    }
+
+
+    @Test
+    void testToJson() {
+        ObjectNode jsonNode = tile.toJson();
+
+        assertNotNull(jsonNode, "toJson() should return a non-null ObjectNode");
+
+        // Check ID
+        assertTrue(jsonNode.has("id"), "JSON should contain 'id' field");
+        assertEquals(0, jsonNode.get("id").asInt(), "Initial ID should be 0 in JSON");
+
+        // Check Type
+        assertTrue(jsonNode.has("type"), "JSON should contain 'type' field");
+        assertEquals(testType.name(), jsonNode.get("type").asText(), "Type should match the initial type name in JSON");
+
+        // Check Value
+        assertTrue(jsonNode.has("value"), "JSON should contain 'value' field");
+        assertEquals(0, jsonNode.get("value").asInt(), "Initial value should be 0 in JSON");
+
+        // Check Coordinates
+        assertTrue(jsonNode.has("coordinates"), "JSON should contain 'coordinates' field");
+        assertTrue(jsonNode.get("coordinates").isArray(), "Coordinates should be a JSON array");
+
+
+        ArrayNode coordsArray = (ArrayNode) jsonNode.get("coordinates");
+        assertEquals(2, coordsArray.size(), "Coordinates array should have 2 elements");
+        assertEquals(0.0, coordsArray.get(0).asDouble(), 0.0001, "Initial X coordinate should be 0.0 in JSON");
+        assertEquals(0.0, coordsArray.get(1).asDouble(), 0.0001, "Initial Y coordinate should be 0.0 in JSON");
+    }
+
+    @Test
+    void testToJsonAfterSetup() {
+        int expectedId = 5;
+        int expectedValue = 8;
+        double expectedX = 12.3;
+        double expectedY = -4.5;
+
+        tile.setId(expectedId);
+        tile.setValue(expectedValue);
+        tile.setCoordinates(expectedX, expectedY);
+
+        ObjectNode jsonNode = tile.toJson();
+
+        assertNotNull(jsonNode, "toJson() should return a non-null ObjectNode");
+
+        // Check ID
+        assertTrue(jsonNode.has("id"), "JSON should contain 'id' field");
+        assertEquals(expectedId, jsonNode.get("id").asInt(), "ID should match the set ID in JSON");
+
+        // Check Type
+        assertTrue(jsonNode.has("type"), "JSON should contain 'type' field");
+        assertEquals(testType.name(), jsonNode.get("type").asText(), "Type should match the initial type name in JSON");
+
+        // Check Value
+        assertTrue(jsonNode.has("value"), "JSON should contain 'value' field");
+        assertEquals(expectedValue, jsonNode.get("value").asInt(), "Value should match the set value in JSON");
+
+        // Check Coordinates
+        assertTrue(jsonNode.has("coordinates"), "JSON should contain 'coordinates' field");
+        assertTrue(jsonNode.get("coordinates").isArray(), "Coordinates should be a JSON array");
+        ArrayNode coordsArray = (ArrayNode) jsonNode.get("coordinates");
+
+        assertEquals(2, coordsArray.size(), "Coordinates array should have 2 elements");
+        assertEquals(expectedX, coordsArray.get(0).asDouble(), 0.0001, "X coordinate should match the set value in JSON");
+        assertEquals(expectedY, coordsArray.get(1).asDouble(), 0.0001, "Y coordinate should match the set value in JSON");
     }
 
 }

@@ -1,8 +1,13 @@
 package com.example.cataniaunited.lobby;
 
+import com.example.cataniaunited.player.PlayerColor;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
+
 import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class LobbyTest {
 
@@ -27,5 +32,22 @@ class LobbyTest {
 
         assertEquals(1, players.size());
         assertTrue(players.contains(hostPlayer));
+    }
+
+    @Test
+    void testRestoreColor_shouldOnlyAddColorIfNotPresent() {
+        Lobby lobby = new Lobby("555xyz", "HostPlayer");
+
+        PlayerColor color = lobby.assignAvailableColor();
+        assertNotNull(color);
+
+        lobby.restoreColor(color);
+
+        int countBefore = (int) lobby.getAvailableColors().stream().filter(c -> c == color).count();
+        lobby.restoreColor(color);
+        int countAfter = (int) lobby.getAvailableColors().stream().filter(c -> c == color).count();
+
+        assertEquals(1, countAfter);
+        assertEquals(countBefore, countAfter);
     }
 }
