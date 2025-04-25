@@ -2,6 +2,9 @@ package com.example.cataniaunited.game.board;
 
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.util.Util;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.util.Arrays;
 
@@ -12,7 +15,7 @@ public class Road implements Placable {
     final int id;
 
     double[] coordinates = new double[2];
-    double rationAngle;
+    double rotationAngle;
 
     public Road(SettlementPosition positionA, SettlementPosition positionB, int id) {
         this.positionA = positionA;
@@ -21,7 +24,7 @@ public class Road implements Placable {
     }
 
     public void setOwnerPlayerId(String ownerPlayerId) throws GameException {
-        if(Util.isEmpty(ownerPlayerId)) {
+        if (Util.isEmpty(ownerPlayerId)) {
             throw new GameException("Owner Id of road must not be empty");
         }
 
@@ -45,8 +48,8 @@ public class Road implements Placable {
         return coordinates.clone();
     }
 
-    public double getRationAngle() {
-        return rationAngle;
+    public double getRotationAngle() {
+        return rotationAngle;
     }
 
     public int getId() {
@@ -84,7 +87,7 @@ public class Road implements Placable {
         }
 
         this.coordinates = new double[]{xMax / 2, yMax / 2};
-        this.rationAngle = StrictMath.atan2(yMin, xMin); // No need to assert that since no Road will be placed on 0,0
+        this.rotationAngle = StrictMath.atan2(yMin, xMin); // No need to assert that since no Road will be placed on 0,0
     }
 
     public String getOwnerPlayerId() {
@@ -94,6 +97,31 @@ public class Road implements Placable {
     @Override
     public String toString() {
         return "Road:{owner: %s; (%s, %s); position: (%s); angle: %f}"
-                .formatted(ownerPlayerId, positionA.getId(), positionB.getId(), Arrays.toString(coordinates), rationAngle);
+                .formatted(ownerPlayerId, positionA.getId(), positionB.getId(), Arrays.toString(coordinates), rotationAngle);
     }
+
+    @Override
+    public ObjectNode toJson() {
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode roadNode = mapper.createObjectNode();
+
+        roadNode.put("id", this.id);
+
+        if (this.ownerPlayerId != null) {
+            roadNode.put("owner", this.ownerPlayerId);
+        } else {
+            roadNode.putNull("owner");
+        }
+
+
+        ArrayNode coordsNode = mapper.createArrayNode();
+        coordsNode.add(this.coordinates[0]); // Add x
+        coordsNode.add(this.coordinates[1]); // Add y
+        roadNode.set("coordinates", coordsNode);
+
+        roadNode.put("rotationAngle", this.rotationAngle);
+
+        return roadNode;
+    }
+
 }

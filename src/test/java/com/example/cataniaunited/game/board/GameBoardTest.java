@@ -3,6 +3,8 @@ package com.example.cataniaunited.game.board;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.board.tile_list_builder.Tile;
 import com.example.cataniaunited.game.buildings.Settlement;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -170,7 +172,7 @@ class GameBoardTest {
     @Test
     void testPlaceSettlement() throws GameException {
         GameBoard gameBoard = new GameBoard(2);
-        var settlementPosition = gameBoard.getSettlementPositionGraph().getFirst();
+        var settlementPosition = gameBoard.getSettlementPositionGraph().get(0);
         String playerId = "Player1";
         gameBoard.placeSettlement(playerId, settlementPosition.getId());
         assertNotNull(settlementPosition.building);
@@ -197,7 +199,7 @@ class GameBoardTest {
     @MethodSource("invalidPlayerIds")
     void placeSettlementShouldThrowExceptionIfPlayerIdIsEmpty(String playerId){
         GameBoard gameBoard = new GameBoard(2);
-        int positionId = gameBoard.getSettlementPositionGraph().getFirst().getId();
+        int positionId = gameBoard.getSettlementPositionGraph().get(0).getId();
         GameException ge = assertThrows(GameException.class, () -> gameBoard.placeSettlement(playerId, positionId));
         assertEquals("Owner Id of building must not be empty", ge.getMessage());
     }
@@ -205,7 +207,7 @@ class GameBoardTest {
     @Test
     void testPlaceRoad() throws GameException {
         GameBoard gameBoard = new GameBoard(2);
-        var road = gameBoard.roadList.getFirst();
+        var road = gameBoard.roadList.get(0);
         String playerId = "Player1";
         gameBoard.placeRoad(playerId, road.getId());
         assertEquals(playerId, road.ownerPlayerId);
@@ -230,7 +232,7 @@ class GameBoardTest {
     @MethodSource("invalidPlayerIds")
     void placeRoadShouldThrowExceptionIfPlayerIdIsEmpty(String playerId){
         GameBoard gameBoard = new GameBoard(2);
-        var road = gameBoard.roadList.getFirst();
+        var road = gameBoard.roadList.get(0);
         GameException ge = assertThrows(GameException.class, () -> gameBoard.placeRoad(playerId, road.getId()));
         assertEquals("Owner Id of road must not be empty", ge.getMessage());
     }
@@ -239,15 +241,87 @@ class GameBoardTest {
         return Stream.of(null, Arguments.of(""));
     }
 
-    @Disabled("test used for debugging purposes, passes automatically")
+
+    @Test
+    void testGetJsonStructure() {
+        int playerCount = 2; // Use a simple case
+        GameBoard gameBoard = new GameBoard(playerCount);
+        int expectedSize = GameBoard.calculateSizeOfBoard(playerCount);
+
+        ObjectNode boardJson = gameBoard.getJson();
+
+        assertNotNull(boardJson, "getJson() should return a non-null ObjectNode");
+
+        // Check top-level keys exist
+        assertTrue(boardJson.has("tiles"), "JSON should contain 'tiles' field");
+        assertTrue(boardJson.has("settlementPositions"), "JSON should contain 'settlementPositions' field");
+        assertTrue(boardJson.has("roads"), "JSON should contain 'roads' field");
+        assertTrue(boardJson.has("ringsOfBoard"), "JSON should contain 'ringsOfBoard' field");
+        assertTrue(boardJson.has("sizeOfHex"), "JSON should contain 'sizeOfHex' field");
+
+        // Check metadata values
+        assertEquals(expectedSize, boardJson.get("ringsOfBoard").asInt(), "ringsOfBoard should match calculated board size");
+        assertEquals(GameBoard.DEFAULT_TILES_PER_PLAYER_GOAL, boardJson.get("sizeOfHex").asInt(), "sizeOfHex should match the constant");
+
+        // Check array types
+        assertTrue(boardJson.get("tiles").isArray(), "'tiles' field should be a JSON array");
+        assertTrue(boardJson.get("settlementPositions").isArray(), "'settlementPositions' field should be a JSON array");
+        assertTrue(boardJson.get("roads").isArray(), "'roads' field should be a JSON array");
+    }
+
+    @Test
+    void testGetJsonContentSize() {
+        int playerCount = 3; // Use a different simple case
+        GameBoard gameBoard = new GameBoard(playerCount);
+
+        // Get the generated lists for size comparison
+        List<Tile> expectedTiles = gameBoard.getTileList();
+        List<SettlementPosition> expectedPositions = gameBoard.getSettlementPositionGraph();
+        List<Road> expectedRoads = gameBoard.getRoadList();
+
+        assertNotNull(expectedTiles, "Internal tile list should exist");
+        assertNotNull(expectedPositions, "Internal position list should exist");
+        assertNotNull(expectedRoads, "Internal road list should exist");
+
+        // Get the JSON
+        ObjectNode boardJson = gameBoard.getJson();
+        assertNotNull(boardJson);
+
+        // Get the arrays from JSON
+        JsonNode tilesNode = boardJson.get("tiles");
+        JsonNode positionsNode = boardJson.get("settlementPositions");
+        JsonNode roadsNode = boardJson.get("roads");
+
+        assertTrue(tilesNode.isArray(), "'tiles' node should be an array");
+        assertTrue(positionsNode.isArray(), "'settlementPositions' node should be an array");
+        assertTrue(roadsNode.isArray(), "'roads' node should be an array");
+
+        // Compare sizes
+        assertEquals(expectedTiles.size(), tilesNode.size(), "JSON tiles array size should match internal list size");
+        assertEquals(expectedPositions.size(), positionsNode.size(), "JSON positions array size should match internal list size");
+        assertEquals(expectedRoads.size(), roadsNode.size(), "JSON roads array size should match internal list size");
+
+        // Optional: Basic check of first element structure (relies on individual toJson tests)
+        if (!expectedTiles.isEmpty()) {
+            assertTrue(tilesNode.get(0).has("id"), "First tile JSON should have an 'id'");
+            assertTrue(tilesNode.get(0).has("type"), "First tile JSON should have a 'type'");
+        }
+        if (!expectedPositions.isEmpty()) {
+            assertTrue(positionsNode.get(0).has("id"), "First position JSON should have an 'id'");
+            assertTrue(positionsNode.get(0).has("coordinates"), "First position JSON should have 'coordinates'");
+        }
+        if (!expectedRoads.isEmpty()) {
+            assertTrue(roadsNode.get(0).has("id"), "First road JSON should have an 'id'");
+            assertTrue(roadsNode.get(0).has("owner"), "First road JSON should have an 'owner'");
+        }
+    }
+
+    //@Disabled("test used for debugging purposes, passes automatically")
     @Test
     void debuggingTest(){
         GameBoard board = new GameBoard(4);
         board.generateBoard();
-        List<SettlementPosition> graph = board.getSettlementPositionGraph();
-        for (SettlementPosition node: graph){
-            System.out.println(node);
-        }
+        System.out.println(board.getJson());
         assertTrue(true);
     }
 

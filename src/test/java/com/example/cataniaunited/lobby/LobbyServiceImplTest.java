@@ -1,6 +1,7 @@
 package com.example.cataniaunited.lobby;
 
 import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.player.PlayerColor;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
@@ -92,6 +93,65 @@ class LobbyServiceImplTest {
         boolean joined = lobbyService.joinLobbyByCode("InvalidCode", "New Player");
 
         assertFalse(joined, "Player should not be able to join the lobby with a valid code");
+    }
+
+    @Test
+    void testJoinLobbyAssignsUniqueColor() throws GameException {
+        String lobbyId = lobbyService.createLobby("HostPlayer");
+        lobbyService.joinLobbyByCode(lobbyId, "Player1");
+
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+        assertTrue(lobby.getPlayers().contains("Player1"));
+
+        PlayerColor color = lobby.getPlayerColor("Player1");
+
+        assertNotNull(color);
+        assertFalse(lobbyService.getOpenLobbies().isEmpty());
+    }
+
+    @Test
+    void testJoinLobbyFailsWhenNoColorsAvailable (){
+        String lobbyId = lobbyService.createLobby("HostPlayer");
+
+        for (int i = 0; i < PlayerColor.values().length; i++) {
+            lobbyService.joinLobbyByCode(lobbyId, "Player" + i);
+        }
+
+        boolean joined = lobbyService.joinLobbyByCode(lobbyId, "ExtraPlayer");
+        assertFalse(joined, "Player should not be able to join when no colors are available");
+    }
+
+    @Test
+    void testRemovePlayerFromLobby() throws GameException {
+        String lobbyId = lobbyService.createLobby("HostPlayer");
+        lobbyService.joinLobbyByCode(lobbyId, "Player1");
+
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+        assertTrue(lobby.getPlayers().contains("Player1"));
+
+        lobbyService.removePlayerFromLobby(lobbyId, "Player1");
+        assertFalse(lobby.getPlayers().contains("Player1"));
+    }
+
+    @Test
+    void testRemovePlayerRestoresColor(){
+        String lobbyId = lobbyService.createLobby("HostPlayer");
+        lobbyService.joinLobbyByCode(lobbyId, "Player1");
+
+        int colorPoolSizeBefore = PlayerColor.values().length - 2;
+        lobbyService.removePlayerFromLobby(lobbyId, "Player1");
+
+        assertEquals(PlayerColor.values().length-1, colorPoolSizeBefore + 1);
+    }
+
+    @Test
+    void testRemovePlayerNotInLobby() {
+        String lobbyId = lobbyService.createLobby("HostPlayer");
+
+        lobbyService.removePlayerFromLobby(lobbyId, "GhostPlayer");
+
+        Lobby lobby = assertDoesNotThrow(() -> lobbyService.getLobbyById(lobbyId));
+        assertFalse(lobby.getPlayers().contains("GhostPlayer"));
     }
 
 }

@@ -9,6 +9,7 @@ public interface LobbyService {
     String generateLobbyId();
     List<String> getOpenLobbies();
     boolean joinLobbyByCode(String lobbyId, String player);
+    void removePlayerFromLobby(String lobbyId, String player);
     Lobby getLobbyById(String lobbyId) throws GameException;
     void clearLobbies();
 }
