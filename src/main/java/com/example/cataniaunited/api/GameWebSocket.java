@@ -4,6 +4,7 @@ import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.GameService;
+import com.example.cataniaunited.game.VictoryPointService;
 import com.example.cataniaunited.lobby.LobbyService;
 import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerService;
@@ -38,6 +39,9 @@ public class GameWebSocket {
     @Inject
     GameService gameService;
 
+    @Inject
+    VictoryPointService victoryPointService;
+
     @OnOpen
     public Uni<MessageDTO> onOpen(WebSocketConnection connection) {
         logger.infof("Client connected: %s", connection.id());
@@ -64,7 +68,7 @@ public class GameWebSocket {
                 case SET_USERNAME -> setUsername(message, connection);
                 case PLACE_SETTLEMENT -> placeSettlement(message, connection);
                 case PLACE_ROAD -> placeRoad(message, connection);
-                case ERROR, CONNECTION_SUCCESSFUL, CLIENT_DISCONNECTED, LOBBY_CREATED, LOBBY_UPDATED, PLAYER_JOINED ->
+                case ERROR, CONNECTION_SUCCESSFUL, CLIENT_DISCONNECTED, LOBBY_CREATED, LOBBY_UPDATED, PLAYER_JOINED, GAME_WON ->
                         throw new GameException("Invalid client command");
             };
         } catch (GameException ge) {
@@ -98,6 +102,9 @@ public class GameWebSocket {
             gameService.placeSettlement(message.getLobbyId(), message.getPlayer(), position);
         } catch (NumberFormatException | GameException e) {
             throw new GameException("Invalid settlement position id: id = %s", settlementPosition.toString());
+        }
+        if(victoryPointService.checkForWin(message.getLobbyId(), message.getPlayer())){
+            return victoryPointService.broadcastWin(connection,  message.getLobbyId(), message.getPlayer());
         }
         MessageDTO update = new MessageDTO(MessageType.PLACE_SETTLEMENT, message.getPlayer(), message.getLobbyId());
         return connection.broadcast().sendText(update).chain(i -> Uni.createFrom().item(update));
