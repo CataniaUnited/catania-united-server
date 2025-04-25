@@ -11,4 +11,5 @@ public interface LobbyService {
     boolean joinLobbyByCode(String lobbyId, String player);
     Lobby getLobbyById(String lobbyId) throws GameException;
     void clearLobbies();
+    void startGame(String lobbyId) throws GameException;
 }

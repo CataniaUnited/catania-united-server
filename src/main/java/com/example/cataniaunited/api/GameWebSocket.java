@@ -61,6 +61,7 @@ public class GameWebSocket {
             return switch (message.getType()) {
                 case CREATE_LOBBY -> createLobby(message);
                 case JOIN_LOBBY -> joinLobby(message, connection);
+                case START_GAME -> startGame(message, connection);
                 case SET_USERNAME -> setUsername(message, connection);
                 case PLACE_SETTLEMENT -> placeSettlement(message, connection);
                 case PLACE_ROAD -> placeRoad(message, connection);
@@ -136,4 +137,24 @@ public class GameWebSocket {
         errorNode.put("error", errorMessage);
         return new MessageDTO(MessageType.ERROR, errorNode);
     }
+
+    private Uni<MessageDTO> startGame(MessageDTO message, WebSocketConnection connection)
+            throws GameException {
+        String lobbyId = message.getLobbyId();
+        lobbyService.startGame(lobbyId);
+        List<String> turnOrder = lobbyService.getLobbyById(lobbyId).getTurnOrder();
+        gameService.createGameboard(lobbyId);
+        ObjectNode payload = JsonNodeFactory.instance.objectNode()
+                .put("lobbyId", lobbyId)
+                .set("turnOrder", JsonNodeFactory.instance.arrayNode()
+                        .addAll(turnOrder.stream()
+                                .map(JsonNodeFactory.instance::textNode)
+                                .toList()));
+
+        MessageDTO startMsg = new MessageDTO(MessageType.START_GAME, payload);
+        return connection.broadcast()
+                .sendText(startMsg)
+                .chain(i -> Uni.createFrom().item(startMsg));
+    }
+
 }
