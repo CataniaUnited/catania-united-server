@@ -32,4 +32,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "catania-united"
-include(":app")
+//include(":app")
