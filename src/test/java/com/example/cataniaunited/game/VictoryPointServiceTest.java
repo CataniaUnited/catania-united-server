@@ -11,6 +11,10 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import java.util.List;
+import io.quarkus.websockets.next.WebSocketConnection;
+import com.example.cataniaunited.dto.MessageDTO;
+import com.example.cataniaunited.dto.MessageType;
+import io.smallrye.mutiny.Uni;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -26,6 +30,9 @@ public class VictoryPointServiceTest {
 
     @Mock
     GameBoard mockGameBoard;
+
+    @Mock
+    WebSocketConnection mockConnection;
 
     @BeforeEach
     void setUp(){
@@ -121,6 +128,26 @@ public class VictoryPointServiceTest {
         boolean playerWon = victoryPointService.checkForWin("lobby1", "player1");
 
         assertTrue(playerWon);
+    }
+
+    @Test
+    void testBroadcastWin_sendsCorrectMessage() throws GameException {
+        WebSocketConnection mockConnection = mock(WebSocketConnection.class, RETURNS_DEEP_STUBS);
+
+        when(mockConnection.broadcast().sendText(any(MessageDTO.class))).thenReturn(Uni.createFrom().voidItem());
+
+        String lobbyId = "lobby1";
+        String playerId = "player1";
+
+        Uni<MessageDTO> resultUni = victoryPointService.broadcastWin(mockConnection, lobbyId, playerId);
+        MessageDTO result = resultUni.await().indefinitely();
+
+        assertEquals(MessageType.GAME_WON, result.getType());
+        assertEquals(playerId, result.getPlayer());
+        assertEquals(lobbyId, result.getLobbyId());
+        assertEquals(playerId, result.getMessage().get("winner").asText());
+
+        verify(mockConnection.broadcast()).sendText(any(MessageDTO.class));
     }
 
 
