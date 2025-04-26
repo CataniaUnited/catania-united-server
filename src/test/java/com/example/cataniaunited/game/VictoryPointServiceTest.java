@@ -4,6 +4,7 @@ import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.game.board.SettlementPosition;
 import io.quarkus.test.InjectMock;
+import org.junit.jupiter.api.AfterEach;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import io.quarkus.test.junit.QuarkusTest;
@@ -31,12 +32,16 @@ public class VictoryPointServiceTest {
     @Mock
     GameBoard mockGameBoard;
 
-    @Mock
-    WebSocketConnection mockConnection;
+    private AutoCloseable closeable;
 
     @BeforeEach
     void setUp(){
-        MockitoAnnotations.openMocks(this);
+        closeable = MockitoAnnotations.openMocks(this);
+    }
+
+    @AfterEach
+    void tearDown() throws Exception {
+        closeable.close();
     }
 
     @Test
@@ -131,7 +136,7 @@ public class VictoryPointServiceTest {
     }
 
     @Test
-    void testBroadcastWin_sendsCorrectMessage() throws GameException {
+    void testBroadcastWin_sendsCorrectMessage(){
         WebSocketConnection mockConnection = mock(WebSocketConnection.class, RETURNS_DEEP_STUBS);
 
         when(mockConnection.broadcast().sendText(any(MessageDTO.class))).thenReturn(Uni.createFrom().voidItem());
@@ -146,7 +151,7 @@ public class VictoryPointServiceTest {
         assertEquals(playerId, result.getPlayer());
         assertEquals(lobbyId, result.getLobbyId());
         assertEquals(playerId, result.getMessage().get("winner").asText());
-
+        
         verify(mockConnection.broadcast()).sendText(any(MessageDTO.class));
     }
 

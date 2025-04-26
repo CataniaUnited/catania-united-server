@@ -8,7 +8,6 @@ import io.quarkus.websockets.next.WebSocketConnection;
 import io.smallrye.mutiny.Uni;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.board.GameBoard;
-import com.example.cataniaunited.lobby.LobbyService;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import jakarta.inject.Inject;
@@ -20,18 +19,14 @@ public class VictoryPointService {
     private static final Logger logger = Logger.getLogger(VictoryPointService.class);
 
     @Inject
-    LobbyService lobbyService;
-
-    @Inject
     GameService gameService;
 
     // extend when cities, longest road and development cards are implemented
     public int calculateVictoryPoints(String lobbyId, String playerId) throws GameException {
         GameBoard gameBoard = gameService.getGameboardByLobbyId(lobbyId);
-        int settlementPoints = (int) gameBoard.getSettlementPositionGraph().stream()
+        return (int) gameBoard.getSettlementPositionGraph().stream()
                 .filter(position -> playerId.equals(position.getBuildingOwner()))
                 .count();
-        return settlementPoints;
     }
 
     public boolean checkForWin(String lobbyId, String playerId) throws GameException {
@@ -39,7 +34,7 @@ public class VictoryPointService {
         return victoryPoints >= 10;
     }
 
-    public Uni<MessageDTO> broadcastWin(WebSocketConnection connection,String lobbyId, String winnerPlayerId) throws GameException {
+    public Uni<MessageDTO> broadcastWin(WebSocketConnection connection,String lobbyId, String winnerPlayerId){
         ObjectNode message = JsonNodeFactory.instance.objectNode();
         message.put("winner", winnerPlayerId);
         MessageDTO messageDTO = new MessageDTO(MessageType.GAME_WON, winnerPlayerId, lobbyId, message);
