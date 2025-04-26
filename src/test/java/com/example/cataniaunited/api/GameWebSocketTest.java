@@ -32,7 +32,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
-
+import static org.mockito.Mockito.doReturn;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -678,5 +678,62 @@ public class GameWebSocketTest {
         assertTrue(responseMessage.getMessage().has("error"), "Error payload should have 'error' field");
         assertEquals(expectedErrorMessage, responseMessage.getMessageNode("error").asText(), "Error message text should match");
     }
+
+    @Test
+    void testStartGameBroadcastsRandomTurnOrder() throws Exception {
+        String lobbyId = "theLobby";
+
+        // 1) spy‐friendly stubs (doReturn, doNothing)
+        doNothing().when(lobbyService).startGame(anyString());
+
+        com.example.cataniaunited.lobby.Lobby fakeLobby =
+                new com.example.cataniaunited.lobby.Lobby(lobbyId, "host");
+        fakeLobby.setTurnOrder(List.of("alice","bob","carol"));
+
+        doReturn(fakeLobby)
+                .when(lobbyService)
+                .getLobbyById(anyString());
+
+        // return null (or a dummy GameBoard) instead of invoking the real method:
+        doReturn(null).when(gameService).createGameboard(anyString());
+
+
+        // 2) connect
+        List<String> received = new CopyOnWriteArrayList<>();
+        CountDownLatch latch = new CountDownLatch(1);
+
+        var client = BasicWebSocketConnector.create()
+                .baseUri(serverUri)
+                .path("/game")
+                .onTextMessage((c, text) -> {
+                    if (text.contains("\"type\":\"START_GAME\"")) {
+                        received.add(text);
+                        latch.countDown();
+                    }
+                })
+                .connectAndAwait();
+
+        // 3) send DTO with top‐level lobbyId
+        MessageDTO startDto = new MessageDTO(
+                MessageType.START_GAME,
+                null,
+                lobbyId,
+                JsonNodeFactory.instance.objectNode()
+        );
+        client.sendTextAndAwait(objectMapper.writeValueAsString(startDto));
+
+        // 4) assert we got exactly our fake turnOrder
+        assertTrue(latch.await(5, TimeUnit.SECONDS), "Timed out waiting for START_GAME");
+        MessageDTO reply = objectMapper.readValue(received.get(0), MessageDTO.class);
+        var arr = reply.getMessageNode("turnOrder");
+        assertEquals(List.of("alice","bob","carol"),
+                List.of(arr.get(0).asText(), arr.get(1).asText(), arr.get(2).asText()));
+
+        // 5) verify the calls
+        verify(lobbyService).startGame(lobbyId);
+        verify(gameService).createGameboard(lobbyId);
+    }
+
+
 
 }
