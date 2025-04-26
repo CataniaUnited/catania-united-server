@@ -76,6 +76,54 @@ public class VictoryPointServiceTest {
         assertEquals(1, points2);
     }
 
+    @Test
+    void testCheckForWin_notEnoughPoints_returnsFalse() throws GameException {
+        SettlementPosition mockedSettlementPosition = mock(SettlementPosition.class);
+
+        when(mockedSettlementPosition.getBuildingOwner()).thenReturn("player1");
+        when(mockGameBoard.getSettlementPositionGraph())
+                .thenReturn(List.of(mockedSettlementPosition, mockedSettlementPosition, mockedSettlementPosition,
+                        mockedSettlementPosition, mockedSettlementPosition, mockedSettlementPosition,mockedSettlementPosition));
+        when(gameService.getGameboardByLobbyId("lobby1")).thenReturn(mockGameBoard);
+
+        boolean playerWon = victoryPointService.checkForWin("lobby1", "player1");
+
+        assertFalse(playerWon);
+    }
+
+    @Test
+    void checkForWin_tenPoints_returnsTrue() throws GameException {
+        SettlementPosition mockedSettlementPosition = mock(SettlementPosition.class);
+
+        when(mockedSettlementPosition.getBuildingOwner()).thenReturn("player1");
+        when(mockGameBoard.getSettlementPositionGraph())
+                .thenReturn(List.of(mockedSettlementPosition, mockedSettlementPosition, mockedSettlementPosition,
+                        mockedSettlementPosition, mockedSettlementPosition, mockedSettlementPosition,mockedSettlementPosition,
+                        mockedSettlementPosition, mockedSettlementPosition, mockedSettlementPosition));
+        when(gameService.getGameboardByLobbyId("lobby1")).thenReturn(mockGameBoard);
+
+        boolean playerWon = victoryPointService.checkForWin("lobby1", "player1");
+
+        assertTrue(playerWon);
+    }
+
+    @Test
+    void checkForWin_moreThenTenPoints_returnsTrue() throws GameException {
+        SettlementPosition mockedSettlementPosition = mock(SettlementPosition.class);
+
+        when(mockedSettlementPosition.getBuildingOwner()).thenReturn("player1");
+        when(mockGameBoard.getSettlementPositionGraph())
+                .thenReturn(List.of(mockedSettlementPosition, mockedSettlementPosition, mockedSettlementPosition,
+                        mockedSettlementPosition, mockedSettlementPosition, mockedSettlementPosition,mockedSettlementPosition,
+                        mockedSettlementPosition, mockedSettlementPosition, mockedSettlementPosition, mockedSettlementPosition));
+        when(gameService.getGameboardByLobbyId("lobby1")).thenReturn(mockGameBoard);
+
+        boolean playerWon = victoryPointService.checkForWin("lobby1", "player1");
+
+        assertTrue(playerWon);
+    }
+
+
 
 
 }
