@@ -6,6 +6,9 @@ import com.example.cataniaunited.game.board.tile_list_builder.Tile;
 import com.example.cataniaunited.game.board.tile_list_builder.TileListBuilder;
 import com.example.cataniaunited.game.board.tile_list_builder.TileListDirector;
 import com.example.cataniaunited.game.buildings.Settlement;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.jboss.logging.Logger;
 
 import java.util.List;
@@ -35,7 +38,7 @@ public class GameBoard {
         long endtime = System.nanoTime();
 
         // Something went wrong
-        if (this.tileList == null || this.settlementPositionGraph == null) {
+        if (this.tileList == null || this.settlementPositionGraph == null || this.roadList == null) {
             logger.errorf("Board generation failed for %d players.", playerCount);
             throw new IllegalStateException("Board generation resulted in null lists.");
         }
@@ -97,6 +100,43 @@ public class GameBoard {
 
     public List<Road> getRoadList() {
         return roadList;
+    }
+
+    public ObjectNode getJson() {
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode boardNode = mapper.createObjectNode();
+
+        // Components of Json
+        ArrayNode tilesNode = mapper.createArrayNode();
+        ArrayNode positionsNode = mapper.createArrayNode();
+        ArrayNode roadsNode = mapper.createArrayNode();
+
+        // Add tiles
+        for (Tile tile : this.tileList) {
+            tilesNode.add(tile.toJson());
+        }
+
+
+        // Add Settlement positions
+        for (SettlementPosition position : this.settlementPositionGraph) {
+            positionsNode.add(position.toJson());
+        }
+
+
+        // Add roads
+        for (Road road : this.roadList) {
+            roadsNode.add(road.toJson());
+        }
+
+        // Add the arrays to the main board node
+        boardNode.set("tiles", tilesNode);
+        boardNode.set("settlementPositions", positionsNode);
+        boardNode.set("roads", roadsNode);
+
+        boardNode.put("ringsOfBoard", this.sizeOfBoard);
+        boardNode.put("sizeOfHex", DEFAULT_TILES_PER_PLAYER_GOAL);
+
+        return boardNode;
     }
 
 }

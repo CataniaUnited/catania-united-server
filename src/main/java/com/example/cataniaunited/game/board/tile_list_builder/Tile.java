@@ -1,6 +1,9 @@
 package com.example.cataniaunited.game.board.tile_list_builder;
 
 import com.example.cataniaunited.game.board.Placable;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class Tile implements Placable {
     final TileType type;
@@ -10,7 +13,7 @@ public class Tile implements Placable {
 
     int id;
 
-    public Tile(TileType type){
+    public Tile(TileType type) {
         this.type = type;
     }
 
@@ -41,7 +44,7 @@ public class Tile implements Placable {
     }
 
     public void setValue(int value) {
-        if (this.value != 0){
+        if (this.value != 0) {
             return;
         }
         this.value = value;
@@ -54,9 +57,28 @@ public class Tile implements Placable {
     @Override
     public String toString() {
         return String.format(
-        "Tile{" +
-                "id=" + id + "," +
-                "coordinates=(%f, %f)" +
-        '}', this.coordinates[0], this.coordinates[1]);
+                "Tile{" +
+                        "id=" + id + "," +
+                        "coordinates=(%f, %f)" +
+                        '}', this.coordinates[0], this.coordinates[1]);
+    }
+
+    @Override
+    public ObjectNode toJson() {
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode tileNode = mapper.createObjectNode();
+
+        tileNode.put("id", this.id);
+
+        tileNode.put("type", this.type.name());
+
+        tileNode.put("value", this.value);
+
+        ArrayNode coordsNode = mapper.createArrayNode();
+        coordsNode.add(this.coordinates[0]); // Add x
+        coordsNode.add(this.coordinates[1]); // Add y
+        tileNode.set("coordinates", coordsNode);
+
+        return tileNode;
     }
 }
