@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @QuarkusTest
-public class VictoryPointServiceTest {
+class VictoryPointServiceTest {
 
     @Inject
     VictoryPointService victoryPointService;
