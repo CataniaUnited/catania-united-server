@@ -286,21 +286,23 @@ public class GameWebSocketTest {
 
         MessageDTO joinLobbyMessage = new MessageDTO(MessageType.JOIN_LOBBY, player, lobbyId);
 
-        List<String> receivedMessages = new CopyOnWriteArrayList<>();
-        CountDownLatch messageLatch = new CountDownLatch(2);
+       List<String> receivedMessages = new CopyOnWriteArrayList<>();
+        CountDownLatch messageLatch = new CountDownLatch(3);
 
-        var webSocketClientConnection = BasicWebSocketConnector.create().baseUri(serverUri).path("/game").onTextMessage((connection, message) -> {
-            if (message.startsWith("{")) {
-                receivedMessages.add(message);
-                messageLatch.countDown();
-            }
-        }).connectAndAwait();
+        var webSocketClientConnection = BasicWebSocketConnector.create()
+                .baseUri(serverUri)
+                .path("/game")
+                .onTextMessage((connection, message) -> {
+                    receivedMessages.add(message);
+                    messageLatch.countDown();
+                })
+                .connectAndAwait();
 
         String sentMessage = objectMapper.writeValueAsString(joinLobbyMessage);
         webSocketClientConnection.sendTextAndAwait(sentMessage);
 
         assertTrue(messageLatch.await(5, TimeUnit.SECONDS), "Not all messages were received in time!");
-        assertEquals(2, receivedMessages.size());
+        assertEquals(3, receivedMessages.size());
 
         MessageDTO responseMessage = objectMapper.readValue(receivedMessages.get(receivedMessages.size() - 1), MessageDTO.class);
 
