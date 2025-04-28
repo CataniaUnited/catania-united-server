@@ -1,14 +1,19 @@
 package com.example.cataniaunited.lobby;
 
-import java.util.*;
-import java.util.concurrent.CopyOnWriteArraySet;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ConcurrentHashMap;
 import com.example.cataniaunited.player.PlayerColor;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 public class Lobby {
     private final String lobbyId;
     private final Set<String> players = new CopyOnWriteArraySet<>();
+    private List<String> turnOrder;
     private final Map<String, PlayerColor> playerColors = new ConcurrentHashMap<>();
     private final List<PlayerColor> availableColors = new CopyOnWriteArrayList<>();
 
@@ -26,8 +31,18 @@ public class Lobby {
         return players;
     }
 
-    public void addPlayer(String player){
-       players.add(player);
+    /**
+     * Adds a new player to this lobby.
+     */
+    public void addPlayer(String player) {
+        this.players.add(player);
+    }
+
+    /**
+     * Gets the current turn order list, set when the game starts.
+     */
+    public List<String> getTurnOrder() {
+        return turnOrder;
     }
 
     public boolean removePlayer(String player){
@@ -60,5 +75,12 @@ public class Lobby {
         if(color != null && !availableColors.contains(color)){
             availableColors.add(color);
         }
+    }
+
+    /**
+     * Sets the shuffled turn order for the game.
+     */
+    public void setTurnOrder(List<String> turnOrder) {
+        this.turnOrder = turnOrder;
     }
 }
