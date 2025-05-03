@@ -11,7 +11,9 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.jboss.logging.Logger;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class GameBoard {
     private static final Logger logger = Logger.getLogger(GameBoard.class);
@@ -22,6 +24,8 @@ public class GameBoard {
     List<SettlementPosition> settlementPositionGraph;
     List<Tile> tileList;
     List<Road> roadList;
+
+    Map<String, Integer> playerVictoryPoints = new HashMap<>();
 
     public GameBoard(int playerCount) {
         if (playerCount <= 1) {
@@ -76,6 +80,14 @@ public class GameBoard {
         try {
             SettlementPosition settlementPosition = settlementPositionGraph.get(positionId - 1);
             settlementPosition.setBuilding(new Settlement(playerId));
+
+            if(playerVictoryPoints.containsKey(playerId)) {
+                int currentPoints = playerVictoryPoints.get(playerId);
+                playerVictoryPoints.put(playerId, currentPoints + 1);
+            } else {
+                playerVictoryPoints.put(playerId, 1);
+            }
+
         } catch (IndexOutOfBoundsException e) {
             throw new GameException("Settlement position not found: id = %s", positionId);
         }
@@ -91,9 +103,7 @@ public class GameBoard {
     }
 
     public int calculateVictoryPointsForPlayer(String playerId) {
-        return (int) this.settlementPositionGraph.stream()
-                .filter(position -> playerId.equals(position.getBuildingOwner()))
-                .count();
+        return playerVictoryPoints.getOrDefault(playerId, 0);
     }
 
     public List<SettlementPosition> getSettlementPositionGraph() {
