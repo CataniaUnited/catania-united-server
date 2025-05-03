@@ -21,12 +21,9 @@ public class VictoryPointService {
     @Inject
     GameService gameService;
 
-    // extend when cities, longest road and development cards are implemented
     public int calculateVictoryPoints(String lobbyId, String playerId) throws GameException {
         GameBoard gameBoard = gameService.getGameboardByLobbyId(lobbyId);
-        return (int) gameBoard.getSettlementPositionGraph().stream()
-                .filter(position -> playerId.equals(position.getBuildingOwner()))
-                .count();
+        return gameBoard.calculateVictoryPointsForPlayer(playerId);
     }
 
     public boolean checkForWin(String lobbyId, String playerId) throws GameException {

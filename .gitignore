@@ -11,6 +11,7 @@ target/
 # IDE specific files
 .idea/
 .vscode/
+local.properties
 
 # OS-specific files
 .DS_Store

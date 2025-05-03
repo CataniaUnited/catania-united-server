@@ -90,6 +90,12 @@ public class GameBoard {
         }
     }
 
+    public int calculateVictoryPointsForPlayer(String playerId) {
+        return (int) this.settlementPositionGraph.stream()
+                .filter(position -> playerId.equals(position.getBuildingOwner()))
+                .count();
+    }
+
     public List<SettlementPosition> getSettlementPositionGraph() {
         return settlementPositionGraph;
     }
