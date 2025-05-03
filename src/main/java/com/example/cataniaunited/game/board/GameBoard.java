@@ -132,12 +132,10 @@ public class GameBoard {
             tilesNode.add(tile.toJson());
         }
 
-
         // Add Settlement positions
         for (SettlementPosition position : this.settlementPositionGraph) {
             positionsNode.add(position.toJson());
         }
-
 
         // Add roads
         for (Road road : this.roadList) {

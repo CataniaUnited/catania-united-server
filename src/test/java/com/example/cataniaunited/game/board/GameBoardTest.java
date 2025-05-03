@@ -101,8 +101,6 @@ class GameBoardTest {
             fail("GameBoard constructor threw an unexpected exception.");
         }
 
-
-
         assertNotNull(gameBoard, "GameBoard instance should be created");
         assertEquals(GameBoard.calculateSizeOfBoard(playerCount), gameBoard.sizeOfBoard, "Internal board size should be set correctly");
 
@@ -241,6 +239,47 @@ class GameBoardTest {
         return Stream.of(null, Arguments.of(""));
     }
 
+    @Test
+    void calculateVictoryPointsForPlayer_returnsCorrectNumberOfPoints_singlePlayer() throws GameException {
+        GameBoard board = new GameBoard(2);
+        int positionId1 = board.getSettlementPositionGraph().get(0).getId();
+        int positionId2 = board.getSettlementPositionGraph().get(1).getId();
+
+        board.placeSettlement("Player1", positionId1);
+        board.placeSettlement("Player1", positionId2);
+
+        int victoryPoints = board.calculateVictoryPointsForPlayer("Player1");
+
+        assertEquals(2, victoryPoints);
+    }
+
+    @Test
+    void calculateVictoryPointsForPlayer_returnsZeroIfPlayerHasNoSettlements() {
+        GameBoard board = new GameBoard(2);
+
+        int victoryPoints = board.calculateVictoryPointsForPlayer("Player1");
+
+        assertEquals(0, victoryPoints);
+    }
+
+    @Test
+    void calculateVictoryPoints_returnsCorrectNumberOfPoints_multiplePlayers() throws GameException {
+        GameBoard board = new GameBoard(2);
+
+        int positionId1 = board.getSettlementPositionGraph().get(0).getId();
+        int positionId2 = board.getSettlementPositionGraph().get(1).getId();
+        int positionId3 = board.getSettlementPositionGraph().get(2).getId();
+
+        board.placeSettlement("Player1", positionId1);
+        board.placeSettlement("Player2", positionId2);
+        board.placeSettlement("Player1", positionId3);
+
+        int victoryPoints1 = board.calculateVictoryPointsForPlayer("Player1");
+        int victoryPoints2 = board.calculateVictoryPointsForPlayer("Player2");
+
+        assertEquals(2, victoryPoints1);
+        assertEquals(1, victoryPoints2);
+    }
 
     @Test
     void testGetJsonStructure() {
