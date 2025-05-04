@@ -5,6 +5,7 @@ import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.GameService;
 import com.example.cataniaunited.game.board.GameBoard;
+import com.example.cataniaunited.game.board.SettlementPosition;
 import com.example.cataniaunited.lobby.LobbyService;
 import com.example.cataniaunited.player.PlayerService;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -33,11 +34,20 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @QuarkusTest
 public class GameWebSocketTest {
@@ -286,7 +296,7 @@ public class GameWebSocketTest {
 
         MessageDTO joinLobbyMessage = new MessageDTO(MessageType.JOIN_LOBBY, player, lobbyId);
 
-       List<String> receivedMessages = new CopyOnWriteArrayList<>();
+        List<String> receivedMessages = new CopyOnWriteArrayList<>();
         CountDownLatch messageLatch = new CountDownLatch(3);
 
         var webSocketClientConnection = BasicWebSocketConnector.create()
@@ -335,10 +345,12 @@ public class GameWebSocketTest {
         String lobbyId = lobbyService.createLobby(player1);
         lobbyService.joinLobbyByCode(lobbyId, player2);
         GameBoard gameBoard = gameService.createGameboard(lobbyId);
+        SettlementPosition settlementPosition = gameBoard.getSettlementPositionGraph().get(0);
+        settlementPosition.getRoads().get(0).setOwnerPlayerId(player2);
 
-        assertNull(gameBoard.getSettlementPositionGraph().get(0).getBuildingOwner());
+        assertNull(settlementPosition.getBuildingOwner());
         //Create message DTO
-        int positionId = gameBoard.getSettlementPositionGraph().get(0).getId();
+        int positionId = settlementPosition.getId();
         ObjectNode placeSettlementMessageNode = objectMapper.createObjectNode().put("settlementPositionId", positionId);
 
         var placeSettlementMessageDTO = new MessageDTO(MessageType.PLACE_SETTLEMENT, player2, lobbyId, placeSettlementMessageNode);

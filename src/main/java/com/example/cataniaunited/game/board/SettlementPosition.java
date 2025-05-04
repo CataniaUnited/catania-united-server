@@ -3,6 +3,7 @@ package com.example.cataniaunited.game.board;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.board.tile_list_builder.Tile;
 import com.example.cataniaunited.game.buildings.Building;
+import com.example.cataniaunited.util.Util;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -83,6 +84,21 @@ public class SettlementPosition implements Placable {
         if (this.building != null && !this.building.getOwnerPlayerId().equals(building.getOwnerPlayerId())) {
             throw new GameException("Player mismatch when placing building: positionId = %s, playerId = %s", id, building.getOwnerPlayerId());
         }
+
+        /*
+            The three intersections surrounding this settlement position MUST NOT have buildings on it,
+            and there may only be one road adjacent to this settlement position
+         */
+        boolean hasNoNeighbouringBuildings = getNeighbours().stream().allMatch(sp -> sp.getBuildingOwner() == null);
+        if(!hasNoNeighbouringBuildings) {
+            throw new GameException("Placement of building is not allowed -> spacing rule violated: positionId = %s, playerId = %s", id, building.getOwnerPlayerId());
+        }
+
+        boolean atLeastOneOwnedRoad = getRoads().stream().anyMatch(road -> !Util.isEmpty(road.getOwnerPlayerId()) && road.getOwnerPlayerId().equals(building.getOwnerPlayerId()));
+        if(!atLeastOneOwnedRoad) {
+            throw new GameException("Placement of building is not allowed -> no owned road adjacent: positionId = %s, playerId = %s", id, building.getOwnerPlayerId());
+        }
+
         this.building = building;
     }
 

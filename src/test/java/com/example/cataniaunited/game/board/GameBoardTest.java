@@ -15,7 +15,13 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.util.List;
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 @QuarkusTest
 class GameBoardTest {
@@ -95,12 +101,11 @@ class GameBoardTest {
         try {
             gameBoard = assertDoesNotThrow(() -> new GameBoard(playerCount),
                     "Board generation failed unexpectedly for " + playerCount + " players.");
-        } catch(Exception e) {
+        } catch (Exception e) {
             // Log the actual exception if assertDoesNotThrow isn't available or for more detail
             System.err.println("GameBoard constructor failed: " + e.getMessage());
             fail("GameBoard constructor threw an unexpected exception.");
         }
-
 
 
         assertNotNull(gameBoard, "GameBoard instance should be created");
@@ -116,7 +121,7 @@ class GameBoardTest {
         assertFalse(graph.isEmpty(), "Generated settlement graph should not be empty");
     }
 
-    static Stream<Arguments> playerCountProvider(){
+    static Stream<Arguments> playerCountProvider() {
         return Stream.of(
                 Arguments.of(2),
                 Arguments.of(3),
@@ -131,7 +136,7 @@ class GameBoardTest {
     }
 
     @Test
-    void generateBoardThrowsExceptionIfGeneratingGraphBeforeTileList(){
+    void generateBoardThrowsExceptionIfGeneratingGraphBeforeTileList() {
         GameBoard gameBoard = new GameBoard(4);
         gameBoard.tileList = null;
         assertThrows(IllegalStateException.class,
@@ -143,10 +148,10 @@ class GameBoardTest {
     @Disabled("BenchmarkTest Tests how many Players theoretically can play a game, doesn't test functionality, therefore disabled")
     @ParameterizedTest
     @MethodSource("benchMarkTestProvider")
-    void benchMarkTest(int sizeOfBoard){
+    void benchMarkTest(int sizeOfBoard) {
         try {
             new GameBoard(sizeOfBoard);
-        } catch (OutOfMemoryError e){
+        } catch (OutOfMemoryError e) {
             fail("Out of Memory");
         }
 
@@ -171,9 +176,12 @@ class GameBoardTest {
 
     @Test
     void testPlaceSettlement() throws GameException {
+        String playerId = "Player1";
         GameBoard gameBoard = new GameBoard(2);
         var settlementPosition = gameBoard.getSettlementPositionGraph().get(0);
-        String playerId = "Player1";
+        Road road = settlementPosition.roads.get(0);
+        road.setOwnerPlayerId(playerId);
+
         gameBoard.placeSettlement(playerId, settlementPosition.getId());
         assertNotNull(settlementPosition.building);
         assertEquals(Settlement.class, settlementPosition.building.getClass());
@@ -197,7 +205,7 @@ class GameBoardTest {
 
     @ParameterizedTest
     @MethodSource("invalidPlayerIds")
-    void placeSettlementShouldThrowExceptionIfPlayerIdIsEmpty(String playerId){
+    void placeSettlementShouldThrowExceptionIfPlayerIdIsEmpty(String playerId) {
         GameBoard gameBoard = new GameBoard(2);
         int positionId = gameBoard.getSettlementPositionGraph().get(0).getId();
         GameException ge = assertThrows(GameException.class, () -> gameBoard.placeSettlement(playerId, positionId));
@@ -230,14 +238,14 @@ class GameBoardTest {
 
     @ParameterizedTest
     @MethodSource("invalidPlayerIds")
-    void placeRoadShouldThrowExceptionIfPlayerIdIsEmpty(String playerId){
+    void placeRoadShouldThrowExceptionIfPlayerIdIsEmpty(String playerId) {
         GameBoard gameBoard = new GameBoard(2);
         var road = gameBoard.roadList.get(0);
         GameException ge = assertThrows(GameException.class, () -> gameBoard.placeRoad(playerId, road.getId()));
         assertEquals("Owner Id of road must not be empty", ge.getMessage());
     }
 
-    static Stream<Arguments> invalidPlayerIds(){
+    static Stream<Arguments> invalidPlayerIds() {
         return Stream.of(null, Arguments.of(""));
     }
 
@@ -318,7 +326,7 @@ class GameBoardTest {
 
     //@Disabled("test used for debugging purposes, passes automatically")
     @Test
-    void debuggingTest(){
+    void debuggingTest() {
         GameBoard board = new GameBoard(4);
         board.generateBoard();
         System.out.println(board.getJson());
