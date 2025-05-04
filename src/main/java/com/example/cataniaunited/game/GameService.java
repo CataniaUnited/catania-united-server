@@ -54,4 +54,9 @@ public class GameService {
     void addGameboardToList(String lobbyId, GameBoard gameboard) {
         lobbyToGameboardMap.put(lobbyId, gameboard);
     }
+
+    public ObjectNode rollDice(String lobbyId) throws GameException {
+        GameBoard gameboard = getGameboardByLobbyId(lobbyId);
+        return gameboard.rollDice();
+    }
 }
