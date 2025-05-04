@@ -6,6 +6,7 @@ import com.example.cataniaunited.game.board.tile_list_builder.Tile;
 import com.example.cataniaunited.game.board.tile_list_builder.TileListBuilder;
 import com.example.cataniaunited.game.board.tile_list_builder.TileListDirector;
 import com.example.cataniaunited.game.buildings.Settlement;
+import com.example.cataniaunited.game.dice.DiceRoller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -18,6 +19,7 @@ public class GameBoard {
     static final int DEFAULT_TILES_PER_PLAYER_GOAL = 6;
     static final int SIZE_OF_HEX = 10;
     final int sizeOfBoard;
+    private final DiceRoller diceRoller;
 
     List<SettlementPosition> settlementPositionGraph;
     List<Tile> tileList;
@@ -34,6 +36,9 @@ public class GameBoard {
 
         generateTileList();
         generateBoard();
+
+        this.diceRoller = new DiceRoller();
+        subscribeTilesToDice();
 
         long endtime = System.nanoTime();
 
@@ -137,6 +142,17 @@ public class GameBoard {
         boardNode.put("sizeOfHex", DEFAULT_TILES_PER_PLAYER_GOAL);
 
         return boardNode;
+    }
+
+    private void subscribeTilesToDice() {
+        tileList.forEach(tile -> {
+            tile.subscribeToDice(diceRoller.getDice1());
+            tile.subscribeToDice(diceRoller.getDice2());
+        });
+    }
+
+    public ObjectNode rollDice() throws GameException {
+        return diceRoller.rollDice();
     }
 
 }
