@@ -184,4 +184,34 @@ class TileTest {
         assertEquals(expectedY, coordsArray.get(1).asDouble(), 0.0001, "Y coordinate should match the set value in JSON");
     }
 
+    @Test
+    void testUpdateWithMatchingValue() {
+        tile.setValue(6);
+        tile.update(6);
+        assertTrue(tile.hasResource());
+    }
+
+    @Test
+    void testUpdateWithNonMatchingValue() {
+        tile.setValue(6);
+        tile.update(5);
+        assertFalse(tile.hasResource());
+    }
+
+    @Test
+    void testUpdateWithWasteTile() {
+        tile.setValue(6);
+        Tile wasteTile = new Tile(TileType.WASTE);
+        wasteTile.setValue(6);
+        wasteTile.update(6);
+        assertFalse(wasteTile.hasResource());
+    }
+
+    @Test
+    void testResetResource() {
+        tile.setValue(6);
+        tile.update(6);
+        tile.resetResource();
+        assertFalse(tile.hasResource());
+    }
 }
