@@ -6,7 +6,9 @@ import jakarta.enterprise.context.ApplicationScoped;
 import org.jboss.logging.Logger;
 
 import java.security.SecureRandom;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @ApplicationScoped
@@ -62,9 +64,9 @@ public class LobbyServiceImpl implements LobbyService {
     @Override
     public boolean joinLobbyByCode(String lobbyId, String player) {
         Lobby lobby = lobbies.get(lobbyId);
-        if(lobby != null){
+        if (lobby != null) {
             PlayerColor assignedColor = lobby.assignAvailableColor();
-            if(assignedColor == null){
+            if (assignedColor == null) {
                 logger.warnf("No colors available for new players in lobby %s.", lobbyId);
                 return false;
             }
@@ -79,12 +81,12 @@ public class LobbyServiceImpl implements LobbyService {
         return false;
     }
 
-    public void removePlayerFromLobby(String lobbyId, String player){
+    public void removePlayerFromLobby(String lobbyId, String player) {
         Lobby lobby = lobbies.get(lobbyId);
-        if(lobby != null){
+        if (lobby != null) {
             PlayerColor color = lobby.getPlayerColor(player);
 
-            if(color != null){
+            if (color != null) {
                 lobby.restoreColor(color);
                 logger.infof("Color %s returned to pool from player %s", color, player);
             }
@@ -105,6 +107,12 @@ public class LobbyServiceImpl implements LobbyService {
             throw new GameException("Lobby with id %s not found", lobbyId);
         }
         return lobby;
+    }
+
+    @Override
+    public boolean isPlayerTurn(String lobbyId, String playerId) throws GameException {
+        Lobby lobby = getLobbyById(lobbyId);
+        return lobby.isPlayerTurn(playerId);
     }
 
     @Override

@@ -3,25 +3,34 @@ package com.example.cataniaunited.lobby;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.player.PlayerColor;
 import io.quarkus.test.junit.QuarkusTest;
-import jakarta.inject.Inject;
+import io.quarkus.test.junit.mockito.InjectSpy;
 import org.jboss.logging.Logger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
-import java.util.*;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.spy;
 
 @QuarkusTest
 class LobbyServiceImplTest {
+    private static final Logger logger = Logger.getLogger(LobbyServiceImplTest.class);
+
+    @InjectSpy
+    LobbyServiceImpl lobbyService;
 
     @BeforeEach
     void setUp() {
         lobbyService.clearLobbies();
     }
-    private static final Logger logger = Logger.getLogger(LobbyServiceImplTest.class);
-
-    @Inject
-    LobbyServiceImpl lobbyService;
 
     @Test
     void testCreateLobby() {
@@ -56,8 +65,9 @@ class LobbyServiceImplTest {
                     "Lobby Id should be in the format abc123 or 123abc");
         }
     }
+
     @Test
-    void testNoDuplicateLobbyIds () {
+    void testNoDuplicateLobbyIds() {
         Set<String> ids = new HashSet<>();
 
         for (int i = 0; i < 500; i++) {
@@ -68,7 +78,7 @@ class LobbyServiceImplTest {
     }
 
     @Test
-    void testJoinLobbyByValidCode () throws GameException {
+    void testJoinLobbyByValidCode() throws GameException {
         String hostPlayer = "HostPlayer";
         String joiningPlayer = "NewPlayer";
 
@@ -89,7 +99,7 @@ class LobbyServiceImplTest {
     }
 
     @Test
-    void testJoinLobbyByInvalidCode (){
+    void testJoinLobbyByInvalidCode() {
         boolean joined = lobbyService.joinLobbyByCode("InvalidCode", "New Player");
 
         assertFalse(joined, "Player should not be able to join the lobby with a valid code");
@@ -110,7 +120,7 @@ class LobbyServiceImplTest {
     }
 
     @Test
-    void testJoinLobbyFailsWhenNoColorsAvailable (){
+    void testJoinLobbyFailsWhenNoColorsAvailable() {
         String lobbyId = lobbyService.createLobby("HostPlayer");
 
         for (int i = 0; i < PlayerColor.values().length; i++) {
@@ -134,14 +144,14 @@ class LobbyServiceImplTest {
     }
 
     @Test
-    void testRemovePlayerRestoresColor(){
+    void testRemovePlayerRestoresColor() {
         String lobbyId = lobbyService.createLobby("HostPlayer");
         lobbyService.joinLobbyByCode(lobbyId, "Player1");
 
         int colorPoolSizeBefore = PlayerColor.values().length - 2;
         lobbyService.removePlayerFromLobby(lobbyId, "Player1");
 
-        assertEquals(PlayerColor.values().length-1, colorPoolSizeBefore + 1);
+        assertEquals(PlayerColor.values().length - 1, colorPoolSizeBefore + 1);
     }
 
     @Test
@@ -152,6 +162,35 @@ class LobbyServiceImplTest {
 
         Lobby lobby = assertDoesNotThrow(() -> lobbyService.getLobbyById(lobbyId));
         assertFalse(lobby.getPlayers().contains("GhostPlayer"));
+    }
+
+    @Test
+    void isPlayerTurnShouldThrowExceptionForNonExisitingLobby() throws GameException {
+        String lobbyId = "NonExistingLobby";
+        GameException ge = assertThrows(GameException.class, () -> {
+            lobbyService.isPlayerTurn(lobbyId, "NonExistingPlayer");
+        });
+        assertEquals("Lobby with id %s not found".formatted(lobbyId), ge.getMessage());
+    }
+
+    @Test
+    void isPlayerTurnShouldReturnTrueForPlayerTurn() throws GameException {
+        String playerId = "player1";
+        String lobbyId = lobbyService.createLobby(playerId);
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+        lobby.setActivePlayer(playerId);
+
+        assertTrue(lobbyService.isPlayerTurn(lobbyId, playerId));
+    }
+
+    @Test
+    void isPlayerTurnShouldReturnFalseForNotPlayerTurn() throws GameException {
+        String playerId = "player1";
+        String lobbyId = lobbyService.createLobby(playerId);
+        Lobby lobby = spy(lobbyService.getLobbyById(lobbyId));
+        lobby.setActivePlayer("anotherPlayer");
+
+        assertFalse(lobbyService.isPlayerTurn(lobbyId, playerId));
     }
 
 }

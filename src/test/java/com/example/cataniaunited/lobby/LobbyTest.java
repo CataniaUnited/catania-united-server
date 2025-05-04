@@ -2,8 +2,13 @@ package com.example.cataniaunited.lobby;
 
 import com.example.cataniaunited.player.PlayerColor;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
+
 import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class LobbyTest {
 
@@ -31,7 +36,7 @@ class LobbyTest {
     }
 
     @Test
-    void testRestoreColor_shouldOnlyAddColorIfNotPresent(){
+    void testRestoreColor_shouldOnlyAddColorIfNotPresent() {
         Lobby lobby = new Lobby("555xyz", "HostPlayer");
 
         PlayerColor color = lobby.assignAvailableColor();
@@ -45,5 +50,42 @@ class LobbyTest {
 
         assertEquals(1, countAfter);
         assertEquals(countBefore, countAfter);
+    }
+
+    @Test
+    void isPlayerTurnShouldReturnTrueForPlayerTurn() {
+        String playerId = "player1";
+        String lobbyId = "555xyz";
+        Lobby lobby = new Lobby(lobbyId, playerId);
+        lobby.setActivePlayer(playerId);
+        assertTrue(lobby.isPlayerTurn(playerId));
+    }
+
+    @Test
+    void isPlayerTurnShouldReturnFalseForNotPlayerTurn() {
+        String playerId = "player1";
+        String lobbyId = "555xyz";
+        Lobby lobby = new Lobby(lobbyId, playerId);
+        lobby.setActivePlayer("anotherPlayer");
+        assertFalse(lobby.isPlayerTurn(playerId));
+    }
+
+    @Test
+    void isPlayerTurnShouldReturnFalseIfPlayerIsNull() {
+        String playerId = "player1";
+        String lobbyId = "555xyz";
+        Lobby lobby = new Lobby(lobbyId, playerId);
+        lobby.setActivePlayer(playerId);
+        assertFalse(lobby.isPlayerTurn(null));
+    }
+
+    @Test
+    void getActivePlayerShouldReturnPlayer() {
+        String playerId = "player1";
+        String lobbyId = "555xyz";
+        Lobby lobby = new Lobby(lobbyId, playerId);
+        lobby.setActivePlayer(playerId);
+
+        assertEquals(playerId, lobby.getActivePlayer());
     }
 }

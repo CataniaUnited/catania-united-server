@@ -28,16 +28,18 @@ public class GameService {
     }
 
     public void placeSettlement(String lobbyId, String playerId, int settlementPositionId) throws GameException {
+        checkPlayerTurn(lobbyId, playerId);
         GameBoard gameboard = getGameboardByLobbyId(lobbyId);
         gameboard.placeSettlement(playerId, settlementPositionId);
     }
 
     public void placeRoad(String lobbyId, String playerId, int roadId) throws GameException {
+        checkPlayerTurn(lobbyId, playerId);
         GameBoard gameboard = getGameboardByLobbyId(lobbyId);
         gameboard.placeRoad(playerId, roadId);
     }
 
-    public ObjectNode getGameboardJsonByLobbyId(String lobbyId) throws GameException{
+    public ObjectNode getGameboardJsonByLobbyId(String lobbyId) throws GameException {
         GameBoard gameBoard = getGameboardByLobbyId(lobbyId);
         return gameBoard.getJson();
     }
@@ -49,6 +51,12 @@ public class GameService {
             throw new GameException("Gameboard for Lobby not found: id = %s", lobbyId);
         }
         return gameboard;
+    }
+
+    private void checkPlayerTurn(String lobbyId, String playerId) throws GameException {
+        if (!lobbyService.isPlayerTurn(lobbyId, playerId)) {
+            throw new GameException("It is not the players turn: playerId=%s, lobbyId=%s", playerId, lobbyId);
+        }
     }
 
     void addGameboardToList(String lobbyId, GameBoard gameboard) {

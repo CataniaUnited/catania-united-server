@@ -6,6 +6,7 @@ import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.GameService;
 import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.game.board.SettlementPosition;
+import com.example.cataniaunited.lobby.Lobby;
 import com.example.cataniaunited.lobby.LobbyService;
 import com.example.cataniaunited.player.PlayerService;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -343,6 +344,8 @@ public class GameWebSocketTest {
         String player1 = "Player1";
         String player2 = "Player2";
         String lobbyId = lobbyService.createLobby(player1);
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+        lobby.setActivePlayer(player2);
         lobbyService.joinLobbyByCode(lobbyId, player2);
         GameBoard gameBoard = gameService.createGameboard(lobbyId);
         SettlementPosition settlementPosition = gameBoard.getSettlementPositionGraph().get(0);
@@ -426,6 +429,8 @@ public class GameWebSocketTest {
         String player2 = "Player2";
         String lobbyId = lobbyService.createLobby(player1);
         lobbyService.joinLobbyByCode(lobbyId, player2);
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+        lobby.setActivePlayer(player2);
         GameBoard gameBoard = gameService.createGameboard(lobbyId);
 
         assertNull(gameBoard.getRoadList().get(0).getOwnerPlayerId());
