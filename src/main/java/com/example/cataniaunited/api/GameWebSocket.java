@@ -5,6 +5,7 @@ import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.GameService;
 import com.example.cataniaunited.game.board.GameBoard;
+import com.example.cataniaunited.game.dice.DiceRoller;
 import com.example.cataniaunited.lobby.LobbyService;
 import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerService;
@@ -147,12 +148,13 @@ public class GameWebSocket {
 
     }
 
-    Uni<MessageDTO> handleDiceRoll(MessageDTO message, WebSocketConnection connection) {
+    Uni<MessageDTO> handleDiceRoll(MessageDTO message, WebSocketConnection connection) throws GameException {
+        ObjectNode diceResult = gameService.rollDice(message.getLobbyId());
         MessageDTO resultMessage = new MessageDTO(
                 MessageType.DICE_RESULT,
                 message.getPlayer(),
                 message.getLobbyId(),
-                message.getMessage()
+                diceResult
         );
         return connection.broadcast().sendText(resultMessage)
                 .chain(() -> Uni.createFrom().item(resultMessage));
