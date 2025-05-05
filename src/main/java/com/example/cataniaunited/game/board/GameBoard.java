@@ -25,8 +25,6 @@ public class GameBoard {
     List<Tile> tileList;
     List<Road> roadList;
 
-    Map<String, Integer> playerVictoryPoints = new HashMap<>();
-
     public GameBoard(int playerCount) {
         if (playerCount <= 1) {
             throw new IllegalArgumentException("Player count must be greater than 1.");
@@ -81,13 +79,6 @@ public class GameBoard {
             SettlementPosition settlementPosition = settlementPositionGraph.get(positionId - 1);
             settlementPosition.setBuilding(new Settlement(playerId));
 
-            if(playerVictoryPoints.containsKey(playerId)) {
-                int currentPoints = playerVictoryPoints.get(playerId);
-                playerVictoryPoints.put(playerId, currentPoints + 1);
-            } else {
-                playerVictoryPoints.put(playerId, 1);
-            }
-
         } catch (IndexOutOfBoundsException e) {
             throw new GameException("Settlement position not found: id = %s", positionId);
         }
@@ -100,10 +91,6 @@ public class GameBoard {
         } catch (IndexOutOfBoundsException e) {
             throw new GameException("Road not found: id = %s", roadId);
         }
-    }
-
-    public int calculateVictoryPointsForPlayer(String playerId) {
-        return playerVictoryPoints.getOrDefault(playerId, 0);
     }
 
     public List<SettlementPosition> getSettlementPositionGraph() {

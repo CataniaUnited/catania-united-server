@@ -4,7 +4,6 @@ import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.GameService;
-import com.example.cataniaunited.game.VictoryPointService;
 import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.lobby.LobbyService;
 import com.example.cataniaunited.player.Player;
@@ -39,9 +38,6 @@ public class GameWebSocket {
 
     @Inject
     GameService gameService;
-
-    @Inject
-    VictoryPointService victoryPointService;
 
     @OnOpen
     public Uni<MessageDTO> onOpen(WebSocketConnection connection) {
@@ -102,11 +98,12 @@ public class GameWebSocket {
         try {
             int position = Integer.parseInt(settlementPosition.toString());
             gameService.placeSettlement(message.getLobbyId(), message.getPlayer(), position);
+            playerService.addVictoryPoints(message.getPlayer(), 1);
         } catch (NumberFormatException | GameException e) {
             throw new GameException("Invalid settlement position id: id = %s", settlementPosition.toString());
         }
-        if(victoryPointService.checkForWin(message.getLobbyId(), message.getPlayer())){
-            return victoryPointService.broadcastWin(connection,  message.getLobbyId(), message.getPlayer());
+        if (playerService.checkForWin(message.getPlayer())) {
+            return gameService.broadcastWin(connection, message.getLobbyId(), message.getPlayer());
         }
         MessageDTO update = new MessageDTO(MessageType.PLACE_SETTLEMENT, message.getPlayer(), message.getLobbyId());
         return connection.broadcast().sendText(update).chain(i -> Uni.createFrom().item(update));

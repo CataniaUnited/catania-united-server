@@ -8,6 +8,11 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
+import com.example.cataniaunited.dto.MessageDTO;
+import com.example.cataniaunited.dto.MessageType;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import io.quarkus.websockets.next.WebSocketConnection;
+import io.smallrye.mutiny.Uni;
 
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -53,5 +58,13 @@ public class GameService {
 
     void addGameboardToList(String lobbyId, GameBoard gameboard) {
         lobbyToGameboardMap.put(lobbyId, gameboard);
+    }
+
+    public Uni<MessageDTO> broadcastWin(WebSocketConnection connection, String lobbyId, String winnerPlayerId) {
+        ObjectNode message = JsonNodeFactory.instance.objectNode();
+        message.put("winner", winnerPlayerId);
+        MessageDTO messageDTO = new MessageDTO(MessageType.GAME_WON, winnerPlayerId, lobbyId, message);
+        logger.infof("Player %s has won the game in lobby %s", winnerPlayerId, lobbyId);
+        return connection.broadcast().sendText(messageDTO).chain(i -> Uni.createFrom().item(messageDTO));
     }
 }
