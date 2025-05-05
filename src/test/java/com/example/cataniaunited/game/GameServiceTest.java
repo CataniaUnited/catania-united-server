@@ -4,6 +4,7 @@ import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.lobby.Lobby;
 import com.example.cataniaunited.lobby.LobbyService;
+import com.example.cataniaunited.player.PlayerColor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.test.junit.QuarkusTest;
@@ -126,9 +127,10 @@ class GameServiceTest {
         String lobbyId = lobbyMock.getLobbyId();
         doReturn(lobbyMock).when(lobbyService).getLobbyById(lobbyId);
         doReturn(true).when(lobbyMock).isPlayerTurn(playerId);
+        doReturn(PlayerColor.BLUE).when(lobbyMock).getPlayerColor(playerId);
         doReturn(gameboardMock).when(gameService).getGameboardByLobbyId(lobbyId);
         gameService.placeSettlement(lobbyId, playerId, settlementPositionId);
-        verify(gameboardMock).placeSettlement(playerId, settlementPositionId);
+        verify(gameboardMock).placeSettlement(playerId, PlayerColor.BLUE, settlementPositionId);
     }
 
     @Test
@@ -138,9 +140,10 @@ class GameServiceTest {
         String lobbyId = lobbyMock.getLobbyId();
         doReturn(lobbyMock).when(lobbyService).getLobbyById(lobbyId);
         doReturn(true).when(lobbyMock).isPlayerTurn(playerId);
+        doReturn(PlayerColor.BLUE).when(lobbyMock).getPlayerColor(playerId);
         doReturn(gameboardMock).when(gameService).getGameboardByLobbyId(lobbyId);
         gameService.placeRoad(lobbyId, playerId, settlementPositionId);
-        verify(gameboardMock).placeRoad(playerId, settlementPositionId);
+        verify(gameboardMock).placeRoad(playerId, PlayerColor.BLUE, settlementPositionId);
     }
 
     @Test

@@ -90,12 +90,12 @@ public class SettlementPosition implements Placable {
             and there may only be one road adjacent to this settlement position
          */
         boolean hasNoNeighbouringBuildings = getNeighbours().stream().allMatch(sp -> sp.getBuildingOwner() == null);
-        if(!hasNoNeighbouringBuildings) {
+        if (!hasNoNeighbouringBuildings) {
             throw new GameException("Placement of building is not allowed -> spacing rule violated: positionId = %s, playerId = %s", id, building.getOwnerPlayerId());
         }
 
         boolean atLeastOneOwnedRoad = getRoads().stream().anyMatch(road -> !Util.isEmpty(road.getOwnerPlayerId()) && road.getOwnerPlayerId().equals(building.getOwnerPlayerId()));
-        if(!atLeastOneOwnedRoad) {
+        if (!atLeastOneOwnedRoad) {
             throw new GameException("Placement of building is not allowed -> no owned road adjacent: positionId = %s, playerId = %s", id, building.getOwnerPlayerId());
         }
 
@@ -117,15 +117,16 @@ public class SettlementPosition implements Placable {
 
         settlementPositionNode.put("id", this.id);
 
-
-        settlementPositionNode.put("building", String.valueOf(this.building)); // type of Building
-
+        if (this.building != null) {
+            settlementPositionNode.set("building", this.building.toJson()); // type of Building
+        } else {
+            settlementPositionNode.putNull("building");
+        }
 
         ArrayNode coordsNode = mapper.createArrayNode();
         coordsNode.add(this.coordinates[0]); // Add x
         coordsNode.add(this.coordinates[1]); // Add y
         settlementPositionNode.set("coordinates", coordsNode);
-
 
         return settlementPositionNode;
     }

@@ -3,6 +3,7 @@ package com.example.cataniaunited.game.board;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.board.tile_list_builder.Tile;
 import com.example.cataniaunited.game.buildings.Settlement;
+import com.example.cataniaunited.player.PlayerColor;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.test.junit.QuarkusTest;
@@ -182,7 +183,7 @@ class GameBoardTest {
         Road road = settlementPosition.roads.get(0);
         road.setOwnerPlayerId(playerId);
 
-        gameBoard.placeSettlement(playerId, settlementPosition.getId());
+        gameBoard.placeSettlement(playerId, PlayerColor.BLUE, settlementPosition.getId());
         assertNotNull(settlementPosition.building);
         assertEquals(Settlement.class, settlementPosition.building.getClass());
         assertEquals(playerId, settlementPosition.building.getOwnerPlayerId());
@@ -191,7 +192,7 @@ class GameBoardTest {
     @Test
     void placeSettlementShouldThrowExceptionIfPositionIsLessThanZero() {
         GameBoard gameBoard = new GameBoard(2);
-        GameException ge = assertThrows(GameException.class, () -> gameBoard.placeSettlement("Player1", -1));
+        GameException ge = assertThrows(GameException.class, () -> gameBoard.placeSettlement("Player1", PlayerColor.BLUE, -1));
         assertEquals("Settlement position not found: id = %s".formatted(-1), ge.getMessage());
     }
 
@@ -199,7 +200,7 @@ class GameBoardTest {
     void placeSettlementShouldThrowExceptionIfPositionIsBiggerThanSize() {
         GameBoard gameBoard = new GameBoard(2);
         int positionId = gameBoard.getSettlementPositionGraph().size() + 1;
-        GameException ge = assertThrows(GameException.class, () -> gameBoard.placeSettlement("Player1", positionId));
+        GameException ge = assertThrows(GameException.class, () -> gameBoard.placeSettlement("Player1", PlayerColor.BLUE, positionId));
         assertEquals("Settlement position not found: id = %s".formatted(positionId), ge.getMessage());
     }
 
@@ -208,7 +209,7 @@ class GameBoardTest {
     void placeSettlementShouldThrowExceptionIfPlayerIdIsEmpty(String playerId) {
         GameBoard gameBoard = new GameBoard(2);
         int positionId = gameBoard.getSettlementPositionGraph().get(0).getId();
-        GameException ge = assertThrows(GameException.class, () -> gameBoard.placeSettlement(playerId, positionId));
+        GameException ge = assertThrows(GameException.class, () -> gameBoard.placeSettlement(playerId, PlayerColor.BLUE, positionId));
         assertEquals("Owner Id of building must not be empty", ge.getMessage());
     }
 
@@ -217,14 +218,14 @@ class GameBoardTest {
         GameBoard gameBoard = new GameBoard(2);
         var road = gameBoard.roadList.get(0);
         String playerId = "Player1";
-        gameBoard.placeRoad(playerId, road.getId());
-        assertEquals(playerId, road.ownerPlayerId);
+        gameBoard.placeRoad(playerId, PlayerColor.BLUE, road.getId());
+        assertEquals(playerId, road.getOwnerPlayerId());
     }
 
     @Test
     void placeRoadShouldThrowExceptionIfRoadIdIsLessThanZero() {
         GameBoard gameBoard = new GameBoard(2);
-        GameException ge = assertThrows(GameException.class, () -> gameBoard.placeRoad("Player1", -1));
+        GameException ge = assertThrows(GameException.class, () -> gameBoard.placeRoad("Player1", PlayerColor.BLUE, -1));
         assertEquals("Road not found: id = %s".formatted(-1), ge.getMessage());
     }
 
@@ -232,7 +233,7 @@ class GameBoardTest {
     void placeRoadShouldThrowExceptionIfRoadIdIsGreaterThanSize() {
         GameBoard gameBoard = new GameBoard(2);
         int roadId = gameBoard.roadList.size() + 1;
-        GameException ge = assertThrows(GameException.class, () -> gameBoard.placeRoad("Player1", roadId));
+        GameException ge = assertThrows(GameException.class, () -> gameBoard.placeRoad("Player1", PlayerColor.BLUE, roadId));
         assertEquals("Road not found: id = %s".formatted(roadId), ge.getMessage());
     }
 
@@ -241,7 +242,7 @@ class GameBoardTest {
     void placeRoadShouldThrowExceptionIfPlayerIdIsEmpty(String playerId) {
         GameBoard gameBoard = new GameBoard(2);
         var road = gameBoard.roadList.get(0);
-        GameException ge = assertThrows(GameException.class, () -> gameBoard.placeRoad(playerId, road.getId()));
+        GameException ge = assertThrows(GameException.class, () -> gameBoard.placeRoad(playerId, PlayerColor.BLUE, road.getId()));
         assertEquals("Owner Id of road must not be empty", ge.getMessage());
     }
 

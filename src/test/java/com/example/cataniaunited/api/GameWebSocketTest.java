@@ -8,6 +8,7 @@ import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.game.board.SettlementPosition;
 import com.example.cataniaunited.lobby.Lobby;
 import com.example.cataniaunited.lobby.LobbyService;
+import com.example.cataniaunited.player.PlayerColor;
 import com.example.cataniaunited.player.PlayerService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -344,9 +345,10 @@ public class GameWebSocketTest {
         String player1 = "Player1";
         String player2 = "Player2";
         String lobbyId = lobbyService.createLobby(player1);
+        lobbyService.joinLobbyByCode(lobbyId, player2);
+        PlayerColor expectedColor = lobbyService.getPlayerColor(lobbyId, player2);
         Lobby lobby = lobbyService.getLobbyById(lobbyId);
         lobby.setActivePlayer(player2);
-        lobbyService.joinLobbyByCode(lobbyId, player2);
         GameBoard gameBoard = gameService.createGameboard(lobbyId);
         SettlementPosition settlementPosition = gameBoard.getSettlementPositionGraph().get(0);
         settlementPosition.getRoads().get(0).setOwnerPlayerId(player2);
@@ -382,6 +384,8 @@ public class GameWebSocketTest {
 
         var actualSettlementPosition = gameService.getGameboardByLobbyId(lobbyId).getSettlementPositionGraph().get(0);
         assertEquals(player2, actualSettlementPosition.getBuildingOwner());
+        ObjectNode settlementNode = actualSettlementPosition.toJson();
+        assertEquals(expectedColor.getHexCode(), settlementNode.get("building").get("color").asText());
         verify(gameService).placeSettlement(lobbyId, player2, actualSettlementPosition.getId());
     }
 

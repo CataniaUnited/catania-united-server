@@ -15,7 +15,8 @@ public enum MessageType {
     CREATE_LOBBY,
     JOIN_LOBBY,
     SET_USERNAME,
+    SET_ACTIVE_PLAYER, //-> TODO: Remove after implementation of player order
     PLACE_SETTLEMENT,
     PLACE_ROAD,
-    CREATE_GAME_BOARD
+    CREATE_GAME_BOARD,
 }

@@ -116,6 +116,16 @@ public class LobbyServiceImpl implements LobbyService {
     }
 
     @Override
+    public PlayerColor getPlayerColor(String lobbyId, String playerId) throws GameException {
+        Lobby lobby = getLobbyById(lobbyId);
+        PlayerColor playerColor = lobby.getPlayerColor(playerId);
+        if (playerColor == null) {
+            throw new GameException("No color for player found: playerId=%s, lobbyId=%s", playerId, lobbyId);
+        }
+        return playerColor;
+    }
+
+    @Override
     public void clearLobbies() {
         lobbies.clear();
         logger.info("All lobbies have been cleared.");

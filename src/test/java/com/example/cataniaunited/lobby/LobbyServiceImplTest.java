@@ -18,7 +18,10 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 @QuarkusTest
 class LobbyServiceImplTest {
@@ -165,7 +168,18 @@ class LobbyServiceImplTest {
     }
 
     @Test
-    void isPlayerTurnShouldThrowExceptionForNonExisitingLobby() throws GameException {
+    void getPlayerColorShouldThrowExceptionIfPlayerHasNoColor() throws GameException {
+        String lobbyId = "lobby1";
+        String playerId = "Player1";
+        Lobby lobbyMock = mock(Lobby.class);
+        when(lobbyMock.getPlayerColor(playerId)).thenReturn(null);
+        doReturn(lobbyMock).when(lobbyService).getLobbyById(lobbyId);
+        GameException ge = assertThrows(GameException.class, () -> lobbyService.getPlayerColor(lobbyId, playerId));
+        assertEquals("No color for player found: playerId=%s, lobbyId=%s".formatted(playerId, lobbyId), ge.getMessage());
+    }
+
+    @Test
+    void isPlayerTurnShouldThrowExceptionForNonExistingLobby() throws GameException {
         String lobbyId = "NonExistingLobby";
         GameException ge = assertThrows(GameException.class, () -> {
             lobbyService.isPlayerTurn(lobbyId, "NonExistingPlayer");
