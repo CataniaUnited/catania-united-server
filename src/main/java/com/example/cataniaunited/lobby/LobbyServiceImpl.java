@@ -26,9 +26,9 @@ public class LobbyServiceImpl implements LobbyService {
         do {
             lobbyId = generateLobbyId();
         } while (lobbies.containsKey(lobbyId));
-
-        lobbies.put(lobbyId, new Lobby(lobbyId, hostPlayer));
-
+        Lobby lobby = new Lobby(lobbyId, hostPlayer);
+        setPlayerColor(lobby, hostPlayer);
+        lobbies.put(lobbyId, lobby);
         logger.infof("Lobby created: ID=%s, Host=%s", lobbyId, hostPlayer);
 
         return lobbyId;
@@ -55,9 +55,7 @@ public class LobbyServiceImpl implements LobbyService {
     @Override
     public List<String> getOpenLobbies() {
         List<String> openLobbies = new ArrayList<>(lobbies.keySet());
-
         logger.infof("Current open lobbies: %s", openLobbies);
-
         return openLobbies;
     }
 
@@ -65,20 +63,27 @@ public class LobbyServiceImpl implements LobbyService {
     public boolean joinLobbyByCode(String lobbyId, String player) {
         Lobby lobby = lobbies.get(lobbyId);
         if (lobby != null) {
-            PlayerColor assignedColor = lobby.assignAvailableColor();
-            if (assignedColor == null) {
-                logger.warnf("No colors available for new players in lobby %s.", lobbyId);
+            PlayerColor assignedColor = setPlayerColor(lobby, player);
+            if(assignedColor == null){
                 return false;
             }
             lobby.addPlayer(player);
-            lobby.setPlayerColor(player, assignedColor);
-
             logger.infof("Player %s joined lobby %s with color %s", player, lobbyId, assignedColor);
             return true;
         }
 
         logger.warnf("Invalid or expired lobby ID: %s", lobbyId);
         return false;
+    }
+
+    protected PlayerColor setPlayerColor(Lobby lobby, String player) {
+        PlayerColor assignedColor = lobby.assignAvailableColor();
+        if (assignedColor == null) {
+            logger.warnf("No colors available for new players in lobby %s.", lobby.getLobbyId());
+            return null;
+        }
+        lobby.setPlayerColor(player, assignedColor);
+        return assignedColor;
     }
 
     public void removePlayerFromLobby(String lobbyId, String player) {
