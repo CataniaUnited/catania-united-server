@@ -91,7 +91,8 @@ public class GameWebSocket {
         } catch (NumberFormatException e) {
             throw new GameException("Invalid road id: id = %s", roadId.toString());
         }
-        MessageDTO update = new MessageDTO(MessageType.PLACE_ROAD, message.getPlayer(), message.getLobbyId());
+        GameBoard updatedGameboard = gameService.getGameboardByLobbyId(message.getLobbyId());
+        MessageDTO update = new MessageDTO(MessageType.PLACE_ROAD, message.getPlayer(), message.getLobbyId(), updatedGameboard.getJson());
         return connection.broadcast().sendText(update).chain(i -> Uni.createFrom().item(update));
     }
 
@@ -103,7 +104,8 @@ public class GameWebSocket {
         } catch (NumberFormatException | GameException e) {
             throw new GameException("Invalid settlement position id: id = %s", settlementPosition.toString());
         }
-        MessageDTO update = new MessageDTO(MessageType.PLACE_SETTLEMENT, message.getPlayer(), message.getLobbyId());
+        GameBoard updatedGameboard = gameService.getGameboardByLobbyId(message.getLobbyId());
+        MessageDTO update = new MessageDTO(MessageType.PLACE_SETTLEMENT, message.getPlayer(), message.getLobbyId(), updatedGameboard.getJson());
         return connection.broadcast().sendText(update).chain(i -> Uni.createFrom().item(update));
     }
 
