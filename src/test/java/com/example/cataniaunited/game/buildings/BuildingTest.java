@@ -20,7 +20,7 @@ public class BuildingTest {
 
         ObjectNode buildingJson = building.toJson();
 
-        assertEquals(playerId, buildingJson.get("ownerPlayerId").asText());
+        assertEquals(playerId, buildingJson.get("owner").asText());
         assertEquals(color.getHexCode(), buildingJson.get("color").asText());
         assertEquals("TestBuilding", buildingJson.get("type").asText());
     }

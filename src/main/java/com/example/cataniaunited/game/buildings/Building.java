@@ -29,7 +29,7 @@ public abstract class Building {
 
     public ObjectNode toJson() {
         ObjectNode result = JsonNodeFactory.instance.objectNode();
-        result.put("ownerPlayerId", this.ownerPlayerId);
+        result.put("owner", this.ownerPlayerId);
         result.put("color", this.color.getHexCode());
         result.put("type", this.getClass().getSimpleName());
         return result;
