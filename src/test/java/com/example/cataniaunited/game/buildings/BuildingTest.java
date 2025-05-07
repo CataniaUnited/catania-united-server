@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @QuarkusTest
-public class BuildingTest {
+class BuildingTest {
 
     @Test
     void testToJson() throws GameException {
@@ -26,19 +26,19 @@ public class BuildingTest {
     }
 
     @Test
-    void constructorShouldThrowExceptionWhenPlayerIdIsNull() throws GameException {
+    void constructorShouldThrowExceptionWhenPlayerIdIsNull() {
         GameException ge = assertThrows(GameException.class, () -> new TestBuilding(null, PlayerColor.LAVENDER));
         assertEquals("Owner Id of building must not be empty", ge.getMessage());
     }
 
     @Test
-    void constructorShouldThrowExceptionWhenPlayerIdIsEmpty() throws GameException {
+    void constructorShouldThrowExceptionWhenPlayerIdIsEmpty() {
         GameException ge = assertThrows(GameException.class, () -> new TestBuilding("", PlayerColor.LAVENDER));
         assertEquals("Owner Id of building must not be empty", ge.getMessage());
     }
 
     @Test
-    void constructorShouldThrowExceptionWhenColorIsNull() throws GameException {
+    void constructorShouldThrowExceptionWhenColorIsNull() {
         GameException ge = assertThrows(GameException.class, () -> new TestBuilding("player1", null));
         assertEquals("Color of building must not be null", ge.getMessage());
     }

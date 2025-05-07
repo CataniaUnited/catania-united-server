@@ -322,7 +322,6 @@ class SettlementPositionTest {
     void setBuildingShouldWorkIfTwoPlayersHaveAdjacentRoads() throws GameException {
         String playerId = "Player1";
         String secondPlayerId = "Player2";
-        ;
         when(mockRoad1.getOwnerPlayerId()).thenReturn(playerId);
         when(mockRoad1.getNeighbour(any(SettlementPosition.class))).thenReturn(mockNeighbour1);
         when(mockRoad2.getOwnerPlayerId()).thenReturn(secondPlayerId);
