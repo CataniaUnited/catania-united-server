@@ -1,6 +1,7 @@
 package com.example.cataniaunited.game.buildings;
 
 import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.example.cataniaunited.player.PlayerColor;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.test.junit.QuarkusTest;
@@ -47,5 +48,10 @@ public class BuildingTest {
 class TestBuilding extends Building {
     protected TestBuilding(String playerId, PlayerColor color) throws GameException {
         super(playerId, color);
+    }
+
+    @Override
+    public void distributeResourcesToPlayer(TileType type) {
+        // do Nothing
     }
 }

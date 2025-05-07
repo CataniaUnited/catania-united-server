@@ -1,7 +1,9 @@
 package com.example.cataniaunited.game.board;
 
+import com.example.cataniaunited.Subscriber;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.board.tile_list_builder.Tile;
+import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.example.cataniaunited.game.buildings.Building;
 import com.example.cataniaunited.util.Util;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -11,7 +13,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.ArrayList;
 import java.util.List;
 
-public class SettlementPosition implements Placable {
+public class SettlementPosition implements Placable, Subscriber<TileType> {
     Building building = null;
     List<Road> roads = new ArrayList<>(3);
     ArrayList<Tile> tiles = new ArrayList<>(3);
@@ -131,4 +133,11 @@ public class SettlementPosition implements Placable {
         return settlementPositionNode;
     }
 
+    @Override
+    public void update(TileType resourceType) {
+        if (building == null)
+            return;
+
+        building.distributeResourcesToPlayer(resourceType);
+    }
 }

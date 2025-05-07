@@ -50,7 +50,7 @@ public class GameWebSocket {
     @OnClose
     public void onClose(WebSocketConnection connection) {
         logger.infof("Client closed connection: %s", connection.id());
-        playerService.removePlayer(connection);
+        playerService.removePlayerByConnectionId(connection);
         ObjectNode message = JsonNodeFactory.instance.objectNode().put("playerId", connection.id());
         connection.broadcast().sendTextAndAwait(new MessageDTO(MessageType.CLIENT_DISCONNECTED, message));
     }

@@ -1,6 +1,10 @@
 package com.example.cataniaunited.game.buildings;
 
+import com.example.cataniaunited.Publisher;
+import com.example.cataniaunited.Subscriber;
 import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.game.board.tile_list_builder.TileType;
+import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerColor;
 import com.example.cataniaunited.util.Util;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
@@ -34,4 +38,7 @@ public abstract class Building {
         result.put("type", this.getClass().getSimpleName());
         return result;
     }
+
+    public abstract void distributeResourcesToPlayer(TileType type);
+
 }

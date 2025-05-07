@@ -161,7 +161,7 @@ public class GameWebSocketTest {
         MessageDTO responseMessage = objectMapper.readValue(receivedMessages.get(receivedMessages.size() - 1), MessageDTO.class);
         assertEquals(MessageType.CLIENT_DISCONNECTED, responseMessage.getType()); // Expect LOBBY_CREATED response
         assertNotNull(responseMessage.getMessageNode("playerId").textValue());
-        verify(playerService).removePlayer(any());
+        verify(playerService).removePlayerByConnectionId(any());
     }
 
     @Test

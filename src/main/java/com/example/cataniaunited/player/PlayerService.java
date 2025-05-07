@@ -9,24 +9,32 @@ import java.util.concurrent.ConcurrentHashMap;
 @ApplicationScoped
 public class PlayerService {
 
-    private static final ConcurrentHashMap<String, Player> players = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, Player> playersByConnectionId = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, Player> playersById = new ConcurrentHashMap<>();
 
     public Player addPlayer(WebSocketConnection connection) {
         Player player = new Player(connection);
-        players.put(connection.id(), player);
+        playersByConnectionId.put(connection.id(), player);
+        playersById.put(player.getUniqueId(), player);
         return player;
     }
 
     public Player getPlayerByConnection(WebSocketConnection connection) {
-        return players.get(connection.id());
+        return playersByConnectionId.get(connection.id());
     }
+
+    public Player getPlayerById(String id){return playersById.get(id);}
 
     public List<Player> getAllPlayers() {
-        return players.values().stream().toList();
+        return playersByConnectionId.values().stream().toList();
     }
 
-    public void removePlayer(WebSocketConnection connection) {
-        players.remove(connection.id());
+    public void removePlayerByConnectionId(WebSocketConnection connection) {
+        Player player = playersByConnectionId.remove(connection.id());
+        if (player == null)
+            return;
+
+        playersById.remove(player.getUniqueId());
     }
 
 }
