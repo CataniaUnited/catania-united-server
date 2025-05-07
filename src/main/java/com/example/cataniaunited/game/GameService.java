@@ -4,6 +4,7 @@ import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.lobby.Lobby;
 import com.example.cataniaunited.lobby.LobbyService;
+import com.example.cataniaunited.player.PlayerService;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -25,6 +26,10 @@ public class GameService {
     @Inject
     LobbyService lobbyService;
 
+    @Inject
+    PlayerService playerService;
+
+
     public GameBoard createGameboard(String lobbyId) throws GameException {
         Lobby lobby = lobbyService.getLobbyById(lobbyId);
         GameBoard gameboard = new GameBoard(lobby.getPlayers().size());
@@ -35,6 +40,7 @@ public class GameService {
     public void placeSettlement(String lobbyId, String playerId, int settlementPositionId) throws GameException {
         GameBoard gameboard = getGameboardByLobbyId(lobbyId);
         gameboard.placeSettlement(playerId, settlementPositionId);
+        playerService.addVictoryPoints(playerId, 1);
     }
 
     public void placeRoad(String lobbyId, String playerId, int roadId) throws GameException {

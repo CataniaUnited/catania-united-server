@@ -98,7 +98,7 @@ public class GameWebSocket {
         try {
             int position = Integer.parseInt(settlementPosition.toString());
             gameService.placeSettlement(message.getLobbyId(), message.getPlayer(), position);
-            playerService.addVictoryPoints(message.getPlayer(), 1);
+
         } catch (NumberFormatException | GameException e) {
             throw new GameException("Invalid settlement position id: id = %s", settlementPosition.toString());
         }

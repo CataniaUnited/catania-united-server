@@ -1,13 +1,18 @@
 package com.example.cataniaunited.game;
 
+import com.example.cataniaunited.dto.MessageDTO;
+import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.lobby.Lobby;
 import com.example.cataniaunited.lobby.LobbyService;
+import com.example.cataniaunited.player.PlayerService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.mockito.InjectSpy;
+import io.quarkus.websockets.next.WebSocketConnection;
+import io.smallrye.mutiny.Uni;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -25,6 +30,9 @@ class GameServiceTest {
 
     @InjectSpy
     LobbyService lobbyService;
+
+    @InjectSpy
+    PlayerService playerService;
 
     GameBoard gameboardMock;
 
@@ -100,6 +108,20 @@ class GameServiceTest {
     }
 
     @Test
+    void placeSettlementShouldAddVictoryPointForPlayer() throws GameException {
+        String playerId = "player1";
+        int settlementPositionId = 5;
+        String lobbyId = lobbyMock.getLobbyId();
+
+        gameService.addGameboardToList(lobbyId, gameboardMock);
+        doNothing().when(gameboardMock).placeSettlement(playerId, settlementPositionId);
+        gameService.placeSettlement(lobbyId, playerId, settlementPositionId);
+
+        verify(gameboardMock).placeSettlement(playerId, settlementPositionId);
+        verify(playerService).addVictoryPoints(playerId, 1);
+    }
+
+    @Test
     void setRoadShouldCallPlaceRoadOnGameboard() throws GameException {
         String playerId = "playerId1";
         int settlementPositionId = 15;
@@ -134,4 +156,26 @@ class GameServiceTest {
         assertEquals(expectedErrorMessage, exception.getMessage());
         verify(gameService).getGameboardByLobbyId(invalidLobbyId);
     }
+
+    @Test
+    void broadcastWinShouldSendCorrectGameWonMessage() {
+        String lobbyId = "lobby123";
+        String winnerPlayerId = "playerABC";
+
+        WebSocketConnection mockConnection = mock(WebSocketConnection.class, RETURNS_DEEP_STUBS);
+        when(mockConnection.broadcast().sendText(any(MessageDTO.class)))
+                .thenReturn(Uni.createFrom().voidItem());
+
+        Uni<MessageDTO> resultUni = gameService.broadcastWin(mockConnection, lobbyId, winnerPlayerId);
+        MessageDTO result = resultUni.await().indefinitely();
+
+        assertNotNull(result);
+        assertEquals(MessageType.GAME_WON, result.getType());
+        assertEquals(lobbyId, result.getLobbyId());
+        assertEquals(winnerPlayerId, result.getPlayer());
+        assertEquals(winnerPlayerId, result.getMessageNode("winner").asText());
+
+        verify(mockConnection.broadcast()).sendText(any(MessageDTO.class));
+    }
+
 }
