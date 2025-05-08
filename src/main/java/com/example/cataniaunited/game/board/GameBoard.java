@@ -11,7 +11,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.jboss.logging.Logger;
-
 import java.util.List;
 
 public class GameBoard {
@@ -77,6 +76,7 @@ public class GameBoard {
         try {
             SettlementPosition settlementPosition = settlementPositionGraph.get(positionId - 1);
             settlementPosition.setBuilding(new Settlement(playerId, color));
+
         } catch (IndexOutOfBoundsException e) {
             throw new GameException("Settlement position not found: id = %s", positionId);
         }
@@ -118,12 +118,10 @@ public class GameBoard {
             tilesNode.add(tile.toJson());
         }
 
-
         // Add Settlement positions
         for (SettlementPosition position : this.settlementPositionGraph) {
             positionsNode.add(position.toJson());
         }
-
 
         // Add roads
         for (Road road : this.roadList) {
