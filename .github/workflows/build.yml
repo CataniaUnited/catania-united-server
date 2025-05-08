@@ -63,6 +63,14 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set Lowercase GitHub Owner Env Var
+        run: |
+          REPO_OWNER="${{ github.repository_owner }}"
+          lowercase_owner=$(echo "${REPO_OWNER}" | tr '[:upper:]' '[:lower:]')
+          echo "LOWERCASE_OWNER=${lowercase_owner}" >> $GITHUB_ENV
+          echo "GitHub Owner '${REPO_OWNER}' converted to lowercase: '${lowercase_owner}'"
+
       - name: Build and push multi-arch image
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -70,7 +78,7 @@ jobs:
           QUARKUS_CONTAINER_IMAGE_PUSH: true
           QUARKUS_CONTAINER_IMAGE_REGISTRY: ghcr.io
           QUARKUS_DOCKER_BUILDX_PLATFORM: "linux/amd64,linux/arm64"
-          QUARKUS_CONTAINER_IMAGE_IMAGE: "ghcr.io/${{ github.repository_owner.toLowerCase() }}/${{ github.event.repository.name }}:${{ github.sha }}"
+          QUARKUS_CONTAINER_IMAGE_IMAGE: "ghcr.io/${{ env.LOWERCASE_OWNER }}/${{ github.event.repository.name }}:${{ github.sha }}"
           JAVA_TOOL_OPTIONS: "-Djava.util.logging.manager=org.jboss.logmanager.LogManager -Dorg.jboss.logging.level=DEBUG"
         run: |
           ./gradlew build --info
