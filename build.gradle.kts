@@ -1,6 +1,6 @@
 plugins {
     java
-    id("io.quarkus") version "3.22.2"
+    id("io.quarkus")
     id("jacoco")
     id("org.sonarqube") version "6.0.1.5171"
 }
