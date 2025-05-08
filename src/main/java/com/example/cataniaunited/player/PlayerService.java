@@ -9,6 +9,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @ApplicationScoped
 public class PlayerService {
 
+    public static final int WIN_THRESHOLD = 10;
+
     private static final ConcurrentHashMap<String, Player> players = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, Player> playersById = new ConcurrentHashMap<>();
 
@@ -47,7 +49,7 @@ public class PlayerService {
 
     public boolean checkForWin(String playerId) {
         Player player = getPlayerById(playerId);
-        return player != null && player.getVictoryPoints() >= 10;
+        return player != null && player.getVictoryPoints() >= WIN_THRESHOLD;
     }
 
 
