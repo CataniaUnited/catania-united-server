@@ -156,7 +156,9 @@ public class GameWebSocket {
                 message.getLobbyId(),
                 diceResult
         );
-        return connection.broadcast().sendText(resultMessage)
+
+        return connection.broadcast()
+                .sendText(resultMessage)
                 .chain(() -> Uni.createFrom().item(resultMessage));
     }
 }
