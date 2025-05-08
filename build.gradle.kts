@@ -1,6 +1,6 @@
 plugins {
     java
-    id("io.quarkus")
+    id("io.quarkus") version "3.22.2"
     id("jacoco")
     id("org.sonarqube") version "6.0.1.5171"
 }
@@ -15,6 +15,7 @@ val quarkusPlatformArtifactId: String by project
 val quarkusPlatformVersion: String by project
 
 dependencies {
+    implementation("io.quarkus:quarkus-container-image-docker")
     implementation(enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}"))
     implementation("io.quarkus:quarkus-websockets-next")
     implementation("io.quarkus:quarkus-arc")
