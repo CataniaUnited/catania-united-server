@@ -6,14 +6,12 @@ import com.example.cataniaunited.game.board.tile_list_builder.Tile;
 import com.example.cataniaunited.game.board.tile_list_builder.TileListBuilder;
 import com.example.cataniaunited.game.board.tile_list_builder.TileListDirector;
 import com.example.cataniaunited.game.buildings.Settlement;
+import com.example.cataniaunited.player.PlayerColor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.jboss.logging.Logger;
-
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class GameBoard {
     private static final Logger logger = Logger.getLogger(GameBoard.class);
@@ -74,20 +72,21 @@ public class GameBoard {
         roadList = graphBuilder.getRoadList();
     }
 
-    public void placeSettlement(String playerId, int positionId) throws GameException {
+    public void placeSettlement(String playerId, PlayerColor color, int positionId) throws GameException {
         try {
             SettlementPosition settlementPosition = settlementPositionGraph.get(positionId - 1);
-            settlementPosition.setBuilding(new Settlement(playerId));
+            settlementPosition.setBuilding(new Settlement(playerId, color));
 
         } catch (IndexOutOfBoundsException e) {
             throw new GameException("Settlement position not found: id = %s", positionId);
         }
     }
 
-    public void placeRoad(String playerId, int roadId) throws GameException {
+    public void placeRoad(String playerId, PlayerColor color, int roadId) throws GameException {
         try {
             Road road = roadList.get(roadId - 1);
             road.setOwnerPlayerId(playerId);
+            road.setColor(color);
         } catch (IndexOutOfBoundsException e) {
             throw new GameException("Road not found: id = %s", roadId);
         }

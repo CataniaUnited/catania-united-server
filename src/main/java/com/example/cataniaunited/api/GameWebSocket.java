@@ -63,11 +63,13 @@ public class GameWebSocket {
                 case CREATE_LOBBY -> createLobby(message);
                 case JOIN_LOBBY -> joinLobby(message, connection);
                 case SET_USERNAME -> setUsername(message, connection);
-                case CREATE_GAME_BOARD -> createGameBoard(message, connection); // TODO: Remove after regular game start is implemented
+                case CREATE_GAME_BOARD ->
+                        createGameBoard(message, connection); // TODO: Remove after regular game start is implemented
+                case SET_ACTIVE_PLAYER -> setActivePlayer(message);
                 case PLACE_SETTLEMENT -> placeSettlement(message, connection);
                 case PLACE_ROAD -> placeRoad(message, connection);
-                case ERROR, CONNECTION_SUCCESSFUL, CLIENT_DISCONNECTED, LOBBY_CREATED, LOBBY_UPDATED, PLAYER_JOINED, GAME_BOARD_JSON, GAME_WON ->
-                        throw new GameException("Invalid client command");
+                case ERROR, CONNECTION_SUCCESSFUL, CLIENT_DISCONNECTED, LOBBY_CREATED, LOBBY_UPDATED, PLAYER_JOINED,
+                     GAME_BOARD_JSON, GAME_WON -> throw new GameException("Invalid client command");
             };
         } catch (GameException ge) {
             logger.errorf("Unexpected Error occurred: message = %s, error = %s", message, ge.getMessage());
@@ -89,7 +91,8 @@ public class GameWebSocket {
         } catch (NumberFormatException e) {
             throw new GameException("Invalid road id: id = %s", roadId.toString());
         }
-        MessageDTO update = new MessageDTO(MessageType.PLACE_ROAD, message.getPlayer(), message.getLobbyId());
+        GameBoard updatedGameboard = gameService.getGameboardByLobbyId(message.getLobbyId());
+        MessageDTO update = new MessageDTO(MessageType.PLACE_ROAD, message.getPlayer(), message.getLobbyId(), updatedGameboard.getJson());
         return connection.broadcast().sendText(update).chain(i -> Uni.createFrom().item(update));
     }
 
@@ -102,10 +105,14 @@ public class GameWebSocket {
         } catch (NumberFormatException | GameException e) {
             throw new GameException("Invalid settlement position id: id = %s", settlementPosition.toString());
         }
+
         if (playerService.checkForWin(message.getPlayer())) {
             return gameService.broadcastWin(connection, message.getLobbyId(), message.getPlayer());
         }
-        MessageDTO update = new MessageDTO(MessageType.PLACE_SETTLEMENT, message.getPlayer(), message.getLobbyId());
+
+        GameBoard updatedGameboard = gameService.getGameboardByLobbyId(message.getLobbyId());
+        MessageDTO update = new MessageDTO(MessageType.PLACE_SETTLEMENT, message.getPlayer(), message.getLobbyId(), updatedGameboard.getJson());
+
         return connection.broadcast().sendText(update).chain(i -> Uni.createFrom().item(update));
     }
 
@@ -137,6 +144,13 @@ public class GameWebSocket {
         throw new GameException("No player session");
     }
 
+    //TODO: Remove after implementation of player order
+    Uni<MessageDTO> setActivePlayer(MessageDTO message) throws GameException {
+        lobbyService.getLobbyById(message.getLobbyId()).setActivePlayer(message.getPlayer());
+        return Uni.createFrom().item(new MessageDTO(MessageType.SET_ACTIVE_PLAYER, message.getPlayer(), message.getLobbyId()));
+    }
+
+
     MessageDTO createErrorMessage(String errorMessage) {
         ObjectNode errorNode = JsonNodeFactory.instance.objectNode();
         errorNode.put("error", errorMessage);
@@ -145,7 +159,7 @@ public class GameWebSocket {
 
     Uni<MessageDTO> createGameBoard(MessageDTO message, WebSocketConnection connection) throws GameException {
         GameBoard board = gameService.createGameboard(message.getLobbyId());
-        MessageDTO updateJson =  new MessageDTO(MessageType.GAME_BOARD_JSON, null, message.getLobbyId(), board.getJson());
+        MessageDTO updateJson = new MessageDTO(MessageType.GAME_BOARD_JSON, null, message.getLobbyId(), board.getJson());
         return connection.broadcast().sendText(updateJson).chain(i -> Uni.createFrom().item(updateJson));
 
     }

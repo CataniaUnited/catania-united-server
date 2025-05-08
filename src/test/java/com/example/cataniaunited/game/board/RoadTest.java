@@ -1,6 +1,7 @@
 package com.example.cataniaunited.game.board;
 
 import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.player.PlayerColor;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.test.junit.QuarkusTest;
@@ -9,7 +10,16 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Locale;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -186,7 +196,7 @@ class RoadTest {
     void testSetOwnerPlayerId() throws GameException {
         String playerId = "Player1";
         road.setOwnerPlayerId(playerId);
-        assertEquals(playerId, road.ownerPlayerId);
+        assertEquals(playerId, road.getOwnerPlayerId());
     }
 
     @Test
@@ -195,6 +205,22 @@ class RoadTest {
         road.setOwnerPlayerId(playerId);
         GameException ge = assertThrows(GameException.class, () -> road.setOwnerPlayerId(playerId));
         assertEquals("Road cannot be placed twice: roadId = %s, playerId = %s".formatted(road.id, playerId), ge.getMessage());
+    }
+
+    @Test
+    void testSetAndGetColor() throws GameException {
+        PlayerColor expectedColor = PlayerColor.BLUE;
+        road.setColor(expectedColor);
+        assertEquals(expectedColor, road.getColor());
+    }
+
+    @Test
+    void setColorShouldThrowErrorIfRoadIsAlreadyPlaced() throws GameException {
+        var firstColor = PlayerColor.BLUE;
+        var secondColor = PlayerColor.RED;
+        road.setColor(firstColor);
+        GameException ge = assertThrows(GameException.class, () -> road.setColor(secondColor));
+        assertEquals("Color of road cannot be changed twice: roadId = %s, color = %s".formatted(road.getId(), secondColor.getHexCode()), ge.getMessage());
     }
 
     @Test
@@ -241,6 +267,8 @@ class RoadTest {
         assertFalse(jsonNode.get("owner").isNull(), "Owner should not be null after setting");
         assertEquals(expectedOwner, jsonNode.get("owner").asText(), "Owner should match the set player ID in JSON");
 
+        assertTrue(jsonNode.get("color").isNull(), "Color should be null");
+
         // Check Coordinates (should still be initial)
         assertTrue(jsonNode.has("coordinates"), "JSON should contain 'coordinates' field");
         ArrayNode coordsArray = (ArrayNode) jsonNode.get("coordinates");
@@ -253,8 +281,21 @@ class RoadTest {
     }
 
     @Test
+    void testToJsonWithColor() throws GameException {
+        PlayerColor expectedColor = PlayerColor.LAVENDER;
+        road.setColor(expectedColor);
+
+        ObjectNode jsonNode = road.toJson();
+        assertNotNull(jsonNode, "toJson() should return a non-null ObjectNode");
+
+        assertEquals(ROAD_ID, jsonNode.get("id").asInt());
+        assertEquals(expectedColor.getHexCode(), jsonNode.get("color").asText(), "Color should match the hex code of the color in JSON\"");
+    }
+
+    @Test
     void testToJsonAfterCoordinateCalculationAndOwner() throws GameException {
         String expectedOwner = "Player33";
+        PlayerColor expectedColor = PlayerColor.LAVENDER;
 
         // Mock getCoordinates from SettlementPosition for calculation
         double[] coordsA = {5.0, -10.0};
@@ -264,6 +305,7 @@ class RoadTest {
 
         // Set owner and calculate coordinates/angle
         road.setOwnerPlayerId(expectedOwner);
+        road.setColor(expectedColor);
         road.setCoordinatesAndRotationAngle();
 
         // Expected calculated values
@@ -284,6 +326,9 @@ class RoadTest {
         // Check Owner
         assertTrue(jsonNode.has("owner"), "JSON should contain 'owner' field");
         assertEquals(expectedOwner, jsonNode.get("owner").asText(), "Owner should match the set player ID in JSON");
+
+        assertTrue(jsonNode.has("color"), "JSON should contain 'color' field");
+        assertEquals(expectedColor.getHexCode(), jsonNode.get("color").asText(), "Color should match the hex code of the color in JSON");
 
         // Check Coordinates
         assertTrue(jsonNode.has("coordinates"), "JSON should contain 'coordinates' field");

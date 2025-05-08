@@ -1,19 +1,30 @@
 package com.example.cataniaunited.game.board;
 
-import com.example.cataniaunited.game.board.tile_list_builder.*;
+import com.example.cataniaunited.game.board.tile_list_builder.StandardTileListBuilder;
+import com.example.cataniaunited.game.board.tile_list_builder.Tile;
+import com.example.cataniaunited.game.board.tile_list_builder.TileListBuilder;
+import com.example.cataniaunited.game.board.tile_list_builder.TileListDirector;
+import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 
 @QuarkusTest
@@ -163,10 +174,26 @@ class GraphBuilderTest {
         String message = "Test failed";
         assertThrows(AssertionError.class,
                 () -> GraphBuilder.checkAndThrowAssertionError(false, message)
-        , "should throw exception"
+                , "should throw exception"
         );
     }
 
+    @Test
+    void getRoadListShouldThrowExceptionWhenRoadListIsNull() {
+        GraphBuilder graphBuilder = mock(GraphBuilder.class);
+        when(graphBuilder.getRoadList()).thenCallRealMethod();
+        IllegalStateException exception = assertThrows(IllegalStateException.class, graphBuilder::getRoadList);
+        assertEquals("Build graph before accessing road list.", exception.getMessage());
+    }
+
+    @Test
+    void getRoadListShouldThrowExceptionWhenRoadListIsEmpty() {
+        GraphBuilder graphBuilder = mock(GraphBuilder.class);
+        when(graphBuilder.getRoadList()).thenCallRealMethod();
+        graphBuilder.roadList = List.of();
+        IllegalStateException exception = assertThrows(IllegalStateException.class, graphBuilder::getRoadList);
+        assertEquals("Build graph before accessing road list.", exception.getMessage());
+    }
 
 }
 
