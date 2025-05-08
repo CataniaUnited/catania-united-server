@@ -63,6 +63,37 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      # --- DOCKERX DEBUGGING STEP ---
+      - name: Debug Docker Buildx Build Command Manually
+        run: |
+          echo "Attempting manual 'docker buildx build' for debugging..."
+          
+          DOCKERFILE_PATH="src/main/docker/Dockerfile.jvm"
+          IMAGE_FULL_NAME="ghcr.io/${{ github.repository }}:${{ github.sha }}"
+          PLATFORMS="linux/amd64,linux/arm64"
+          BUILD_CONTEXT="." # Projekt-Root ist der Build-Kontext
+          
+          if [ ! -f "${DOCKERFILE_PATH}" ]; then
+            echo "Error: Dockerfile not found at ${DOCKERFILE_PATH}"
+            exit 1
+          fi
+          
+          echo "Executing command:"
+          echo "docker buildx build -f ${DOCKERFILE_PATH} -t ${IMAGE_FULL_NAME} --platform ${PLATFORMS} --push ${BUILD_CONTEXT}"
+          echo "--- START OF MANUAL DOCKER BUILDX OUTPUT ---"
+          
+          set -euo pipefail
+          set -x 
+          
+          docker buildx build \
+            -f "${DOCKERFILE_PATH}" \
+            -t "${IMAGE_FULL_NAME}" \
+            --platform "${PLATFORMS}" \
+            --push \
+            "${BUILD_CONTEXT}"
+          
+          set +x # set -x deaktivieren
+          echo "--- END OF MANUAL DOCKER BUILDX OUTPUT ---"
       - name: Build and push multi-arch image
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
