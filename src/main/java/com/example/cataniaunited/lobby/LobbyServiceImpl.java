@@ -6,7 +6,9 @@ import jakarta.enterprise.context.ApplicationScoped;
 import org.jboss.logging.Logger;
 
 import java.security.SecureRandom;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @ApplicationScoped
@@ -24,9 +26,9 @@ public class LobbyServiceImpl implements LobbyService {
         do {
             lobbyId = generateLobbyId();
         } while (lobbies.containsKey(lobbyId));
-
-        lobbies.put(lobbyId, new Lobby(lobbyId, hostPlayer));
-
+        Lobby lobby = new Lobby(lobbyId, hostPlayer);
+        setPlayerColor(lobby, hostPlayer);
+        lobbies.put(lobbyId, lobby);
         logger.infof("Lobby created: ID=%s, Host=%s", lobbyId, hostPlayer);
 
         return lobbyId;
@@ -53,24 +55,19 @@ public class LobbyServiceImpl implements LobbyService {
     @Override
     public List<String> getOpenLobbies() {
         List<String> openLobbies = new ArrayList<>(lobbies.keySet());
-
         logger.infof("Current open lobbies: %s", openLobbies);
-
         return openLobbies;
     }
 
     @Override
     public boolean joinLobbyByCode(String lobbyId, String player) {
         Lobby lobby = lobbies.get(lobbyId);
-        if(lobby != null){
-            PlayerColor assignedColor = lobby.assignAvailableColor();
+        if (lobby != null) {
+            PlayerColor assignedColor = setPlayerColor(lobby, player);
             if(assignedColor == null){
-                logger.warnf("No colors available for new players in lobby %s.", lobbyId);
                 return false;
             }
             lobby.addPlayer(player);
-            lobby.setPlayerColor(player, assignedColor);
-
             logger.infof("Player %s joined lobby %s with color %s", player, lobbyId, assignedColor);
             return true;
         }
@@ -79,12 +76,22 @@ public class LobbyServiceImpl implements LobbyService {
         return false;
     }
 
-    public void removePlayerFromLobby(String lobbyId, String player){
+    protected PlayerColor setPlayerColor(Lobby lobby, String player) {
+        PlayerColor assignedColor = lobby.assignAvailableColor();
+        if (assignedColor == null) {
+            logger.warnf("No colors available for new players in lobby %s.", lobby.getLobbyId());
+            return null;
+        }
+        lobby.setPlayerColor(player, assignedColor);
+        return assignedColor;
+    }
+
+    public void removePlayerFromLobby(String lobbyId, String player) {
         Lobby lobby = lobbies.get(lobbyId);
-        if(lobby != null){
+        if (lobby != null) {
             PlayerColor color = lobby.getPlayerColor(player);
 
-            if(color != null){
+            if (color != null) {
                 lobby.restoreColor(color);
                 logger.infof("Color %s returned to pool from player %s", color, player);
             }
@@ -105,6 +112,22 @@ public class LobbyServiceImpl implements LobbyService {
             throw new GameException("Lobby with id %s not found", lobbyId);
         }
         return lobby;
+    }
+
+    @Override
+    public boolean isPlayerTurn(String lobbyId, String playerId) throws GameException {
+        Lobby lobby = getLobbyById(lobbyId);
+        return lobby.isPlayerTurn(playerId);
+    }
+
+    @Override
+    public PlayerColor getPlayerColor(String lobbyId, String playerId) throws GameException {
+        Lobby lobby = getLobbyById(lobbyId);
+        PlayerColor playerColor = lobby.getPlayerColor(playerId);
+        if (playerColor == null) {
+            throw new GameException("No color for player found: playerId=%s, lobbyId=%s", playerId, lobbyId);
+        }
+        return playerColor;
     }
 
     @Override

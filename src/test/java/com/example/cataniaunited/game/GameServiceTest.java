@@ -4,6 +4,7 @@ import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.lobby.Lobby;
 import com.example.cataniaunited.lobby.LobbyService;
+import com.example.cataniaunited.player.PlayerColor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.test.junit.QuarkusTest;
@@ -13,9 +14,17 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @QuarkusTest
 class GameServiceTest {
@@ -77,16 +86,38 @@ class GameServiceTest {
     void placeSettlementShouldThrowGameExceptionForNonExistingLobby() throws GameException {
         String invalidLobbyId = "invalidLobbyId";
         GameException ge = assertThrows(GameException.class, () -> gameService.placeSettlement(invalidLobbyId, "1", 1));
-        assertEquals("Gameboard for Lobby not found: id = %s".formatted(invalidLobbyId), ge.getMessage());
-        verify(gameService).getGameboardByLobbyId(invalidLobbyId);
+        assertEquals("Lobby with id %s not found".formatted(invalidLobbyId), ge.getMessage());
+        verify(gameService, never()).getGameboardByLobbyId(invalidLobbyId);
     }
 
     @Test
     void placeRoadShouldThrowGameExceptionForNonExistingLobby() throws GameException {
         String invalidLobbyId = "invalidLobbyId";
         GameException ge = assertThrows(GameException.class, () -> gameService.placeRoad(invalidLobbyId, "1", 1));
-        assertEquals("Gameboard for Lobby not found: id = %s".formatted(invalidLobbyId), ge.getMessage());
-        verify(gameService).getGameboardByLobbyId(invalidLobbyId);
+        assertEquals("Lobby with id %s not found".formatted(invalidLobbyId), ge.getMessage());
+        verify(gameService, never()).getGameboardByLobbyId(invalidLobbyId);
+    }
+
+    @Test
+    void placeSettlementShouldThrowGameExceptionForNotPlayerTurn() throws GameException {
+        String playerId = "playerId1";
+        String lobbyId = lobbyMock.getLobbyId();
+        doReturn(lobbyMock).when(lobbyService).getLobbyById(lobbyId);
+        doReturn(false).when(lobbyMock).isPlayerTurn(playerId);
+        GameException ge = assertThrows(GameException.class, () -> gameService.placeSettlement(lobbyId, playerId, 1));
+        assertEquals("It is not the players turn: playerId=%s, lobbyId=%s".formatted(playerId, lobbyId), ge.getMessage());
+        verify(gameService, never()).getGameboardByLobbyId(lobbyId);
+    }
+
+    @Test
+    void placeRoadShouldThrowGameExceptionForNotPlayerTurn() throws GameException {
+        String playerId = "playerId1";
+        String lobbyId = lobbyMock.getLobbyId();
+        doReturn(lobbyMock).when(lobbyService).getLobbyById(lobbyId);
+        doReturn(false).when(lobbyMock).isPlayerTurn(playerId);
+        GameException ge = assertThrows(GameException.class, () -> gameService.placeRoad(lobbyId, playerId, 1));
+        assertEquals("It is not the players turn: playerId=%s, lobbyId=%s".formatted(playerId, lobbyId), ge.getMessage());
+        verify(gameService, never()).getGameboardByLobbyId(lobbyId);
     }
 
     @Test
@@ -94,9 +125,12 @@ class GameServiceTest {
         String playerId = "playerId1";
         int settlementPositionId = 15;
         String lobbyId = lobbyMock.getLobbyId();
+        doReturn(lobbyMock).when(lobbyService).getLobbyById(lobbyId);
+        doReturn(true).when(lobbyMock).isPlayerTurn(playerId);
+        doReturn(PlayerColor.BLUE).when(lobbyMock).getPlayerColor(playerId);
         doReturn(gameboardMock).when(gameService).getGameboardByLobbyId(lobbyId);
         gameService.placeSettlement(lobbyId, playerId, settlementPositionId);
-        verify(gameboardMock).placeSettlement(playerId, settlementPositionId);
+        verify(gameboardMock).placeSettlement(playerId, PlayerColor.BLUE, settlementPositionId);
     }
 
     @Test
@@ -104,9 +138,12 @@ class GameServiceTest {
         String playerId = "playerId1";
         int settlementPositionId = 15;
         String lobbyId = lobbyMock.getLobbyId();
+        doReturn(lobbyMock).when(lobbyService).getLobbyById(lobbyId);
+        doReturn(true).when(lobbyMock).isPlayerTurn(playerId);
+        doReturn(PlayerColor.BLUE).when(lobbyMock).getPlayerColor(playerId);
         doReturn(gameboardMock).when(gameService).getGameboardByLobbyId(lobbyId);
         gameService.placeRoad(lobbyId, playerId, settlementPositionId);
-        verify(gameboardMock).placeRoad(playerId, settlementPositionId);
+        verify(gameboardMock).placeRoad(playerId, PlayerColor.BLUE, settlementPositionId);
     }
 
     @Test

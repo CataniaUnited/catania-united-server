@@ -1,6 +1,7 @@
 package com.example.cataniaunited.game.board;
 
 import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.player.PlayerColor;
 import com.example.cataniaunited.util.Util;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -10,6 +11,7 @@ import java.util.Arrays;
 
 public class Road implements Placable {
     String ownerPlayerId;
+    PlayerColor color;
     final SettlementPosition positionA;
     final SettlementPosition positionB;
     final int id;
@@ -94,6 +96,17 @@ public class Road implements Placable {
         return ownerPlayerId;
     }
 
+    public PlayerColor getColor() {
+        return color;
+    }
+
+    public void setColor(PlayerColor color) throws GameException {
+        if (this.color != null) {
+            throw new GameException("Color of road cannot be changed twice: roadId = %s, color = %s", id, color.getHexCode());
+        }
+        this.color = color;
+    }
+
     @Override
     public String toString() {
         return "Road:{owner: %s; (%s, %s); position: (%s); angle: %f}"
@@ -104,7 +117,6 @@ public class Road implements Placable {
     public ObjectNode toJson() {
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode roadNode = mapper.createObjectNode();
-
         roadNode.put("id", this.id);
 
         if (this.ownerPlayerId != null) {
@@ -113,14 +125,17 @@ public class Road implements Placable {
             roadNode.putNull("owner");
         }
 
+        if (this.color != null) {
+            roadNode.put("color", this.color.getHexCode());
+        } else {
+            roadNode.putNull("color");
+        }
 
         ArrayNode coordsNode = mapper.createArrayNode();
         coordsNode.add(this.coordinates[0]); // Add x
         coordsNode.add(this.coordinates[1]); // Add y
         roadNode.set("coordinates", coordsNode);
-
         roadNode.put("rotationAngle", this.rotationAngle);
-
         return roadNode;
     }
 
