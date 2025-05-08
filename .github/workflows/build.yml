@@ -66,9 +66,11 @@ jobs:
       - name: Build and push multi-arch image
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          QUARKUS_CONTAINER_IMAGE_BUILD: true
+          QUARKUS_CONTAINER_IMAGE_PUSH: true
+          QUARKUS_CONTAINER_IMAGE_REGISTRY: ghcr.io
+          QUARKUS_DOCKER_BUILDX_PLATFORM: "linux/amd64,linux/arm64"
+          QUARKUS_CONTAINER_IMAGE_IMAGE: "ghcr.io/${{ github.repository }}:${{ github.sha }}"
+          JAVA_TOOL_OPTIONS: "-Djava.util.logging.manager=org.jboss.logmanager.LogManager -Dorg.jboss.logging.level=DEBUG"
         run: |
-          ./gradlew build \
-            -Dquarkus.container-image.registry="ghcr.io" \
-            -Dquarkus.container-image.build=true \
-            -Dquarkus.container-image.push=true \
-            -Dquarkus.docker.buildx.platform="linux/amd64,linux/arm64"
+          ./gradlew build --info
