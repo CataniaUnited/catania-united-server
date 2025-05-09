@@ -67,7 +67,6 @@ public class GameService {
     }
 
     public ObjectNode rollDice(String lobbyId) throws GameException {
-        GameBoard gameboard = getGameboardByLobbyId(lobbyId);
-        return gameboard.rollDice();
+        return getGameboardByLobbyId(lobbyId).rollDice();
     }
 }
