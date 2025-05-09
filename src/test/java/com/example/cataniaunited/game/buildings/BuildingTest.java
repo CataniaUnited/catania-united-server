@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertNotNull; // Added for the new test
 
 @QuarkusTest
-public class BuildingTest {
+class BuildingTest {
 
     @Test
     void testToJson() throws GameException {

@@ -4,6 +4,8 @@ import com.example.cataniaunited.Publisher;
 import com.example.cataniaunited.Subscriber;
 import com.example.cataniaunited.game.board.Placable;
 import com.example.cataniaunited.game.board.SettlementPosition;
+import com.example.cataniaunited.Subscriber;
+import com.example.cataniaunited.game.dice.DiceRoller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -111,5 +113,18 @@ public class Tile implements Placable, Publisher<SettlementPosition, TileType>, 
     public void update(Integer notification) {
         if (value == notification)
             notifySubscribers(type);
+    }
+
+    // TODO: refactor to equal addSubscriber
+    public void subscribeToDice(DiceRoller diceRoller) {
+        diceRoller.addSubscriber(this);
+    }
+
+    public boolean hasResource() {
+        return hasResource;
+    }
+
+    public void resetResource() {
+        this.hasResource = false;
     }
 }

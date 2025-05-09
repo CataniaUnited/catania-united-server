@@ -17,6 +17,7 @@ public class Player {
     final String connectionId;
 
     HashMap<TileType, Integer> resources = new HashMap<>();
+    private int victoryPoints;
 
     public Player() {
         this.uniqueId = UUID.randomUUID().toString();
@@ -54,6 +55,14 @@ public class Player {
 
     public String getUniqueId() {
         return uniqueId;
+    }
+
+    public int getVictoryPoints() {
+        return victoryPoints;
+    }
+
+    public void addVictoryPoints(int victoryPoints) {
+        this.victoryPoints += victoryPoints;
     }
 
     @Override

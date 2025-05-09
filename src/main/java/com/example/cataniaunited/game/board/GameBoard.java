@@ -6,12 +6,12 @@ import com.example.cataniaunited.game.board.tile_list_builder.Tile;
 import com.example.cataniaunited.game.board.tile_list_builder.TileListBuilder;
 import com.example.cataniaunited.game.board.tile_list_builder.TileListDirector;
 import com.example.cataniaunited.game.buildings.Settlement;
+import com.example.cataniaunited.game.dice.DiceRoller;
 import com.example.cataniaunited.player.PlayerColor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.jboss.logging.Logger;
-
 import java.util.List;
 
 public class GameBoard {
@@ -19,6 +19,7 @@ public class GameBoard {
     static final int DEFAULT_TILES_PER_PLAYER_GOAL = 6;
     static final int SIZE_OF_HEX = 10;
     final int sizeOfBoard;
+    private final DiceRoller diceRoller;
 
     List<SettlementPosition> settlementPositionGraph;
     List<Tile> tileList;
@@ -35,6 +36,9 @@ public class GameBoard {
 
         generateTileList();
         generateBoard();
+
+        this.diceRoller = new DiceRoller();
+        subscribeTilesToDice();
 
         long endtime = System.nanoTime();
 
@@ -77,6 +81,7 @@ public class GameBoard {
         try {
             SettlementPosition settlementPosition = settlementPositionGraph.get(positionId - 1);
             settlementPosition.setBuilding(new Settlement(playerId, color));
+
         } catch (IndexOutOfBoundsException e) {
             throw new GameException("Settlement position not found: id = %s", positionId);
         }
@@ -118,12 +123,10 @@ public class GameBoard {
             tilesNode.add(tile.toJson());
         }
 
-
         // Add Settlement positions
         for (SettlementPosition position : this.settlementPositionGraph) {
             positionsNode.add(position.toJson());
         }
-
 
         // Add roads
         for (Road road : this.roadList) {
@@ -139,6 +142,21 @@ public class GameBoard {
         boardNode.put("sizeOfHex", DEFAULT_TILES_PER_PLAYER_GOAL);
 
         return boardNode;
+    }
+
+    private void subscribeTilesToDice() {
+        tileList.forEach(tile -> tile.subscribeToDice(diceRoller));
+    }
+
+    public ObjectNode rollDice()  {
+        ObjectNode result = diceRoller.rollDice();
+
+        //distributeResources logic here
+        tileList.stream()
+                .filter(Tile::hasResource)
+                .forEach(Tile::resetResource);
+
+        return result;
     }
 
 }

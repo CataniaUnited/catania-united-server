@@ -5,6 +5,9 @@ import io.quarkus.websockets.next.WebSocketConnection;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import io.quarkus.websockets.next.WebSocketConnection;
 
 import java.util.List;
 
@@ -132,4 +135,62 @@ class PlayerServiceTest {
         assertNotNull(playerService.getPlayerByConnection(mockConnection1), "Existing player should not be affected.");
     }
 
+    @Test
+    void addPlayerRegistersPlayerByConnectionAndId() {
+        Player player = playerService.addPlayer(mockConnection1);
+        assertEquals("conn123", player.toString().contains("conn123") ? "conn123" : null);
+        assertSame(player, playerService.getPlayerByConnection(mockConnection1));
+        assertSame(player, playerService.getPlayerById(player.getUniqueId()));
+    }
+
+    @Test
+    void removePlayerRemovesFromBothMaps() {
+        Player player = playerService.addPlayer(mockConnection1);
+        playerService.removePlayer(mockConnection1);
+        assertNull(playerService.getPlayerByConnection(mockConnection1));
+        assertNull(playerService.getPlayerById(player.getUniqueId()));
+    }
+
+    @Test
+    void removePlayerNonExistingConnection(){
+        Player player = playerService.addPlayer(mockConnection1);
+        playerService.removePlayer(mockConnection1);
+
+        assertDoesNotThrow(() -> playerService.removePlayer(mockConnection1));
+
+        assertNull(playerService.getPlayerByConnection(mockConnection1));
+        assertNull(playerService.getPlayerById(player.getUniqueId()));
+    }
+
+    @Test
+    void addVictoryPointsIncreasesPointsCorrectly() {
+        Player player = playerService.addPlayer(mockConnection1);
+        playerService.addVictoryPoints(player.getUniqueId(), 2);
+        playerService.addVictoryPoints(player.getUniqueId(), 3);
+        assertEquals(5, player.getVictoryPoints());
+    }
+
+    @Test
+    void checkForWinReturnsFalseIfLessThanTenPoints() {
+        Player player = playerService.addPlayer(mockConnection1);
+        playerService.addVictoryPoints(player.getUniqueId(), 9);
+        assertFalse(playerService.checkForWin(player.getUniqueId()));
+    }
+
+    @Test
+    void checkForWinReturnsTrueIfTenPoints() {
+        Player player = playerService.addPlayer(mockConnection1);
+        playerService.addVictoryPoints(player.getUniqueId(), 10);
+        assertTrue(playerService.checkForWin(player.getUniqueId()));
+    }
+
+    @Test
+    void getAllPlayersReturnsListOfAllPlayers() {
+        playerService.addPlayer(mockConnection1);
+        List<Player> players = playerService.getAllPlayers();
+        assertEquals(1, players.size());
+    }
+
+
 }
+

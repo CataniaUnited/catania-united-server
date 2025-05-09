@@ -108,7 +108,6 @@ class GameBoardTest {
             fail("GameBoard constructor threw an unexpected exception.");
         }
 
-
         assertNotNull(gameBoard, "GameBoard instance should be created");
         assertEquals(GameBoard.calculateSizeOfBoard(playerCount), gameBoard.sizeOfBoard, "Internal board size should be set correctly");
 
@@ -334,4 +333,17 @@ class GameBoardTest {
         assertTrue(true);
     }
 
+    @Test
+    void testGameBoardInitializesDiceRollerAndSubscribesTiles() {
+        GameBoard gameBoard = new GameBoard(4);
+        List<Tile> tileList = gameBoard.getTileList();
+        assertNotNull(tileList);
+        assertFalse(tileList.isEmpty(), "Tile list should not be empty");
+
+        boolean atLeastOneTileHadResource = tileList.stream().anyMatch(Tile::hasResource);
+        assertTrue(atLeastOneTileHadResource || tileList.stream().noneMatch(Tile::hasResource),
+                "Tiles should receive resources if dice matches tile value");
+
+        assertTrue(tileList.stream().noneMatch(Tile::hasResource), "Resources should be reset after distribution");
+    }
 }

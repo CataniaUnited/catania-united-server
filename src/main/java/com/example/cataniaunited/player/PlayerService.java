@@ -11,6 +11,7 @@ public class PlayerService {
 
     private static final ConcurrentHashMap<String, Player> playersByConnectionId = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, Player> playersById = new ConcurrentHashMap<>();
+    public static final int WIN_THRESHOLD = 10;
 
     public Player addPlayer(WebSocketConnection connection) {
         Player player = new Player(connection);
@@ -41,5 +42,25 @@ public class PlayerService {
         playersByConnectionId.clear();
         playersById.clear();
     }
+    
+    public void removePlayer(WebSocketConnection connection) {
+        Player removed = playersByConnectionId.remove(connection.id());
+        if (removed != null) {
+            playersById.remove(removed.getUniqueId());
+        }
+    }
+
+    public void addVictoryPoints(String playerId, int points) {
+        Player player = getPlayerById(playerId);
+        if (player != null) {
+            player.addVictoryPoints(points);
+        }
+    }
+
+    public boolean checkForWin(String playerId) {
+        Player player = getPlayerById(playerId);
+        return player != null && player.getVictoryPoints() >= WIN_THRESHOLD;
+    }
+
 
 }
