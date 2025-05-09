@@ -5,7 +5,10 @@ import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.GameService;
 import com.example.cataniaunited.game.board.GameBoard;
+import com.example.cataniaunited.game.board.SettlementPosition;
+import com.example.cataniaunited.lobby.Lobby;
 import com.example.cataniaunited.lobby.LobbyService;
+import com.example.cataniaunited.player.PlayerColor;
 import com.example.cataniaunited.player.PlayerService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -32,12 +35,23 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
-import static org.mockito.Mockito.doReturn;
-import static org.junit.jupiter.api.Assertions.*;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.eq;
+
 
 @QuarkusTest
 public class GameWebSocketTest {
@@ -286,7 +300,7 @@ public class GameWebSocketTest {
 
         MessageDTO joinLobbyMessage = new MessageDTO(MessageType.JOIN_LOBBY, player, lobbyId);
 
-       List<String> receivedMessages = new CopyOnWriteArrayList<>();
+        List<String> receivedMessages = new CopyOnWriteArrayList<>();
         CountDownLatch messageLatch = new CountDownLatch(3);
 
         var webSocketClientConnection = BasicWebSocketConnector.create()
@@ -334,11 +348,16 @@ public class GameWebSocketTest {
         String player2 = "Player2";
         String lobbyId = lobbyService.createLobby(player1);
         lobbyService.joinLobbyByCode(lobbyId, player2);
+        PlayerColor expectedColor = lobbyService.getPlayerColor(lobbyId, player2);
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+        lobby.setActivePlayer(player2);
         GameBoard gameBoard = gameService.createGameboard(lobbyId);
+        SettlementPosition settlementPosition = gameBoard.getSettlementPositionGraph().get(0);
+        settlementPosition.getRoads().get(0).setOwnerPlayerId(player2);
 
-        assertNull(gameBoard.getSettlementPositionGraph().get(0).getBuildingOwner());
+        assertNull(settlementPosition.getBuildingOwner());
         //Create message DTO
-        int positionId = gameBoard.getSettlementPositionGraph().get(0).getId();
+        int positionId = settlementPosition.getId();
         ObjectNode placeSettlementMessageNode = objectMapper.createObjectNode().put("settlementPositionId", positionId);
 
         var placeSettlementMessageDTO = new MessageDTO(MessageType.PLACE_SETTLEMENT, player2, lobbyId, placeSettlementMessageNode);
@@ -367,6 +386,8 @@ public class GameWebSocketTest {
 
         var actualSettlementPosition = gameService.getGameboardByLobbyId(lobbyId).getSettlementPositionGraph().get(0);
         assertEquals(player2, actualSettlementPosition.getBuildingOwner());
+        ObjectNode settlementNode = actualSettlementPosition.toJson();
+        assertEquals(expectedColor.getHexCode(), settlementNode.get("building").get("color").asText());
         verify(gameService).placeSettlement(lobbyId, player2, actualSettlementPosition.getId());
     }
 
@@ -408,12 +429,59 @@ public class GameWebSocketTest {
     }
 
     @Test
+    void placeSettlementShouldTriggerBroadcastWinIfPlayerWins() throws Exception {
+        String player1 = "winningPlayer";
+        String player2 = "dummyPlayer";
+
+        String lobbyId = lobbyService.createLobby(player1);
+        lobbyService.joinLobbyByCode(lobbyId, player2);
+
+        GameBoard board = gameService.createGameboard(lobbyId);
+        int settlementId = board.getSettlementPositionGraph().get(0).getId();
+        board.getSettlementPositionGraph().get(0).getRoads().get(0).setOwnerPlayerId(player1);
+
+        lobbyService.getLobbyById(lobbyId).setActivePlayer(player1);
+
+        doReturn(true).when(playerService).checkForWin(player1);
+
+        ObjectNode msgNode = JsonNodeFactory.instance.objectNode().put("settlementPositionId", settlementId);
+        MessageDTO msg = new MessageDTO(MessageType.PLACE_SETTLEMENT, player1, lobbyId, msgNode);
+
+        List<String> messages = new CopyOnWriteArrayList<>();
+        CountDownLatch latch = new CountDownLatch(3);
+
+        var client = BasicWebSocketConnector.create()
+                .baseUri(serverUri)
+                .path("/game")
+                .onTextMessage((conn, m) -> {
+                    if (m.startsWith("{")) {
+                        messages.add(m);
+                        latch.countDown();
+                    }
+                })
+                .connectAndAwait();
+
+        client.sendTextAndAwait(new ObjectMapper().writeValueAsString(msg));
+
+        assertTrue(latch.await(5, TimeUnit.SECONDS), "Expected messages were not received");
+
+        MessageDTO response = new ObjectMapper().readValue(messages.get(messages.size() - 1), MessageDTO.class);
+        assertEquals(MessageType.GAME_WON, response.getType());
+        assertEquals(player1, response.getMessageNode("winner").asText());
+
+        verify(gameService).broadcastWin(any(), eq(lobbyId), eq(player1));
+    }
+
+
+    @Test
     void testPlacementOfRoad() throws GameException, JsonProcessingException, InterruptedException {
         //Setup Players, Lobby and Gameboard
         String player1 = "Player1";
         String player2 = "Player2";
         String lobbyId = lobbyService.createLobby(player1);
         lobbyService.joinLobbyByCode(lobbyId, player2);
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+        lobby.setActivePlayer(player2);
         GameBoard gameBoard = gameService.createGameboard(lobbyId);
 
         assertNull(gameBoard.getRoadList().get(0).getOwnerPlayerId());
@@ -595,62 +663,5 @@ public class GameWebSocketTest {
         assertTrue(responseMessage.getMessage().has("error"), "Error payload should have 'error' field");
         assertEquals(expectedErrorMessage, responseMessage.getMessageNode("error").asText(), "Error message text should match");
     }
-
-    @Test
-    void testStartGameBroadcastsRandomTurnOrder() throws Exception {
-        String lobbyId = "theLobby";
-
-        // 1) spy‐friendly stubs (doReturn, doNothing)
-        doNothing().when(lobbyService).startGame(anyString());
-
-        com.example.cataniaunited.lobby.Lobby fakeLobby =
-                new com.example.cataniaunited.lobby.Lobby(lobbyId, "host");
-        fakeLobby.setTurnOrder(List.of("alice","bob","carol"));
-
-        doReturn(fakeLobby)
-                .when(lobbyService)
-                .getLobbyById(anyString());
-
-        // return null (or a dummy GameBoard) instead of invoking the real method:
-        doReturn(null).when(gameService).createGameboard(anyString());
-
-
-        // 2) connect
-        List<String> received = new CopyOnWriteArrayList<>();
-        CountDownLatch latch = new CountDownLatch(1);
-
-        var client = BasicWebSocketConnector.create()
-                .baseUri(serverUri)
-                .path("/game")
-                .onTextMessage((c, text) -> {
-                    if (text.contains("\"type\":\"START_GAME\"")) {
-                        received.add(text);
-                        latch.countDown();
-                    }
-                })
-                .connectAndAwait();
-
-        // 3) send DTO with top‐level lobbyId
-        MessageDTO startDto = new MessageDTO(
-                MessageType.START_GAME,
-                null,
-                lobbyId,
-                JsonNodeFactory.instance.objectNode()
-        );
-        client.sendTextAndAwait(objectMapper.writeValueAsString(startDto));
-
-        // 4) assert we got exactly our fake turnOrder
-        assertTrue(latch.await(5, TimeUnit.SECONDS), "Timed out waiting for START_GAME");
-        MessageDTO reply = objectMapper.readValue(received.get(0), MessageDTO.class);
-        var arr = reply.getMessageNode("turnOrder");
-        assertEquals(List.of("alice","bob","carol"),
-                List.of(arr.get(0).asText(), arr.get(1).asText(), arr.get(2).asText()));
-
-        // 5) verify the calls
-        verify(lobbyService).startGame(lobbyId);
-        verify(gameService).createGameboard(lobbyId);
-    }
-
-
 
 }
