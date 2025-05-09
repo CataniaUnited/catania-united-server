@@ -2,12 +2,12 @@ package com.example.cataniaunited.game.board.tile_list_builder;
 
 import com.example.cataniaunited.game.board.Placable;
 import com.example.cataniaunited.Subscriber;
-import com.example.cataniaunited.game.dice.Dice;
+import com.example.cataniaunited.game.dice.DiceRoller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-public class Tile implements Placable, Subscriber<Dice, Integer> {
+public class Tile implements Placable, Subscriber<DiceRoller, Integer> {
     final TileType type;
     int value = 0; // To set later
 
@@ -86,13 +86,13 @@ public class Tile implements Placable, Subscriber<Dice, Integer> {
         return tileNode;
     }
 
-    public void subscribeToDice(Dice dice) {
-        dice.addSubscriber(this);
+    public void subscribeToDice(DiceRoller diceRoller) {
+        diceRoller.addSubscriber(this);
     }
 
     @Override
-    public void update(Integer diceValue) {
-        if (this.value == diceValue && this.type != TileType.WASTE) {
+    public void update(Integer diceTotal) {
+        if (this.value == diceTotal && this.type != TileType.WASTE) {
             this.hasResource = true;
             // notify buildings here
         }
