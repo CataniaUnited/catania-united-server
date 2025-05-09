@@ -1,6 +1,9 @@
 package com.example.cataniaunited.game.board;
 
 import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.exception.IntersectionOccupiedException;
+import com.example.cataniaunited.exception.NoAdjacentRoadException;
+import com.example.cataniaunited.exception.SpacingRuleViolationException;
 import com.example.cataniaunited.game.board.tile_list_builder.Tile;
 import com.example.cataniaunited.game.buildings.Building;
 import com.example.cataniaunited.game.buildings.Settlement;
@@ -279,8 +282,8 @@ class SettlementPositionTest {
 
         String secondPlayerId = "Player2";
         Settlement settlement2 = new Settlement(secondPlayerId, PlayerColor.BLUE);
-        GameException ge = assertThrows(GameException.class, () -> settlementPosition.setBuilding(settlement2));
-        assertEquals("Player mismatch when placing building: positionId = %s, playerId = %s".formatted(settlementPosition.id, secondPlayerId), ge.getMessage());
+        GameException ge = assertThrows(IntersectionOccupiedException.class, () -> settlementPosition.setBuilding(settlement2));
+        assertEquals("Intersection occupied!".formatted(settlementPosition.id, secondPlayerId), ge.getMessage());
     }
 
     @Test
@@ -293,16 +296,16 @@ class SettlementPositionTest {
 
         String secondPlayerId = "Player2";
         Settlement settlement = new Settlement(secondPlayerId, PlayerColor.BLUE);
-        GameException ge = assertThrows(GameException.class, () -> settlementPosition.setBuilding(settlement));
-        assertEquals("Placement of building is not allowed -> spacing rule violated: positionId = %s, playerId = %s".formatted(settlementPosition.id, secondPlayerId), ge.getMessage());
+        GameException ge = assertThrows(SpacingRuleViolationException.class, () -> settlementPosition.setBuilding(settlement));
+        assertEquals("Too close to another settlement or city".formatted(settlementPosition.id, secondPlayerId), ge.getMessage());
     }
 
     @Test
     void setBuildingShouldThrowErrorWhenPlayerHasNoAdjacentRoad() throws GameException {
         String playerId = "Player1";
         Settlement settlement = new Settlement(playerId, PlayerColor.BLUE);
-        GameException ge = assertThrows(GameException.class, () -> settlementPosition.setBuilding(settlement));
-        assertEquals("Placement of building is not allowed -> no owned road adjacent: positionId = %s, playerId = %s".formatted(settlementPosition.id, playerId), ge.getMessage());
+        GameException ge = assertThrows(NoAdjacentRoadException.class, () -> settlementPosition.setBuilding(settlement));
+        assertEquals("No adjacent roads found".formatted(settlementPosition.id, playerId), ge.getMessage());
     }
 
     @Test
@@ -314,8 +317,8 @@ class SettlementPositionTest {
 
         String secondPlayerId = "Player2";
         Settlement settlement = new Settlement(secondPlayerId, PlayerColor.BLUE);
-        GameException ge = assertThrows(GameException.class, () -> settlementPosition.setBuilding(settlement));
-        assertEquals("Placement of building is not allowed -> no owned road adjacent: positionId = %s, playerId = %s".formatted(settlementPosition.id, secondPlayerId), ge.getMessage());
+        GameException ge = assertThrows(NoAdjacentRoadException.class, () -> settlementPosition.setBuilding(settlement));
+        assertEquals("No adjacent roads found".formatted(settlementPosition.id, secondPlayerId), ge.getMessage());
     }
 
     @Test
