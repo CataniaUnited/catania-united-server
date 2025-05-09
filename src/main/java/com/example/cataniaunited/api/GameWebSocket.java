@@ -5,7 +5,6 @@ import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.GameService;
 import com.example.cataniaunited.game.board.GameBoard;
-import com.example.cataniaunited.game.dice.DiceRoller;
 import com.example.cataniaunited.lobby.LobbyService;
 import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerService;
