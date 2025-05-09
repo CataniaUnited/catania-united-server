@@ -620,22 +620,19 @@ public class GameWebSocketTest {
 
     @Test
     void testHandleDiceRoll() throws GameException, JsonProcessingException, InterruptedException {
-        // Setup Players, Lobby and Gameboard
         String player1 = "Player1";
         String player2 = "Player2";
         String lobbyId = lobbyService.createLobby(player1);
         lobbyService.joinLobbyByCode(lobbyId, player2);
         Lobby lobby = lobbyService.getLobbyById(lobbyId);
-        lobby.setActivePlayer(player1); // Set active player who will roll
+        lobby.setActivePlayer(player1);
 
-        // Create game board
-        GameBoard gameBoard = gameService.createGameboard(lobbyId);
+        gameService.createGameboard(lobbyId);
 
-        // Create message DTO
         MessageDTO rollDiceMessageDTO = new MessageDTO(MessageType.ROLL_DICE, player1, lobbyId);
 
         List<String> receivedMessages = new CopyOnWriteArrayList<>();
-        CountDownLatch messageLatch = new CountDownLatch(1); // Expecting 1 message for dice result
+        CountDownLatch messageLatch = new CountDownLatch(1);
 
         var webSocketClientConnection = BasicWebSocketConnector.create()
                 .baseUri(serverUri)
@@ -654,21 +651,17 @@ public class GameWebSocketTest {
                     }
                 }).connectAndAwait();
 
-        // Send the dice roll message
         String sentMessage = objectMapper.writeValueAsString(rollDiceMessageDTO);
         webSocketClientConnection.sendTextAndAwait(sentMessage);
 
-        // Wait for response
         boolean messageReceived = messageLatch.await(5, TimeUnit.SECONDS);
         assertTrue(messageReceived, "Dice result message not received in time!");
 
-        // Verify response
         MessageDTO responseMessage = objectMapper.readValue(receivedMessages.get(0), MessageDTO.class);
         assertEquals(MessageType.DICE_RESULT, responseMessage.getType());
         assertEquals(player1, responseMessage.getPlayer());
         assertEquals(lobbyId, responseMessage.getLobbyId());
 
-        // Verify dice result contains valid values
         JsonNode diceResult = responseMessage.getMessage();
         assertNotNull(diceResult);
         int dice1 = diceResult.get("dice1").asInt();
@@ -677,7 +670,6 @@ public class GameWebSocketTest {
         assertTrue(dice2 >= 1 && dice2 <= 6, "Dice 2 value out of range");
         assertEquals(dice1 + dice2, diceResult.get("total").asInt());
 
-        // Verify game service was called
         verify(gameService).rollDice(lobbyId);
     }
 }

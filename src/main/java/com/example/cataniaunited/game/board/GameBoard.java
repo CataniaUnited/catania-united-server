@@ -147,21 +147,16 @@ public class GameBoard {
     }
 
     private void subscribeTilesToDice() {
-        tileList.forEach(tile -> {
-            tile.subscribeToDice(diceRoller);
-        });
+        tileList.forEach(tile -> tile.subscribeToDice(diceRoller));
     }
 
-    public ObjectNode rollDice() throws GameException {
+    public ObjectNode rollDice()  {
         ObjectNode result = diceRoller.rollDice();
 
-        // Distribute resources here
+        //distributeResources logic here
         tileList.stream()
-                .filter(tile -> tile.hasResource())
-                .forEach(tile -> {
-                    //distributeResources Method here
-                    tile.resetResource();
-                });
+                .filter(Tile::hasResource)
+                .forEach(Tile::resetResource);
 
         return result;
     }

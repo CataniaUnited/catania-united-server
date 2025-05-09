@@ -1,6 +1,5 @@
 package com.example.cataniaunited.game.dice;
 
-import com.example.cataniaunited.exception.GameException;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
@@ -8,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class DiceRollerTest {
 
     @Test
-    void testRollDiceReturnsValidTotal() throws GameException {
+    void testRollDiceReturnsValidTotal() {
         DiceRoller diceRoller = new DiceRoller();
 
         ObjectNode result = diceRoller.rollDice();

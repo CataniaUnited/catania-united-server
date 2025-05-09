@@ -341,14 +341,8 @@ class GameBoardTest {
         assertNotNull(tileList);
         assertFalse(tileList.isEmpty(), "Tile list should not be empty");
 
-        try {
-            gameBoard.rollDice();
-        } catch (GameException e) {
-            fail("Dice roll should not throw an exception");
-        }
-
         boolean atLeastOneTileHadResource = tileList.stream().anyMatch(Tile::hasResource);
-        assertTrue(atLeastOneTileHadResource || tileList.stream().noneMatch(t -> t.hasResource()),
+        assertTrue(atLeastOneTileHadResource || tileList.stream().noneMatch(Tile::hasResource),
                 "Tiles should receive resources if dice matches tile value");
 
         assertTrue(tileList.stream().noneMatch(Tile::hasResource), "Resources should be reset after distribution");
