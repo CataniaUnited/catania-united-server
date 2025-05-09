@@ -51,4 +51,7 @@ mvnw.cmd
 *.out
 
 # Generated files
-*.generated
+*.generatedlocal.properties
+
+# local config
+local.properties
