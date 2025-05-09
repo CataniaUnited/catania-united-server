@@ -77,6 +77,11 @@ public class GameService {
         lobbyToGameboardMap.put(lobbyId, gameboard);
     }
 
+
+    public ObjectNode rollDice(String lobbyId) throws GameException {
+        return getGameboardByLobbyId(lobbyId).rollDice();
+    }
+  
     public Uni<MessageDTO> broadcastWin(WebSocketConnection connection, String lobbyId, String winnerPlayerId) {
         ObjectNode message = JsonNodeFactory.instance.objectNode();
         message.put("winner", winnerPlayerId);
