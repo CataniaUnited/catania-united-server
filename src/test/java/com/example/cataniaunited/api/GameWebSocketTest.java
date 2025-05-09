@@ -51,6 +51,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.eq;
+
 
 @QuarkusTest
 public class GameWebSocketTest {
@@ -426,6 +428,51 @@ public class GameWebSocketTest {
 
         verify(gameService, never()).placeSettlement(anyString(), anyString(), anyInt());
     }
+
+    @Test
+    void placeSettlementShouldTriggerBroadcastWinIfPlayerWins() throws Exception {
+        String player1 = "winningPlayer";
+        String player2 = "dummyPlayer";
+
+        String lobbyId = lobbyService.createLobby(player1);
+        lobbyService.joinLobbyByCode(lobbyId, player2);
+
+        GameBoard board = gameService.createGameboard(lobbyId);
+        int settlementId = board.getSettlementPositionGraph().get(0).getId();
+        board.getSettlementPositionGraph().get(0).getRoads().get(0).setOwnerPlayerId(player1);
+
+        lobbyService.getLobbyById(lobbyId).setActivePlayer(player1);
+
+        doReturn(true).when(playerService).checkForWin(player1);
+
+        ObjectNode msgNode = JsonNodeFactory.instance.objectNode().put("settlementPositionId", settlementId);
+        MessageDTO msg = new MessageDTO(MessageType.PLACE_SETTLEMENT, player1, lobbyId, msgNode);
+
+        List<String> messages = new CopyOnWriteArrayList<>();
+        CountDownLatch latch = new CountDownLatch(3);
+
+        var client = BasicWebSocketConnector.create()
+                .baseUri(serverUri)
+                .path("/game")
+                .onTextMessage((conn, m) -> {
+                    if (m.startsWith("{")) {
+                        messages.add(m);
+                        latch.countDown();
+                    }
+                })
+                .connectAndAwait();
+
+        client.sendTextAndAwait(new ObjectMapper().writeValueAsString(msg));
+
+        assertTrue(latch.await(5, TimeUnit.SECONDS), "Expected messages were not received");
+
+        MessageDTO response = new ObjectMapper().readValue(messages.get(messages.size() - 1), MessageDTO.class);
+        assertEquals(MessageType.GAME_WON, response.getType());
+        assertEquals(player1, response.getMessageNode("winner").asText());
+
+        verify(gameService).broadcastWin(any(), eq(lobbyId), eq(player1));
+    }
+
 
     @Test
     void testPlacementOfRoad() throws GameException, JsonProcessingException, InterruptedException {

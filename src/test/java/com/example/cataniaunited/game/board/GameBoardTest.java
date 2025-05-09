@@ -108,7 +108,6 @@ class GameBoardTest {
             fail("GameBoard constructor threw an unexpected exception.");
         }
 
-
         assertNotNull(gameBoard, "GameBoard instance should be created");
         assertEquals(GameBoard.calculateSizeOfBoard(playerCount), gameBoard.sizeOfBoard, "Internal board size should be set correctly");
 

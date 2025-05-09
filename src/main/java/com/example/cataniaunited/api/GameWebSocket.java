@@ -70,9 +70,7 @@ public class GameWebSocket {
                 case PLACE_ROAD -> placeRoad(message, connection);
                 case ROLL_DICE -> handleDiceRoll(message, connection);
                 case ERROR, CONNECTION_SUCCESSFUL, CLIENT_DISCONNECTED, LOBBY_CREATED, LOBBY_UPDATED, PLAYER_JOINED,
-                     GAME_BOARD_JSON, DICE_RESULT -> throw new GameException("Invalid client command");
-
-
+                     GAME_BOARD_JSON, GAME_WON, DICE_RESULT -> throw new GameException("Invalid client command");
             };
         } catch (GameException ge) {
             logger.errorf("Unexpected Error occurred: message = %s, error = %s", message, ge.getMessage());
@@ -104,11 +102,18 @@ public class GameWebSocket {
         try {
             int position = Integer.parseInt(settlementPosition.toString());
             gameService.placeSettlement(message.getLobbyId(), message.getPlayer(), position);
+
         } catch (NumberFormatException e) {
             throw new GameException("Invalid settlement position id: id = %s", settlementPosition.toString());
         }
+
+        if (playerService.checkForWin(message.getPlayer())) {
+            return gameService.broadcastWin(connection, message.getLobbyId(), message.getPlayer());
+        }
+
         GameBoard updatedGameboard = gameService.getGameboardByLobbyId(message.getLobbyId());
         MessageDTO update = new MessageDTO(MessageType.PLACE_SETTLEMENT, message.getPlayer(), message.getLobbyId(), updatedGameboard.getJson());
+
         return connection.broadcast().sendText(update).chain(i -> Uni.createFrom().item(update));
     }
 
