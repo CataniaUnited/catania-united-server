@@ -1,5 +1,6 @@
 package com.example.cataniaunited.game.board.tile_list_builder;
 
+import com.example.cataniaunited.game.dice.DiceRoller;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.test.junit.QuarkusTest;
@@ -7,6 +8,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
 
 @QuarkusTest
 class TileTest {
@@ -212,6 +214,23 @@ class TileTest {
         tile.setValue(6);
         tile.update(6);
         tile.resetResource();
+        assertFalse(tile.hasResource());
+    }
+
+    @Test
+    void updateShouldSetHasResourceWhenValueMatches() {
+        tile.setValue(6);
+        DiceRoller mockDiceRoller = mock(DiceRoller.class);
+        tile.subscribeToDice(mockDiceRoller);
+        tile.update(6);
+        assertTrue(tile.hasResource());
+    }
+
+    @Test
+    void updateShouldNotSetHasResourceWhenValueDiffers() {
+        DiceRoller mockDiceRoller = mock(DiceRoller.class);
+        tile.subscribeToDice(mockDiceRoller);
+        tile.update(5);
         assertFalse(tile.hasResource());
     }
 }
