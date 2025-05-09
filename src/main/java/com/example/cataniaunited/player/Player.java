@@ -14,7 +14,7 @@ public class Player {
 
     private String username;
     private final String uniqueId;
-    private final String connectionId;
+    final String connectionId;
 
     HashMap<TileType, Integer> resources = new HashMap<>();
 

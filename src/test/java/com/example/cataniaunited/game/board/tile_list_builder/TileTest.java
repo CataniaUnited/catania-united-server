@@ -1,5 +1,6 @@
 package com.example.cataniaunited.game.board.tile_list_builder;
 
+import com.example.cataniaunited.game.board.SettlementPosition;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.test.junit.QuarkusTest;
@@ -7,6 +8,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 @QuarkusTest
 class TileTest {
@@ -182,6 +184,113 @@ class TileTest {
         assertEquals(2, coordsArray.size(), "Coordinates array should have 2 elements");
         assertEquals(expectedX, coordsArray.get(0).asDouble(), 0.0001, "X coordinate should match the set value in JSON");
         assertEquals(expectedY, coordsArray.get(1).asDouble(), 0.0001, "Y coordinate should match the set value in JSON");
+    }
+
+    @Test
+    void addSubscriberAddsSettlementPositionToList() {
+        SettlementPosition mockSettlement1 = mock(SettlementPosition.class);
+        SettlementPosition mockSettlement2 = mock(SettlementPosition.class);
+
+        tile.addSubscriber(mockSettlement1);
+        assertTrue(tile.settlementsOfTile.contains(mockSettlement1), "Subscriber list should contain added settlement 1.");
+        assertEquals(1, tile.settlementsOfTile.size(), "Subscriber list size should be 1.");
+
+        tile.addSubscriber(mockSettlement2);
+        assertTrue(tile.settlementsOfTile.contains(mockSettlement2), "Subscriber list should contain added settlement 2.");
+        assertEquals(2, tile.settlementsOfTile.size(), "Subscriber list size should be 2.");
+    }
+
+    @Test
+    void removeSubscriberRemovesSettlementPositionFromList() {
+        SettlementPosition mockSettlement1 = mock(SettlementPosition.class);
+        SettlementPosition mockSettlement2 = mock(SettlementPosition.class);
+
+        tile.addSubscriber(mockSettlement1);
+        tile.addSubscriber(mockSettlement2);
+        assertEquals(2, tile.settlementsOfTile.size(), "Subscriber list size should be 2.");
+
+        tile.removeSubscriber(mockSettlement1);
+        assertFalse(tile.settlementsOfTile.contains(mockSettlement1), "Subscriber list should not contain removed settlement 1.");
+        assertTrue(tile.settlementsOfTile.contains(mockSettlement2), "Subscriber list should still contain settlement 2.");
+        assertEquals(1, tile.settlementsOfTile.size(), "Subscriber list size should be 1 after removal.");
+
+        tile.removeSubscriber(mockSettlement2);
+        assertFalse(tile.settlementsOfTile.contains(mockSettlement2), "Subscriber list should not contain removed settlement 2.");
+        assertTrue(tile.settlementsOfTile.isEmpty(), "Subscriber list should be empty after removing all subscribers.");
+    }
+
+    @Test
+    void removeSubscriberDoesNothingIfSubscriberNotInList() {
+        SettlementPosition mockSettlement1 = mock(SettlementPosition.class);
+        SettlementPosition mockSettlementNotInList = mock(SettlementPosition.class);
+
+        tile.addSubscriber(mockSettlement1);
+        assertEquals(1, tile.settlementsOfTile.size());
+
+        assertDoesNotThrow(() -> tile.removeSubscriber(mockSettlementNotInList));
+        assertEquals(1, tile.settlementsOfTile.size(), "List size should not change when removing a non-existent subscriber.");
+        assertTrue(tile.settlementsOfTile.contains(mockSettlement1), "Original subscriber should still be in the list.");
+    }
+
+
+    @Test
+    void notifySubscribersCallsUpdateOnAllSubscribedSettlements() {
+        SettlementPosition mockSettlement1 = mock(SettlementPosition.class);
+        SettlementPosition mockSettlement2 = mock(SettlementPosition.class);
+
+        tile.addSubscriber(mockSettlement1);
+        tile.addSubscriber(mockSettlement2);
+
+        TileType notificationType = TileType.WOOD;
+        tile.notifySubscribers(notificationType);
+
+        verify(mockSettlement1, times(1)).update(notificationType);
+        verify(mockSettlement2, times(1)).update(notificationType);
+    }
+
+    @Test
+    void notifySubscribersDoesNothingIfNoSubscribers() {
+        TileType notificationType = TileType.WHEAT;
+
+        assertDoesNotThrow(() -> tile.notifySubscribers(notificationType),
+                "notifySubscribers should not throw an error if there are no subscribers.");
+    }
+
+    @Test
+    void updateTileWithValueMatchingNotificationNotifiesSubscribers() {
+        int tileValue = 9;
+        tile.setValue(tileValue);
+
+        SettlementPosition mockSettlement = mock(SettlementPosition.class);
+        tile.addSubscriber(mockSettlement);
+
+        tile.update(tileValue);
+
+
+        verify(mockSettlement, times(1)).update(testType); // testType is TileType.WHEAT (tile.getType())
+    }
+
+    @Test
+    void updateTileWithValueNotMatchingNotificationDoesNotNotifySubscribers() {
+        int tileValue = 9;
+        int nonMatchingNotificationValue = 8;
+        tile.setValue(tileValue);
+
+        SettlementPosition mockSettlement = mock(SettlementPosition.class);
+        tile.addSubscriber(mockSettlement);
+
+        tile.update(nonMatchingNotificationValue);
+
+        verify(mockSettlement, never()).update(any(TileType.class));
+    }
+
+    @Test
+    void updateTileWithNoSubscribersAndMatchingValueDoesNotThrowError() {
+        int tileValue = 9;
+        tile.setValue(tileValue);
+
+        assertDoesNotThrow(() -> tile.update(tileValue),
+                "Updating tile with matching value and no subscribers should not throw an error.");
     }
 
 }

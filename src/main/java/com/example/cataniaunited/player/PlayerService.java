@@ -37,4 +37,9 @@ public class PlayerService {
         playersById.remove(player.getUniqueId());
     }
 
+    public static void clearAllPlayersForTesting() {
+        playersByConnectionId.clear();
+        playersById.clear();
+    }
+
 }

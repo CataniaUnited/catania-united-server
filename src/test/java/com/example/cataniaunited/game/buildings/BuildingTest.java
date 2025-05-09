@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertNotNull; // Added for the new test
 
 @QuarkusTest
 public class BuildingTest {
@@ -27,24 +28,44 @@ public class BuildingTest {
     }
 
     @Test
-    void constructorShouldThrowExceptionWhenPlayerIdIsNull() throws GameException {
+    void constructorShouldThrowExceptionWhenPlayerIdIsNull() {
         GameException ge = assertThrows(GameException.class, () -> new TestBuilding(null, PlayerColor.LAVENDER));
         assertEquals("Owner Id of building must not be empty", ge.getMessage());
     }
 
     @Test
-    void constructorShouldThrowExceptionWhenPlayerIdIsEmpty() throws GameException {
+    void constructorShouldThrowExceptionWhenPlayerIdIsEmpty() {
         GameException ge = assertThrows(GameException.class, () -> new TestBuilding("", PlayerColor.LAVENDER));
         assertEquals("Owner Id of building must not be empty", ge.getMessage());
     }
 
     @Test
-    void constructorShouldThrowExceptionWhenColorIsNull() throws GameException {
+    void constructorShouldThrowExceptionWhenColorIsNull() {
         GameException ge = assertThrows(GameException.class, () -> new TestBuilding("player1", null));
         assertEquals("Color of building must not be null", ge.getMessage());
     }
+    @Test
+    void testSuccessfulConstructorInitialization() throws GameException {
+        String expectedPlayerId = "playerSuccess";
+        PlayerColor expectedColor = PlayerColor.GREEN;
+        TestBuilding building = new TestBuilding(expectedPlayerId, expectedColor);
+
+        assertNotNull(building, "Building instance should not be null.");
+        assertEquals(expectedPlayerId, building.getOwnerPlayerId(), "Owner player ID should be correctly set.");
+    }
+
+    @Test
+    void testGetOwnerPlayerId() throws GameException {
+        String expectedPlayerId = "owner123";
+        PlayerColor color = PlayerColor.YELLOW;
+        TestBuilding building = new TestBuilding(expectedPlayerId, color);
+
+        assertEquals(expectedPlayerId, building.getOwnerPlayerId(), "getOwnerPlayerId should return the correct player ID.");
+    }
+
 }
 
+// TestBuilding class remains as a separate class in the same file
 class TestBuilding extends Building {
     protected TestBuilding(String playerId, PlayerColor color) throws GameException {
         super(playerId, color);
