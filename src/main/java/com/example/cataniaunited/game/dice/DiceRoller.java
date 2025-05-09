@@ -2,7 +2,6 @@ package com.example.cataniaunited.game.dice;
 
 import com.example.cataniaunited.Publisher;
 import com.example.cataniaunited.Subscriber;
-import com.example.cataniaunited.exception.GameException;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.jboss.logging.Logger;
