@@ -149,14 +149,7 @@ public class GameBoard {
     }
 
     public ObjectNode rollDice()  {
-        ObjectNode result = diceRoller.rollDice();
-
-        //distributeResources logic here
-        tileList.stream()
-                .filter(Tile::hasResource)
-                .forEach(Tile::resetResource);
-
-        return result;
+        return diceRoller.rollDice();
     }
 
 }

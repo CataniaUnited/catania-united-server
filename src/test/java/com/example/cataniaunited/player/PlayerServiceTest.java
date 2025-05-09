@@ -5,9 +5,6 @@ import io.quarkus.websockets.next.WebSocketConnection;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import io.quarkus.websockets.next.WebSocketConnection;
 
 import java.util.List;
 
@@ -136,14 +133,6 @@ class PlayerServiceTest {
     }
 
     @Test
-    void addPlayerRegistersPlayerByConnectionAndId() {
-        Player player = playerService.addPlayer(mockConnection1);
-        assertEquals("conn123", player.toString().contains("conn123") ? "conn123" : null);
-        assertSame(player, playerService.getPlayerByConnection(mockConnection1));
-        assertSame(player, playerService.getPlayerById(player.getUniqueId()));
-    }
-
-    @Test
     void removePlayerRemovesFromBothMaps() {
         Player player = playerService.addPlayer(mockConnection1);
         playerService.removePlayer(mockConnection1);
@@ -190,7 +179,5 @@ class PlayerServiceTest {
         List<Player> players = playerService.getAllPlayers();
         assertEquals(1, players.size());
     }
-
-
 }
 

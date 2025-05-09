@@ -332,18 +332,4 @@ class GameBoardTest {
         System.out.println(board.getJson());
         assertTrue(true);
     }
-
-    @Test
-    void testGameBoardInitializesDiceRollerAndSubscribesTiles() {
-        GameBoard gameBoard = new GameBoard(4);
-        List<Tile> tileList = gameBoard.getTileList();
-        assertNotNull(tileList);
-        assertFalse(tileList.isEmpty(), "Tile list should not be empty");
-
-        boolean atLeastOneTileHadResource = tileList.stream().anyMatch(Tile::hasResource);
-        assertTrue(atLeastOneTileHadResource || tileList.stream().noneMatch(Tile::hasResource),
-                "Tiles should receive resources if dice matches tile value");
-
-        assertTrue(tileList.stream().noneMatch(Tile::hasResource), "Resources should be reset after distribution");
-    }
 }
