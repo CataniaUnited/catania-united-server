@@ -75,8 +75,8 @@ public class Player {
         return victoryPoints;
     }
 
-    public void addVictoryPoints(int v) {
-        victoryPoints += v;
+    public void addVictoryPoints(int victoryPoints) {
+        this.victoryPoints += victoryPoints;
     }
 
     public WebSocketConnection getConnection() {
@@ -93,7 +93,7 @@ public class Player {
             String json = new ObjectMapper().writeValueAsString(dto);
             connection.sendText(json)          // non-blocking
                     .subscribe().with(
-                            v -> LOG.debugf("▶ Sent to %s : %s", uniqueId, dto.getType()),
+                            v -> LOG.debugf("Sent to %s : %s", uniqueId, dto.getType()),
                             err -> LOG.errorf(err, "Failed to send to %s", uniqueId)
                     );
         } catch (Exception e) {
@@ -110,7 +110,7 @@ public class Player {
         return "Player{" +
                 "username='" + username + '\'' +
                 ", uniqueId='" + uniqueId + '\'' +
-                ", connectionId='" +(connection != null ? connection.id() : "null") + '\'' +
+                ", connectionId='" + (connection != null ? connection.id() : "null") + '\'' +
                 '}';
     }
 
