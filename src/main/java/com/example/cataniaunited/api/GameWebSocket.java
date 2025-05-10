@@ -122,7 +122,9 @@ public class GameWebSocket {
         boolean joined = lobbyService.joinLobbyByCode(message.getLobbyId(), message.getPlayer());
         PlayerColor color = lobbyService.getPlayerColor(message.getLobbyId(), message.getPlayer());
         if (joined) {
-            MessageDTO update = new MessageDTO(MessageType.PLAYER_JOINED, message.getPlayer(), message.getLobbyId(), color.getHexCode());
+            ObjectNode colorNode = JsonNodeFactory.instance.objectNode();
+            colorNode.put("color", color.getHexCode());
+            MessageDTO update = new MessageDTO(MessageType.PLAYER_JOINED, message.getPlayer(), message.getLobbyId(), colorNode);
             return connection.broadcast().sendText(update).chain(i -> Uni.createFrom().item(update));
         }
         throw new GameException("No lobby session");
@@ -131,9 +133,10 @@ public class GameWebSocket {
     Uni<MessageDTO> createLobby(MessageDTO message) throws GameException {
         String lobbyId = lobbyService.createLobby(message.getPlayer());
         PlayerColor color = lobbyService.getPlayerColor(lobbyId, message.getPlayer());
+        ObjectNode colorNode = JsonNodeFactory.instance.objectNode();
+        colorNode.put("color", color.getHexCode());
         return Uni.createFrom().item(
-                new MessageDTO(MessageType.LOBBY_CREATED, message.getPlayer(), lobbyId, color.getHexCode())
-        );
+                new MessageDTO(MessageType.LOBBY_CREATED, message.getPlayer(), lobbyId, colorNode));
     }
 
     Uni<MessageDTO> setUsername(MessageDTO message, WebSocketConnection connection) throws GameException {

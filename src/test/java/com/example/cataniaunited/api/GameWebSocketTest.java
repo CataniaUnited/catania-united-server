@@ -130,8 +130,10 @@ public class GameWebSocketTest {
         assertEquals(MessageType.LOBBY_CREATED, responseMessage.getType()); // Expect LOBBY_CREATED response
         assertEquals("Player 1", responseMessage.getPlayer()); // Player should remain the same
         assertNotNull(responseMessage.getLobbyId());
-        assertNotNull(responseMessage.getPlayerColor());
-        assertFalse(responseMessage.getPlayerColor().isEmpty(), "Player color should not be empty");
+
+        String color = responseMessage.getMessageNode("color").textValue();
+        assertNotNull(color, "Color should be present");
+        assertTrue(color.matches("#[0-9A-Fa-f]{6}"), "Color should be a valid hex code");
     }
 
     @Test
@@ -325,7 +327,7 @@ public class GameWebSocketTest {
         assertEquals(MessageType.PLAYER_JOINED, responseMessage.getType());
         assertEquals(player, responseMessage.getPlayer());
         assertEquals(lobbyId, responseMessage.getLobbyId());
-        assertEquals(assignedColor.getHexCode(), responseMessage.getPlayerColor());
+        assertEquals(assignedColor.getHexCode(), responseMessage.getMessageNode("color").textValue());
     }
 
     @Test
