@@ -9,9 +9,6 @@ import jakarta.inject.Inject;
 
 public class City extends Building {
 
-    @Inject
-    PlayerService playerService;
-
     public City(Player player, PlayerColor color) throws GameException {
         super(player, color);
     }

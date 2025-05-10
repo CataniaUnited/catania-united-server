@@ -203,9 +203,7 @@ public class GameWebSocket {
 
                 logger.infof("Sending PLAYER_RESOURCES to %s: %s", playerIdInLobby, resourcesPayload.toString());
                 individualResourceSendUnis.add(
-                        playerConnection.sendText(resourceMsg).onFailure().invoke(e -> {
-                            logger.errorf("Failed to send PLAYER_RESOURCES to %s: %s", playerIdInLobby, e.getMessage());
-                        })
+                        playerConnection.sendText(resourceMsg).onFailure().invoke(e -> logger.errorf("Failed to send PLAYER_RESOURCES to %s: %s", playerIdInLobby, e.getMessage()))
                 );
             } else {
                 logger.warnf("No open connection for player %s to send PLAYER_RESOURCES.", playerIdInLobby);

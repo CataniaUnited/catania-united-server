@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 @QuarkusTest
-public class SettlementTest {
+class SettlementTest {
     private Settlement settlement;
     private final String testPlayerId = "playerSettle1";
     private final PlayerColor testColor = PlayerColor.BLUE;

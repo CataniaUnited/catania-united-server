@@ -20,7 +20,7 @@ public class Tile implements Placable, Publisher<SettlementPosition, TileType>, 
 
     int id;
 
-    public List<SettlementPosition> settlementsOfTile = new ArrayList<>(6);
+    List<SettlementPosition> settlementsOfTile = new ArrayList<>(6);
 
     public Tile(TileType type) {
         this.type = type;
@@ -117,4 +117,8 @@ public class Tile implements Placable, Publisher<SettlementPosition, TileType>, 
         diceRoller.addSubscriber(this);
     }
 
+
+    public List<SettlementPosition> getSettlementsOfTile() {
+        return settlementsOfTile;
+    }
 }

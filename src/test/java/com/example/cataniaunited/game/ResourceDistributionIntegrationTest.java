@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
 
 @QuarkusTest
-public class ResourceDistributionIntegrationTest {
+class ResourceDistributionIntegrationTest {
 
     @Inject
     GameService gameService;
@@ -84,7 +84,7 @@ public class ResourceDistributionIntegrationTest {
         int mockDiceRollTotal = targetTile.getValue(); // We want the dice to roll this sum
 
         // 2. Find a SettlementPosition on this tile.
-        SettlementPosition targetSettlementPosition = targetTile.settlementsOfTile.stream()
+        SettlementPosition targetSettlementPosition = targetTile.getSettlementsOfTile().stream()
                 .findFirst()
                 .orElseThrow(() -> new AssertionError(
                         "Target tile (ID: " + targetTile.getId() + ", Type: " + targetTile.getType() +

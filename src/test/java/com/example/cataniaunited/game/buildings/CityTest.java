@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 @QuarkusTest
-public class CityTest {
+class CityTest {
     private City city;
     private final String testPlayerId = "playerCity1";
     private final PlayerColor testColor = PlayerColor.RED;

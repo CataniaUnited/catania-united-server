@@ -22,8 +22,6 @@ class PlayerTest {
 
     @Test
     void testDefaultConstructor() {
-        Player player = new Player();
-
         assertTrue(player.getUsername().startsWith("RandomPlayer_"));
         Assertions.assertNotNull(player.getUniqueId(), "uniqueId should not be null");
         Assertions.assertFalse(player.getUniqueId().isEmpty(), "uniqueId should not be empty");
@@ -32,17 +30,17 @@ class PlayerTest {
     @Test
     void testCustomConstructor() {
         String customUsername = "Alice1";
-        Player player = new Player(customUsername);
-        assertEquals(customUsername, player.getUsername());
-        Assertions.assertNotNull(player.getUniqueId(), "uniqueId should not be null");
+        Player customPlayer = new Player(customUsername);
+        assertEquals(customUsername, customPlayer.getUsername());
+        Assertions.assertNotNull(customPlayer.getUniqueId(), "uniqueId should not be null");
     }
 
     @Test
     void testSetUsername() {
-        Player player = new Player();
+        Player customPlayer = new Player();
         String newUsername = "Bob";
-        player.setUsername(newUsername);
-        assertEquals(newUsername, player.getUsername());
+        customPlayer.setUsername(newUsername);
+        assertEquals(newUsername, customPlayer.getUsername());
     }
 
     @Test
@@ -55,7 +53,6 @@ class PlayerTest {
 
     @Test
     void defaultConstructorInitializesResourcesToZeroAndConnectionIdToNull() {
-        Player player = new Player();
         assertNull(player.connectionId, "connectionId should be null for default constructor.");
 
         for (TileType type : TileType.values()) {
@@ -69,8 +66,8 @@ class PlayerTest {
 
     @Test
     void constructorWithUsernameInitializesConnectionIdAsNull() {
-        Player player = new Player("TestUser");
-        assertNull(player.connectionId, "connectionId should be null for username-only constructor.");
+        Player customPlayer = new Player("TestUser");
+        assertNull(customPlayer.connectionId, "connectionId should be null for username-only constructor.");
     }
 
     @Test
@@ -79,11 +76,11 @@ class PlayerTest {
         String expectedConnectionId = "connId_123";
         when(mockConnection.id()).thenReturn(expectedConnectionId);
 
-        Player player = new Player(mockConnection);
+        Player customPlayer = new Player(mockConnection);
 
-        assertTrue(player.getUsername().startsWith("RandomPlayer_"), "Username should start with 'RandomPlayer_'.");
-        assertNotNull(player.getUniqueId(), "uniqueId should not be null.");
-        assertEquals(expectedConnectionId, player.connectionId, "connectionId should match the mock connection's ID.");
+        assertTrue(customPlayer.getUsername().startsWith("RandomPlayer_"), "Username should start with 'RandomPlayer_'.");
+        assertNotNull(customPlayer.getUniqueId(), "uniqueId should not be null.");
+        assertEquals(expectedConnectionId, customPlayer.connectionId, "connectionId should match the mock connection's ID.");
     }
 
     @Test
@@ -93,11 +90,11 @@ class PlayerTest {
         String expectedConnectionId = "connId_456";
         when(mockConnection.id()).thenReturn(expectedConnectionId);
 
-        Player player = new Player(customUsername, mockConnection);
+        Player customPlayer = new Player(customUsername, mockConnection);
 
-        assertEquals(customUsername, player.getUsername());
-        assertNotNull(player.getUniqueId(), "uniqueId should not be null.");
-        assertEquals(expectedConnectionId, player.connectionId, "connectionId should match the mock connection's ID.");
+        assertEquals(customUsername, customPlayer.getUsername());
+        assertNotNull(customPlayer.getUniqueId(), "uniqueId should not be null.");
+        assertEquals(expectedConnectionId, customPlayer.connectionId, "connectionId should match the mock connection's ID.");
     }
 
     @Test
@@ -107,34 +104,33 @@ class PlayerTest {
         String connectionId = "ws_conn_789";
         when(mockConnection.id()).thenReturn(connectionId);
 
-        Player player = new Player(username, mockConnection);
-        String uniqueId = player.getUniqueId();
+        Player customPlayer = new Player(username, mockConnection);
+        String uniqueId = customPlayer.getUniqueId();
 
         String expectedString = "Player{" +
                 "username='" + username + '\'' +
                 ", uniqueId='" + uniqueId + '\'' +
                 ", connectionId='" + connectionId + '\'' +
                 '}';
-        assertEquals(expectedString, player.toString());
+        assertEquals(expectedString, customPlayer.toString());
     }
 
     @Test
     void toStringHandlesNullConnectionId() {
         String username = "OfflineUserToString";
-        Player player = new Player(username);
-        String uniqueId = player.getUniqueId();
+        Player customPlayer = new Player(username);
+        String uniqueId = customPlayer.getUniqueId();
 
         String expectedString = "Player{" +
                 "username='" + username + '\'' +
                 ", uniqueId='" + uniqueId + '\'' +
                 ", connectionId='null'" +
                 '}';
-        assertEquals(expectedString, player.toString());
+        assertEquals(expectedString, customPlayer.toString());
     }
 
     @Test
     void getResourceAddsResourceCorrectlyForFirstTime() {
-        Player player = new Player();
         TileType testResource = TileType.WHEAT;
         int amount = 5;
 
@@ -145,7 +141,6 @@ class PlayerTest {
 
     @Test
     void getResourceAddsToExistingResourceAmount() {
-        Player player = new Player();
         TileType testResource = TileType.WOOD;
         int initialAmount = 3;
         int additionalAmount = 7;
@@ -159,7 +154,6 @@ class PlayerTest {
 
     @Test
     void getResourceWorksForAllTileTypes() {
-        Player player = new Player();
         int amount = 2;
         for (TileType type : TileType.values()) {
             if (type == TileType.WASTE){

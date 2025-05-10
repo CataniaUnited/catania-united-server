@@ -21,9 +21,9 @@ class DiceRollerTest {
 
     @Test
     void testRollDiceReturnsValidTotal() {
-        DiceRoller diceRoller = new DiceRoller();
+        DiceRoller methodDiceRoller = new DiceRoller();
 
-        ObjectNode result = diceRoller.rollDice();
+        ObjectNode result = methodDiceRoller.rollDice();
 
         int dice1 = result.get("dice1").asInt();
         int dice2 = result.get("dice2").asInt();
