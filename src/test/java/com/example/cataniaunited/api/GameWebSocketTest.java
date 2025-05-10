@@ -36,10 +36,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -132,6 +129,8 @@ public class GameWebSocketTest {
         assertEquals(MessageType.LOBBY_CREATED, responseMessage.getType()); // Expect LOBBY_CREATED response
         assertEquals("Player 1", responseMessage.getPlayer()); // Player should remain the same
         assertNotNull(responseMessage.getLobbyId());
+        assertNotNull(responseMessage.getPlayerColor());
+        assertFalse(responseMessage.getPlayerColor().isEmpty(), "Player color should not be empty");
     }
 
     @Test
@@ -292,11 +291,13 @@ public class GameWebSocketTest {
     }
 
     @Test
-    void testPlayerJoinedLobbySuccess() throws JsonProcessingException, InterruptedException {
+    void testPlayerJoinedLobbySuccess() throws JsonProcessingException, InterruptedException, GameException {
         String player = "TestPlayer";
         String lobbyId = "xyz123";
+        PlayerColor assignedColor = PlayerColor.RED;
 
         doReturn(true).when(lobbyService).joinLobbyByCode(lobbyId, player);
+        doReturn(assignedColor).when(lobbyService).getPlayerColor(lobbyId, player);
 
         MessageDTO joinLobbyMessage = new MessageDTO(MessageType.JOIN_LOBBY, player, lobbyId);
 
@@ -323,6 +324,7 @@ public class GameWebSocketTest {
         assertEquals(MessageType.PLAYER_JOINED, responseMessage.getType());
         assertEquals(player, responseMessage.getPlayer());
         assertEquals(lobbyId, responseMessage.getLobbyId());
+        assertEquals(assignedColor.getHexCode(), responseMessage.getPlayerColor());
     }
 
     @Test

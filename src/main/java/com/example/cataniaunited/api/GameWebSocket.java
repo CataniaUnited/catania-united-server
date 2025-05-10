@@ -7,6 +7,7 @@ import com.example.cataniaunited.game.GameService;
 import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.lobby.LobbyService;
 import com.example.cataniaunited.player.Player;
+import com.example.cataniaunited.player.PlayerColor;
 import com.example.cataniaunited.player.PlayerService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
@@ -118,17 +119,19 @@ public class GameWebSocket {
 
     Uni<MessageDTO> joinLobby(MessageDTO message, WebSocketConnection connection) throws GameException {
         boolean joined = lobbyService.joinLobbyByCode(message.getLobbyId(), message.getPlayer());
+        PlayerColor color = lobbyService.getPlayerColor(message.getLobbyId(), message.getPlayer());
         if (joined) {
-            MessageDTO update = new MessageDTO(MessageType.PLAYER_JOINED, message.getPlayer(), message.getLobbyId());
+            MessageDTO update = new MessageDTO(MessageType.PLAYER_JOINED, message.getPlayer(), message.getLobbyId(), color.getHexCode());
             return connection.broadcast().sendText(update).chain(i -> Uni.createFrom().item(update));
         }
         throw new GameException("No lobby session");
     }
 
-    Uni<MessageDTO> createLobby(MessageDTO message) {
+    Uni<MessageDTO> createLobby(MessageDTO message) throws GameException {
         String lobbyId = lobbyService.createLobby(message.getPlayer());
+        PlayerColor color = lobbyService.getPlayerColor(lobbyId, message.getPlayer());
         return Uni.createFrom().item(
-                new MessageDTO(MessageType.LOBBY_CREATED, message.getPlayer(), lobbyId)
+                new MessageDTO(MessageType.LOBBY_CREATED, message.getPlayer(), lobbyId, color.getHexCode())
         );
     }
 

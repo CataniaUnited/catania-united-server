@@ -12,6 +12,7 @@ public class MessageDTO {
     private MessageType type;
     private String player;
     private String lobbyId;
+    private String playerColor;
     private List<String> players;
     //Generic JSON Object
     private ObjectNode message;
@@ -27,6 +28,13 @@ public class MessageDTO {
     public MessageDTO(MessageType type, String player, String lobbyId) {
         this.type = type;
         this.player = player;
+        this.lobbyId = lobbyId;
+    }
+
+    public MessageDTO(MessageType type, String player, String lobbyId, String playerColor) {
+        this.type = type;
+        this.player = player;
+        this.playerColor = playerColor;
         this.lobbyId = lobbyId;
     }
 
@@ -66,6 +74,14 @@ public class MessageDTO {
 
     public void setLobbyId(String lobbyId) {
         this.lobbyId = lobbyId;
+    }
+
+    public String getPlayerColor() {
+        return playerColor;
+    }
+
+    public void setPlayerColor(String playerColor) {
+        this.playerColor = playerColor;
     }
 
     // NEW getters/setters for players
