@@ -283,7 +283,7 @@ class SettlementPositionTest {
         String secondPlayerId = "Player2";
         Settlement settlement2 = new Settlement(secondPlayerId, PlayerColor.BLUE);
         GameException ge = assertThrows(IntersectionOccupiedException.class, () -> settlementPosition.setBuilding(settlement2));
-        assertEquals("Intersection occupied!".formatted(settlementPosition.id, secondPlayerId), ge.getMessage());
+        assertEquals("Intersection occupied!", ge.getMessage());
     }
 
     @Test
@@ -297,7 +297,7 @@ class SettlementPositionTest {
         String secondPlayerId = "Player2";
         Settlement settlement = new Settlement(secondPlayerId, PlayerColor.BLUE);
         GameException ge = assertThrows(SpacingRuleViolationException.class, () -> settlementPosition.setBuilding(settlement));
-        assertEquals("Too close to another settlement or city".formatted(settlementPosition.id, secondPlayerId), ge.getMessage());
+        assertEquals("Too close to another settlement or city", ge.getMessage());
     }
 
     @Test
@@ -305,7 +305,7 @@ class SettlementPositionTest {
         String playerId = "Player1";
         Settlement settlement = new Settlement(playerId, PlayerColor.BLUE);
         GameException ge = assertThrows(NoAdjacentRoadException.class, () -> settlementPosition.setBuilding(settlement));
-        assertEquals("No adjacent roads found".formatted(settlementPosition.id, playerId), ge.getMessage());
+        assertEquals("No adjacent roads found", ge.getMessage());
     }
 
     @Test
@@ -318,7 +318,7 @@ class SettlementPositionTest {
         String secondPlayerId = "Player2";
         Settlement settlement = new Settlement(secondPlayerId, PlayerColor.BLUE);
         GameException ge = assertThrows(NoAdjacentRoadException.class, () -> settlementPosition.setBuilding(settlement));
-        assertEquals("No adjacent roads found".formatted(settlementPosition.id, secondPlayerId), ge.getMessage());
+        assertEquals("No adjacent roads found", ge.getMessage());
     }
 
     @Test
