@@ -1,29 +1,34 @@
 package com.example.cataniaunited.player;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.example.cataniaunited.game.board.tile_list_builder.TileType;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.websockets.next.WebSocketConnection;
 
-import java.util.Random;
-import java.util.UUID;
+import java.util.*;
 
 public class Player {
 
     private String username;
     private final String uniqueId;
-    private final String connectionId;
+    final String connectionId;
+
+    HashMap<TileType, Integer> resources = new HashMap<>();
     private int victoryPoints;
 
     public Player() {
         this.uniqueId = UUID.randomUUID().toString();
         this.username = "RandomPlayer_" + new Random().nextInt(10000);
         this.connectionId = null;
+        initializeResources();
     }
 
     public Player(String username) {
         this.username = username;
         this.uniqueId = UUID.randomUUID().toString();
         this.connectionId = null;
+        initializeResources();
     }
 
     public Player(WebSocketConnection connection) {
@@ -34,6 +39,15 @@ public class Player {
         this.username = username;
         this.uniqueId = UUID.randomUUID().toString();
         this.connectionId = connection.id();
+        initializeResources();
+    }
+
+    void initializeResources(){
+        for (TileType resource: TileType.values()){
+            if (resource == TileType.WASTE)
+                continue; // No waste resource
+            resources.put(resource, 0);
+        }
     }
 
     public String getUsername() {
@@ -64,6 +78,10 @@ public class Player {
         return playerNode;
     }
 
+    public int getResourceCount(TileType type) {
+        return resources.getOrDefault(type, 0);
+    }
+
     @Override
     public String toString() {
         return "Player{" +
@@ -71,5 +89,23 @@ public class Player {
                 ", uniqueId='" + uniqueId + '\'' +
                 ", connectionId='" + connectionId + '\'' +
                 '}';
+    }
+
+    public void getResource(TileType resource, int amount) {
+        if(resource == TileType.WASTE)
+            return;
+
+        Integer resourceCount = resources.get(resource);
+        resources.put(resource, resourceCount+amount);
+    }
+
+    public ObjectNode getResourceJSON() {
+        ObjectNode resourcesNode = JsonNodeFactory.instance.objectNode();
+        for (Map.Entry<TileType, Integer> entry : this.resources.entrySet()) {
+            if (entry.getKey() != TileType.WASTE) {
+                resourcesNode.put(entry.getKey().name(), entry.getValue());
+            }
+        }
+        return resourcesNode;
     }
 }

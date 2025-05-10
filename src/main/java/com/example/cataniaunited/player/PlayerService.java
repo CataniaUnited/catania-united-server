@@ -9,35 +9,43 @@ import java.util.concurrent.ConcurrentHashMap;
 @ApplicationScoped
 public class PlayerService {
 
-    public static final int WIN_THRESHOLD = 10;
-
-    private static final ConcurrentHashMap<String, Player> players = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, Player> playersByConnectionId = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, Player> playersById = new ConcurrentHashMap<>();
+
+    private final ConcurrentHashMap<String, WebSocketConnection> connectionsByPlayerId = new ConcurrentHashMap<>();
+    public static final int WIN_THRESHOLD = 10;
 
     public Player addPlayer(WebSocketConnection connection) {
         Player player = new Player(connection);
-        players.put(connection.id(), player);
+        playersByConnectionId.put(connection.id(), player);
         playersById.put(player.getUniqueId(), player);
+        connectionsByPlayerId.put(player.getUniqueId(), connection);
         return player;
     }
 
     public Player getPlayerByConnection(WebSocketConnection connection) {
-        return players.get(connection.id());
+        return playersByConnectionId.get(connection.id());
     }
 
-    public Player getPlayerById(String playerId) {
-        return playersById.get(playerId);
-    }
+    public Player getPlayerById(String id){return playersById.get(id);}
 
     public List<Player> getAllPlayers() {
-        return players.values().stream().toList();
+        return playersByConnectionId.values().stream().toList();
     }
 
-    public void removePlayer(WebSocketConnection connection) {
-        Player removed = players.remove(connection.id());
-        if (removed != null) {
-            playersById.remove(removed.getUniqueId());
-        }
+    public void removePlayerByConnectionId(WebSocketConnection connection) {
+        Player player = playersByConnectionId.remove(connection.id());
+        if (player == null)
+            return;
+
+        playersById.remove(player.getUniqueId());
+        connectionsByPlayerId.remove(player.getUniqueId());
+    }
+
+    public static void clearAllPlayersForTesting() {
+        playersByConnectionId.clear();
+        playersById.clear();
+        playersByConnectionId.clear();
     }
 
     public void addVictoryPoints(String playerId, int points) {
@@ -50,6 +58,18 @@ public class PlayerService {
     public boolean checkForWin(String playerId) {
         Player player = getPlayerById(playerId);
         return player != null && player.getVictoryPoints() >= WIN_THRESHOLD;
+    }
+
+    public WebSocketConnection getConnectionByPlayerId(String playerId) {
+        if (playerId == null) {
+            return null;
+        }
+        WebSocketConnection conn = connectionsByPlayerId.get(playerId);
+        if (conn != null && !conn.isOpen()) {
+            connectionsByPlayerId.remove(playerId, conn);
+            return null;
+        }
+        return conn;
     }
 
 
