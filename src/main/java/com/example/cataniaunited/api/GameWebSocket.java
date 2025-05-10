@@ -5,6 +5,7 @@ import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.GameService;
 import com.example.cataniaunited.game.board.GameBoard;
+import com.example.cataniaunited.lobby.Lobby;
 import com.example.cataniaunited.lobby.LobbyService;
 import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerColor;
@@ -23,6 +24,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @ApplicationScoped
@@ -51,7 +53,7 @@ public class GameWebSocket {
     @OnClose
     public void onClose(WebSocketConnection connection) {
         logger.infof("Client closed connection: %s", connection.id());
-        playerService.removePlayer(connection);
+        playerService.removePlayerByConnectionId(connection);
         ObjectNode message = JsonNodeFactory.instance.objectNode().put("playerId", connection.id());
         connection.broadcast().sendTextAndAwait(new MessageDTO(MessageType.CLIENT_DISCONNECTED, message));
     }
@@ -71,7 +73,7 @@ public class GameWebSocket {
                 case PLACE_ROAD -> placeRoad(message, connection);
                 case ROLL_DICE -> handleDiceRoll(message, connection);
                 case ERROR, CONNECTION_SUCCESSFUL, CLIENT_DISCONNECTED, LOBBY_CREATED, LOBBY_UPDATED, PLAYER_JOINED,
-                     GAME_BOARD_JSON, GAME_WON, DICE_RESULT -> throw new GameException("Invalid client command");
+                        GAME_BOARD_JSON, GAME_WON, DICE_RESULT, PLAYER_RESOURCES -> throw new GameException("Invalid client command");
             };
         } catch (GameException ge) {
             logger.errorf("Unexpected Error occurred: message = %s, error = %s", message, ge.getMessage());
@@ -172,16 +174,56 @@ public class GameWebSocket {
     }
 
     Uni<MessageDTO> handleDiceRoll(MessageDTO message, WebSocketConnection connection) throws GameException {
+        // Roll and broadcast dice
         ObjectNode diceResult = gameService.rollDice(message.getLobbyId());
-        MessageDTO resultMessage = new MessageDTO(
+        MessageDTO diceResultMessage = new MessageDTO(
                 MessageType.DICE_RESULT,
                 message.getPlayer(),
                 message.getLobbyId(),
                 diceResult
         );
+        Uni<MessageDTO> broadcastDiceUni = connection.broadcast().sendText(diceResultMessage).chain(() -> Uni.createFrom().item(diceResultMessage));
 
-        return connection.broadcast()
-                .sendText(resultMessage)
-                .chain(() -> Uni.createFrom().item(resultMessage));
+
+        // send updated resources
+        Lobby currentLobby = lobbyService.getLobbyById(message.getLobbyId());
+        List<Uni<Void>> individualResourceSendUnis = new ArrayList<>();
+
+        for (String playerIdInLobby : currentLobby.getPlayers()) {
+            Player player = playerService.getPlayerById(playerIdInLobby);
+            if (player == null) {
+                logger.warnf("Player object not found for ID %s in lobby %s during resource update.", playerIdInLobby, currentLobby.getLobbyId());
+                continue;
+            }
+
+            WebSocketConnection playerConnection = playerService.getConnectionByPlayerId(playerIdInLobby);
+            if (playerConnection != null && playerConnection.isOpen()) {
+                ObjectNode resourcesPayload = player.getResourceJSON();
+
+                MessageDTO resourceMsg = new MessageDTO(
+                        MessageType.PLAYER_RESOURCES,
+                        playerIdInLobby,
+                        message.getLobbyId(),
+                        resourcesPayload
+                );
+
+                logger.infof("Sending PLAYER_RESOURCES to %s: %s", playerIdInLobby, resourcesPayload.toString());
+                individualResourceSendUnis.add(
+                        playerConnection.sendText(resourceMsg).onFailure().invoke(e -> logger.errorf("Failed to send PLAYER_RESOURCES to %s: %s", playerIdInLobby, e.getMessage()))
+                );
+            } else {
+                logger.warnf("No open connection for player %s to send PLAYER_RESOURCES.", playerIdInLobby);
+            }
+        }
+
+        Uni<Void> resourceUpdatesUni = Uni.createFrom().voidItem();
+        if (!individualResourceSendUnis.isEmpty()) {
+            resourceUpdatesUni = Uni.join().all(individualResourceSendUnis).andCollectFailures().replaceWithVoid();
+        }
+
+        Uni<Void> finalresourceUpdatesUni = resourceUpdatesUni;
+        return broadcastDiceUni
+                .chain(() -> finalresourceUpdatesUni)
+                .chain(() -> Uni.createFrom().item(diceResultMessage));
     }
 }
