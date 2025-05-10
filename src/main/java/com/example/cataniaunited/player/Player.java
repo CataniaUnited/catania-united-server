@@ -1,65 +1,70 @@
 package com.example.cataniaunited.player;
 
+import com.example.cataniaunited.dto.MessageDTO;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quarkus.websockets.next.WebSocketConnection;
+import org.jboss.logging.Logger;
 
 import java.util.Random;
 import java.util.UUID;
 
 public class Player {
 
-    private String username;
+    private static final Logger LOG = Logger.getLogger(Player.class);
+
+    private String  username;
     private final String uniqueId;
-    private final String connectionId;
-    private int victoryPoints;
+    private final WebSocketConnection connection;
+    private int     victoryPoints = 0;
 
-    public Player() {
-        this.uniqueId = UUID.randomUUID().toString();
-        this.username = "RandomPlayer_" + new Random().nextInt(10000);
-        this.connectionId = null;
+
+
+    public Player(WebSocketConnection conn) {
+        this("RandomPlayer_" + new Random().nextInt(10_000), conn);
     }
 
-    public Player(String username) {
-        this.username = username;
-        this.uniqueId = UUID.randomUUID().toString();
-        this.connectionId = null;
+    public Player(String username, WebSocketConnection conn) {
+        this.username  = username;
+        this.uniqueId  = UUID.randomUUID().toString();
+        this.connection = conn;
     }
 
-    public Player(WebSocketConnection connection) {
-        this("RandomPlayer_" + new Random().nextInt(10000), connection);
-    }
 
-    public Player(String username, WebSocketConnection connection) {
-        this.username = username;
-        this.uniqueId = UUID.randomUUID().toString();
-        this.connectionId = connection.id();
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public String getUniqueId() {
+    public String getUniqueId() {                 // ▶ added back
         return uniqueId;
     }
 
-    public int getVictoryPoints() {
-        return victoryPoints;
+    public String getId() {                       // unchanged
+        return uniqueId;
     }
 
-    public void addVictoryPoints(int victoryPoints) {
-        this.victoryPoints += victoryPoints;
+    public String  getUsername() { return username; }
+    public void    setUsername(String u) { username = u; }
+    public int     getVictoryPoints() { return victoryPoints; }
+    public void    addVictoryPoints(int v) { victoryPoints += v; }
+    public WebSocketConnection getConnection() { return connection; }
+
+
+
+    /** Send a {@link MessageDTO} to this player without blocking. */
+    public void sendMessage(MessageDTO dto) {
+        if (connection == null) {
+            LOG.warnf("No WS connection for player %s – message dropped!", uniqueId);
+            return;
+        }
+        try {
+            String json = new ObjectMapper().writeValueAsString(dto);
+            connection.sendText(json)          // non-blocking
+                    .subscribe().with(
+                            v   -> LOG.debugf("▶ Sent to %s : %s", uniqueId, dto.getType()),
+                            err -> LOG.errorf(err, "Failed to send to %s", uniqueId)
+                    );
+        } catch (Exception e) {
+            LOG.errorf(e, "Failed to serialise DTO for player %s", uniqueId);
+        }
     }
 
-    @Override
-    public String toString() {
-        return "Player{" +
-                "username='" + username + '\'' +
-                ", uniqueId='" + uniqueId + '\'' +
-                ", connectionId='" + connectionId + '\'' +
-                '}';
+    @Override public String toString() {
+        return "Player{username='%s', id='%s'}".formatted(username, uniqueId);
     }
 }

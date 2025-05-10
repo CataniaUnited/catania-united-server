@@ -11,7 +11,8 @@ public enum MessageType {
     LOBBY_CREATED,
     GAME_WON,
     GAME_BOARD_JSON,
-
+    START_GAME,
+    GAME_STARTED,
     //Client Messages
     CREATE_LOBBY,
     JOIN_LOBBY,
