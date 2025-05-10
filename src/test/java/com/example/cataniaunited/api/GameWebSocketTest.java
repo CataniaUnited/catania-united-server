@@ -248,28 +248,59 @@ public class GameWebSocketTest {
     }
 
     @Test
-    void testSetUsernameOfNonExistingPlayer() throws JsonProcessingException, InterruptedException {
+    void testSetUsernameOfNonExistingPlayer() throws Exception {
+        String newUsername = "Chicken";
+        String expectedErrorMessage = "No player session";
+
+        // We expect one CONNECTION_SUCCESSFUL and one ERROR message
+        CountDownLatch connectionLatch = new CountDownLatch(1);
+        CountDownLatch errorLatch = new CountDownLatch(1);
+        List<MessageDTO> receivedErrorMessages = new CopyOnWriteArrayList<>(); // Store only error messages
+
         doReturn(null).when(playerService).getPlayerByConnection(any(WebSocketConnection.class));
-        CountDownLatch latch = new CountDownLatch(2);
-        List<String> receivedMessages = new CopyOnWriteArrayList<>();
 
-        var client = BasicWebSocketConnector.create().baseUri(serverUri).path("/game").onTextMessage((connection, message) -> {
-            if (message.startsWith("{")) {
-                receivedMessages.add(message);
-                latch.countDown();
-            }
-        }).connectAndAwait();
+        var client = BasicWebSocketConnector.create().baseUri(serverUri).path("/game")
+                .onTextMessage((connection, message) -> {
+                    if (message.startsWith("{")) {
+                        try {
+                            MessageDTO dto = objectMapper.readValue(message, MessageDTO.class);
+                            if (dto.getType() == MessageType.CONNECTION_SUCCESSFUL) {
+                                System.out.println("Test Client: Received CONNECTION_SUCCESSFUL");
+                                connectionLatch.countDown();
+                            } else if (dto.getType() == MessageType.ERROR) {
+                                System.out.println("Test Client: Received ERROR: " + dto.getMessageNode("error").asText());
+                                receivedErrorMessages.add(dto);
+                                errorLatch.countDown();
+                            } else {
+                                System.out.println("Test Client: Received unexpected message type: " + dto.getType());
+                            }
+                        } catch (JsonProcessingException e) {
+                            fail("Test Client: Failed to parse message: " + message, e);
+                        }
+                    }
+                }).connectAndAwait();
 
+        assertTrue(connectionLatch.await(5, TimeUnit.SECONDS), "Did not receive CONNECTION_SUCCESSFUL message");
+
+        // Now send the SET_USERNAME message
         MessageDTO setUsernameMsg = new MessageDTO();
         setUsernameMsg.setType(MessageType.SET_USERNAME);
-        setUsernameMsg.setPlayer("Chicken");
-        client.sendTextAndAwait(setUsernameMsg);
+        setUsernameMsg.setPlayer(newUsername);
+        System.out.println("Test Client: Sending SET_USERNAME with username: " + newUsername);
+        client.sendTextAndAwait(objectMapper.writeValueAsString(setUsernameMsg));
 
-        assertTrue(latch.await(5, TimeUnit.SECONDS), "Did not receive all messages");
+        // Wait for the ERROR message
+        assertTrue(errorLatch.await(5, TimeUnit.SECONDS), "Did not receive ERROR message after SET_USERNAME");
 
-        MessageDTO received = objectMapper.readValue(receivedMessages.get(receivedMessages.size() - 1), MessageDTO.class);
-        assertEquals(MessageType.ERROR, received.getType());
-        assertEquals("No player session", received.getMessageNode("error").textValue());
+        assertEquals(1, receivedErrorMessages.size(), "Should have received exactly one ERROR message DTO.");
+        MessageDTO errorDto = receivedErrorMessages.get(0);
+        assertEquals(MessageType.ERROR, errorDto.getType());
+        assertNotNull(errorDto.getMessage());
+        assertEquals(expectedErrorMessage, errorDto.getMessageNode("error").textValue());
+
+        verify(playerService, times(1)).getPlayerByConnection(any(WebSocketConnection.class));
+
+        client.closeAndAwait();
     }
 
     @Test
