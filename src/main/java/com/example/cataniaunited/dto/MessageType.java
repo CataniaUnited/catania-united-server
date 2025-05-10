@@ -16,6 +16,7 @@ public enum MessageType {
     GAME_STARTED,
 
     DICE_RESULT,
+    PLAYER_RESOURCES,
 
 
     //Client Messages

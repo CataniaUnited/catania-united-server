@@ -1,62 +1,89 @@
 package com.example.cataniaunited.player;
 
 import com.example.cataniaunited.dto.MessageDTO;
+import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.websockets.next.WebSocketConnection;
 import org.jboss.logging.Logger;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 
-/** Runtime representation of a connected player. */
 public class Player {
 
     private static final Logger LOG = Logger.getLogger(Player.class);
 
-    private String  username;
+    private String username;
     private final String uniqueId;
     private final WebSocketConnection connection;
-    private int     victoryPoints = 0;
+    private int victoryPoints = 0;
+    HashMap<TileType, Integer> resources = new HashMap<>();
 
-    /* ------------------------------------------------------------------ */
-    /*  Constructors                                                      */
-    /* ------------------------------------------------------------------ */
-
-    public Player(WebSocketConnection conn) {
-        this("RandomPlayer_" + new Random().nextInt(10_000), conn);
+    public Player() {
+        this.uniqueId = UUID.randomUUID().toString();
+        this.username = "RandomPlayer_" + new Random().nextInt(10000);
+        this.connection = null;
+        initializeResources();
     }
 
-    public Player(String username, WebSocketConnection conn) {
-        this.username  = username;
-        this.uniqueId  = UUID.randomUUID().toString();
-        this.connection = conn;
+    public Player(WebSocketConnection connection) {
+        this.uniqueId = UUID.randomUUID().toString();
+        this.username = "RandomPlayer_" + new Random().nextInt(10000);
+        this.connection = connection;
+        initializeResources();
     }
 
-    /* ------------------------------------------------------------------ */
-    /*  Accessors                                                         */
-    /* ------------------------------------------------------------------ */
+    public Player(String username) {
+        this.username = username;
+        this.uniqueId = UUID.randomUUID().toString();
+        this.connection = null;
+        initializeResources();
+    }
 
-    /** Original method still referenced by PlayerService */
-    public String getUniqueId() {                 // ▶ added back
+    public Player(String username, WebSocketConnection connection) {
+        this.username = username;
+        this.uniqueId = UUID.randomUUID().toString();
+        this.connection = connection;
+        initializeResources();
+    }
+
+    void initializeResources() {
+        for (TileType resource : TileType.values()) {
+            if (resource == TileType.WASTE)
+                continue; // No waste resource
+            resources.put(resource, 0);
+        }
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String u) {
+        username = u;
+    }
+
+    public String getUniqueId() {
         return uniqueId;
     }
 
-    /** Short alias used in newer code */
-    public String getId() {                       // unchanged
-        return uniqueId;
+    public int getVictoryPoints() {
+        return victoryPoints;
     }
 
-    public String  getUsername() { return username; }
-    public void    setUsername(String u) { username = u; }
-    public int     getVictoryPoints() { return victoryPoints; }
-    public void    addVictoryPoints(int v) { victoryPoints += v; }
-    public WebSocketConnection getConnection() { return connection; }
+    public void addVictoryPoints(int v) {
+        victoryPoints += v;
+    }
 
-    /* ------------------------------------------------------------------ */
-    /*  Messaging                                                         */
-    /* ------------------------------------------------------------------ */
+    public WebSocketConnection getConnection() {
+        return connection;
+    }
 
-    /** Send a {@link MessageDTO} to this player without blocking. */
+
     public void sendMessage(MessageDTO dto) {
         if (connection == null) {
             LOG.warnf("No WS connection for player %s – message dropped!", uniqueId);
@@ -66,7 +93,7 @@ public class Player {
             String json = new ObjectMapper().writeValueAsString(dto);
             connection.sendText(json)          // non-blocking
                     .subscribe().with(
-                            v   -> LOG.debugf("▶ Sent to %s : %s", uniqueId, dto.getType()),
+                            v -> LOG.debugf("▶ Sent to %s : %s", uniqueId, dto.getType()),
                             err -> LOG.errorf(err, "Failed to send to %s", uniqueId)
                     );
         } catch (Exception e) {
@@ -74,7 +101,34 @@ public class Player {
         }
     }
 
-    @Override public String toString() {
-        return "Player{username='%s', id='%s'}".formatted(username, uniqueId);
+    public int getResourceCount(TileType type) {
+        return resources.getOrDefault(type, 0);
+    }
+
+    @Override
+    public String toString() {
+        return "Player{" +
+                "username='" + username + '\'' +
+                ", uniqueId='" + uniqueId + '\'' +
+                ", connectionId='" +(connection != null ? connection.id() : "null") + '\'' +
+                '}';
+    }
+
+    public void getResource(TileType resource, int amount) {
+        if (resource == TileType.WASTE)
+            return;
+
+        Integer resourceCount = resources.get(resource);
+        resources.put(resource, resourceCount + amount);
+    }
+
+    public ObjectNode getResourceJSON() {
+        ObjectNode resourcesNode = JsonNodeFactory.instance.objectNode();
+        for (Map.Entry<TileType, Integer> entry : this.resources.entrySet()) {
+            if (entry.getKey() != TileType.WASTE) {
+                resourcesNode.put(entry.getKey().name(), entry.getValue());
+            }
+        }
+        return resourcesNode;
     }
 }

@@ -1,16 +1,16 @@
 package com.example.cataniaunited.game.dice;
 
 import com.example.cataniaunited.Publisher;
-import com.example.cataniaunited.Subscriber;
+import com.example.cataniaunited.game.board.tile_list_builder.Tile;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.jboss.logging.Logger;
 import java.util.ArrayList;
 import java.util.List;
 
-public class DiceRoller implements Publisher<DiceRoller, Integer> {
+public class DiceRoller implements Publisher<Tile, Integer> {
     private static final Logger logger = Logger.getLogger(DiceRoller.class);
-    private final List<Subscriber<DiceRoller, Integer>> subscribers = new ArrayList<>();
+    private final List<Tile> subscribers = new ArrayList<>();
     private final Dice dice1 = new Dice();
     private final Dice dice2 = new Dice();
 
@@ -30,19 +30,18 @@ public class DiceRoller implements Publisher<DiceRoller, Integer> {
         notifySubscribers(total);
         return result;
     }
-
     @Override
-    public void addSubscriber(Subscriber<DiceRoller, Integer> subscriber) {
+    public void addSubscriber(Tile subscriber) {
         subscribers.add(subscriber);
     }
 
     @Override
-    public void removeSubscriber(Subscriber<DiceRoller, Integer> subscriber) {
+    public void removeSubscriber(Tile subscriber) {
         subscribers.remove(subscriber);
     }
 
     @Override
     public void notifySubscribers(Integer total) {
-        subscribers.forEach(sub -> sub.update(total));
+        subscribers.forEach(s -> s.update(total));
     }
 }

@@ -6,6 +6,7 @@ import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.lobby.Lobby;
 import com.example.cataniaunited.lobby.LobbyService;
+import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerService;
 import com.example.cataniaunited.player.PlayerColor;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -132,31 +133,35 @@ class GameServiceTest {
     @Test
     void setSettlementShouldCallPlaceSettlementOnGameboard() throws GameException {
         String playerId = "playerId1";
+        Player player = mock(Player.class);
         int settlementPositionId = 15;
         String lobbyId = lobbyMock.getLobbyId();
         doReturn(lobbyMock).when(lobbyService).getLobbyById(lobbyId);
         doReturn(true).when(lobbyMock).isPlayerTurn(playerId);
         doReturn(PlayerColor.BLUE).when(lobbyMock).getPlayerColor(playerId);
         doReturn(gameboardMock).when(gameService).getGameboardByLobbyId(lobbyId);
+        doReturn(player).when(playerService).getPlayerById(playerId);
         gameService.placeSettlement(lobbyId, playerId, settlementPositionId);
-        verify(gameboardMock).placeSettlement(playerId, PlayerColor.BLUE, settlementPositionId);
+        verify(gameboardMock).placeSettlement(player, PlayerColor.BLUE, settlementPositionId);
     }
 
     @Test
     void placeSettlementShouldAddVictoryPointForPlayer() throws GameException {
         String playerId = "player1";
+        Player player = mock(Player.class);
         int settlementPositionId = 5;
         String lobbyId = lobbyMock.getLobbyId();
 
         doReturn(lobbyMock).when(lobbyService).getLobbyById(lobbyId);
         doReturn(true).when(lobbyMock).isPlayerTurn(playerId);
         doReturn(PlayerColor.BLUE).when(lobbyMock).getPlayerColor(playerId);
+        doReturn(player).when(playerService).getPlayerById(playerId);
 
         gameService.addGameboardToList(lobbyId, gameboardMock);
-        doNothing().when(gameboardMock).placeSettlement(playerId, PlayerColor.BLUE, settlementPositionId);
+        doNothing().when(gameboardMock).placeSettlement(player, PlayerColor.BLUE, settlementPositionId);
         gameService.placeSettlement(lobbyId, playerId, settlementPositionId);
 
-        verify(gameboardMock).placeSettlement(playerId, PlayerColor.BLUE, settlementPositionId);
+        verify(gameboardMock).placeSettlement(player, PlayerColor.BLUE, settlementPositionId);
         verify(playerService).addVictoryPoints(playerId, 1);
     }
 
@@ -192,9 +197,7 @@ class GameServiceTest {
         String expectedErrorMessage = "Gameboard for Lobby not found: id = %s".formatted(invalidLobbyId);
         doThrow(new GameException(expectedErrorMessage))
                 .when(gameService).getGameboardByLobbyId(invalidLobbyId);
-        GameException exception = assertThrows(GameException.class, () -> {
-            gameService.getGameboardJsonByLobbyId(invalidLobbyId);
-        }, "Should throw GameException when gameboard is not found");
+        GameException exception = assertThrows(GameException.class, () -> gameService.getGameboardJsonByLobbyId(invalidLobbyId), "Should throw GameException when gameboard is not found");
         assertEquals(expectedErrorMessage, exception.getMessage());
         verify(gameService).getGameboardByLobbyId(invalidLobbyId);
     }
