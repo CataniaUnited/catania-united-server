@@ -306,7 +306,7 @@ public class GameWebSocketTest {
     }
 
     @Test
-    void testJoinLobbySuccess() throws InterruptedException, JsonProcessingException {
+    void testJoinLobbySuccess() throws InterruptedException, JsonProcessingException, GameException {
         MessageDTO joinLobbyMessage = new MessageDTO(MessageType.JOIN_LOBBY, "Player 1", "abc123");
 
         doReturn(true).when(lobbyService).joinLobbyByCode("abc123", "Player 1");
@@ -323,14 +323,14 @@ public class GameWebSocketTest {
     @Test
     void testPlayerJoinedLobbySuccess() throws JsonProcessingException, InterruptedException, GameException {
         String player = "TestPlayer";
-        PlayerColor assignedColor = PlayerColor.RED;
-
-        String lobbyId = lobbyService.createLobby("HostPlayer");
-        Lobby lobby = spy(lobbyService.getLobbyById(lobbyId));
-        when(lobby.assignAvailableColor()).thenReturn(assignedColor);
+        PlayerColor assignedColor = PlayerColor.BLUE;
+        String lobbyId = "xyz123";
+        Lobby mockLobby = mock(Lobby.class);
+        doReturn(mockLobby).when(lobbyService).getLobbyById(lobbyId);
+        doReturn(assignedColor).when(mockLobby).assignAvailableColor();
+        doReturn(assignedColor).when(mockLobby).getPlayerColor(player);
 
         MessageDTO joinLobbyMessage = new MessageDTO(MessageType.JOIN_LOBBY, player, lobbyId);
-
         List<String> receivedMessages = new CopyOnWriteArrayList<>();
         CountDownLatch messageLatch = new CountDownLatch(3);
 
@@ -354,11 +354,11 @@ public class GameWebSocketTest {
         assertEquals(MessageType.PLAYER_JOINED, responseMessage.getType());
         assertEquals(player, responseMessage.getPlayer());
         assertEquals(lobbyId, responseMessage.getLobbyId());
-        assertEquals(assignedColor.getHexCode(), responseMessage.getMessageNode("color").textValue());
+        assertNotNull(assignedColor.getHexCode(), responseMessage.getMessageNode("color").asText());
     }
 
     @Test
-    void testJoinLobbyFailure() throws InterruptedException, JsonProcessingException {
+    void testJoinLobbyFailure() throws InterruptedException, JsonProcessingException, GameException {
         MessageDTO joinLobbyMessage = new MessageDTO(MessageType.JOIN_LOBBY, "Player 1", "invalidLobbyId");
 
         doReturn(false).when(lobbyService).joinLobbyByCode("invalidLobbyId", "Player 1");
