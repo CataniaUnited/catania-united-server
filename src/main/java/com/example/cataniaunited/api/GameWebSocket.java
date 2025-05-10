@@ -112,8 +112,19 @@ public class GameWebSocket {
         }
 
         GameBoard updatedGameboard = gameService.getGameboardByLobbyId(message.getLobbyId());
-        MessageDTO update = new MessageDTO(MessageType.PLACE_SETTLEMENT, message.getPlayer(), message.getLobbyId(), updatedGameboard.getJson());
+        ObjectNode gameboardJson = updatedGameboard.getJson();
 
+        ObjectNode victoryPoints = gameboardJson.putObject("victoryPoints");
+        playerService.getAllPlayers().forEach(p -> {
+            victoryPoints.put(p.getUsername(), p.getVictoryPoints());
+        });
+
+        MessageDTO update = new MessageDTO(
+                MessageType.PLACE_SETTLEMENT,
+                message.getPlayer(),
+                message.getLobbyId(),
+                gameboardJson
+        );
         return connection.broadcast().sendText(update).chain(i -> Uni.createFrom().item(update));
     }
 
