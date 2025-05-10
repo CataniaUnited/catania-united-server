@@ -42,7 +42,7 @@ public class GameService {
         checkPlayerTurn(lobbyId, playerId);
         GameBoard gameboard = getGameboardByLobbyId(lobbyId);
         PlayerColor color = lobbyService.getPlayerColor(lobbyId, playerId);
-        gameboard.placeSettlement(playerId, color, settlementPositionId);
+        gameboard.placeSettlement(playerService.getPlayerById(playerId), color, settlementPositionId);
         playerService.addVictoryPoints(playerId, 1);
     }
 
@@ -88,5 +88,10 @@ public class GameService {
         MessageDTO messageDTO = new MessageDTO(MessageType.GAME_WON, winnerPlayerId, lobbyId, message);
         logger.infof("Player %s has won the game in lobby %s", winnerPlayerId, lobbyId);
         return connection.broadcast().sendText(messageDTO).chain(i -> Uni.createFrom().item(messageDTO));
+    }
+
+    public void clearGameBoardsForTesting() {
+        lobbyToGameboardMap.clear();
+        logger.info("All game boards have been cleared for testing.");
     }
 }
