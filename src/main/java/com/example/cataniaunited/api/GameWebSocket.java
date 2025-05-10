@@ -16,15 +16,11 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
-/**
- * Single WebSocket endpoint (<code>/game</code>) that dispatches
- * client commands to the service layer.
- */
+
 @ApplicationScoped
 @WebSocket(path = "/game")
 public class GameWebSocket {
 
-    /* ───────────────────────── dependencies ───────────────────────── */
 
     @Inject LobbyService  lobbyService;
     @Inject PlayerService playerService;
@@ -32,7 +28,6 @@ public class GameWebSocket {
 
     private static final Logger LOG = Logger.getLogger(GameWebSocket.class);
 
-    /* ───────────────────────── lifecycle ──────────────────────────── */
 
     @OnOpen
     public Uni<MessageDTO> onOpen(WebSocketConnection conn) {
@@ -44,20 +39,17 @@ public class GameWebSocket {
         );
     }
 
-    @OnClose public void onClose(WebSocketConnection c) {
-        playerService.removePlayer(c);
-        LOG.infov("Client {0} disconnected", c.id());
-    }
+    @OnClose public void onClose(WebSocketConnection c) { playerService.removePlayer(c); }
 
     @OnError
-    public Uni<MessageDTO> onError(WebSocketConnection c, Throwable t) {
-        LOG.error("WS error", t);
+    public Uni<MessageDTO> onError(WebSocketConnection c, Throwable err) {
+        LOG.error("WS error", err);
         ObjectNode body = JsonNodeFactory.instance.objectNode()
-                .put("error", t.getMessage());
+                .put("error", err.getMessage());
         return Uni.createFrom().item(new MessageDTO(MessageType.ERROR, body));
     }
 
-    /* ───────────────────────── dispatcher ─────────────────────────── */
+
 
     @OnTextMessage
     public Uni<MessageDTO> onText(MessageDTO m, WebSocketConnection c) {
@@ -138,6 +130,34 @@ public class GameWebSocket {
         // Send to all real players
         lobbyService.notifyPlayers(m.getLobbyId(), startPacket);
 
+        GameBoard board = gameService.getGameboardByLobbyId(m.getLobbyId());
+        MessageDTO boardPacket = new MessageDTO(
+                MessageType.GAME_BOARD_JSON,
+                null,
+                m.getLobbyId(),
+                board.getJson());
+
+        lobbyService.notifyPlayers(m.getLobbyId(), boardPacket);
+
+        /* Return START_GAME so the caller sees success */
         return Uni.createFrom().item(startPacket);
     }
+
 }
+
+
+    Uni<MessageDTO> handleDiceRoll(MessageDTO message, WebSocketConnection connection) throws GameException {
+        ObjectNode diceResult = gameService.rollDice(message.getLobbyId());
+        MessageDTO resultMessage = new MessageDTO(
+                MessageType.DICE_RESULT,
+                message.getPlayer(),
+                message.getLobbyId(),
+                diceResult
+        );
+
+        return connection.broadcast()
+                .sendText(resultMessage)
+                .chain(() -> Uni.createFrom().item(resultMessage));
+    }
+}
+

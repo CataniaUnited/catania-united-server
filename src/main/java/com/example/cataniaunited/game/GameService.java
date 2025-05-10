@@ -1,3 +1,4 @@
+// src/main/java/com/example/cataniaunited/game/GameService.java
 package com.example.cataniaunited.game;
 
 import com.example.cataniaunited.dto.MessageDTO;
@@ -62,16 +63,15 @@ public class GameService {
         MessageDTO dto = new MessageDTO(
                 MessageType.GAME_STARTED, null, lobbyId, payload);
 
-        order.stream()
-                .map(playerService::getPlayerById)
-                .filter(Objects::nonNull)
-                .forEach(p -> p.sendMessage(dto));
-
-        LOG.infov("Game started in lobby {0}  order {1}", lobbyId, order);
+        /* 4) multicast */
+        for (String pid : order) {
+            Player p = playerService.getPlayerById(pid);
+            if (p != null) p.sendMessage(dto);
+        }
+        LOG.infov("Game started in lobby {0}  – order {1}", lobbyId, order);
         return dto;
     }
 
-    /* ────────────────── in-game actions ──────────────────── */
 
     public void placeSettlement(String lobbyId, String playerId, int pos)
             throws GameException {
@@ -90,7 +90,6 @@ public class GameService {
                 lobbyService.getPlayerColor(lobbyId, playerId), roadId);
     }
 
-    /* ────────────────── helper / access ──────────────────── */
 
     public ObjectNode getGameboardJsonByLobbyId(String lobbyId)
             throws GameException {
@@ -104,7 +103,6 @@ public class GameService {
         return b;
     }
 
-    /* ────────────────── broadcast win ────────────────────── */
 
     public Uni<MessageDTO> broadcastWin(io.quarkus.websockets.next.WebSocketConnection conn,
                                         String lobbyId, String winner) {
