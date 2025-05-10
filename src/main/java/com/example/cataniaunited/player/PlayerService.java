@@ -11,12 +11,15 @@ public class PlayerService {
 
     private static final ConcurrentHashMap<String, Player> playersByConnectionId = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, Player> playersById = new ConcurrentHashMap<>();
+
+    private final ConcurrentHashMap<String, WebSocketConnection> connectionsByPlayerId = new ConcurrentHashMap<>();
     public static final int WIN_THRESHOLD = 10;
 
     public Player addPlayer(WebSocketConnection connection) {
         Player player = new Player(connection);
         playersByConnectionId.put(connection.id(), player);
         playersById.put(player.getUniqueId(), player);
+        connectionsByPlayerId.put(player.getUniqueId(), connection);
         return player;
     }
 
@@ -36,18 +39,13 @@ public class PlayerService {
             return;
 
         playersById.remove(player.getUniqueId());
+        connectionsByPlayerId.remove(player.getUniqueId());
     }
 
     public static void clearAllPlayersForTesting() {
         playersByConnectionId.clear();
         playersById.clear();
-    }
-    
-    public void removePlayer(WebSocketConnection connection) {
-        Player removed = playersByConnectionId.remove(connection.id());
-        if (removed != null) {
-            playersById.remove(removed.getUniqueId());
-        }
+        playersByConnectionId.clear();
     }
 
     public void addVictoryPoints(String playerId, int points) {
@@ -60,6 +58,18 @@ public class PlayerService {
     public boolean checkForWin(String playerId) {
         Player player = getPlayerById(playerId);
         return player != null && player.getVictoryPoints() >= WIN_THRESHOLD;
+    }
+
+    public WebSocketConnection getConnectionByPlayerId(String playerId) {
+        if (playerId == null) {
+            return null;
+        }
+        WebSocketConnection conn = connectionsByPlayerId.get(playerId);
+        if (conn != null && !conn.isOpen()) {
+            connectionsByPlayerId.remove(playerId, conn);
+            return null;
+        }
+        return conn;
     }
 
 
