@@ -8,6 +8,7 @@ import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.game.board.SettlementPosition;
 import com.example.cataniaunited.lobby.Lobby;
 import com.example.cataniaunited.lobby.LobbyService;
+import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerColor;
 import com.example.cataniaunited.player.PlayerService;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -21,17 +22,20 @@ import io.quarkus.test.junit.mockito.InjectSpy;
 import io.quarkus.websockets.next.BasicWebSocketConnector;
 import io.quarkus.websockets.next.OpenConnections;
 import io.quarkus.websockets.next.WebSocketConnection;
+import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.Mockito;
 
 import java.net.URI;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -527,6 +531,75 @@ public class GameWebSocketTest {
         assertEquals(winnerUsername, response.getMessageNode("winner").asText());
 
         verify(gameService).broadcastWin(any(), eq(lobbyId), eq(player1Id));
+    }
+
+    @Test
+    void testPlaceSettlementIncludesAllPlayersInResponse() throws GameException, JsonProcessingException, InterruptedException {
+        String player1 = "Player1";
+        String player2 = "Player2";
+        String player3 = "Player3";
+        String lobbyId = lobbyService.createLobby(player1);
+        lobbyService.joinLobbyByCode(lobbyId, player2);
+        lobbyService.joinLobbyByCode(lobbyId, player3);
+
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+        lobby.setActivePlayer(player1);
+        GameBoard gameBoard = gameService.createGameboard(lobbyId);
+        SettlementPosition settlementPosition = gameBoard.getSettlementPositionGraph().get(0);
+        settlementPosition.getRoads().get(0).setOwnerPlayerId(player1);
+
+        int positionId = settlementPosition.getId();
+        ObjectNode placeSettlementMessageNode = objectMapper.createObjectNode().put("settlementPositionId", positionId);
+        var placeSettlementMessageDTO = new MessageDTO(MessageType.PLACE_SETTLEMENT, player1, lobbyId, placeSettlementMessageNode);
+
+        Player mockPlayer1 = mock(Player.class);
+        when(mockPlayer1.getUniqueId()).thenReturn(player1);
+        when(mockPlayer1.getUsername()).thenReturn(player1);
+        when(mockPlayer1.toJson()).thenReturn(objectMapper.createObjectNode().put("username", player1));
+
+        Player mockPlayer2 = mock(Player.class);
+        when(mockPlayer2.getUniqueId()).thenReturn(player2);
+        when(mockPlayer2.getUsername()).thenReturn(player2);
+        when(mockPlayer2.toJson()).thenReturn(objectMapper.createObjectNode().put("username", player2));
+
+        Player mockPlayer3 = mock(Player.class);
+        when(mockPlayer3.getUniqueId()).thenReturn(player3);
+        when(mockPlayer3.getUsername()).thenReturn(player3);
+        when(mockPlayer3.toJson()).thenReturn(objectMapper.createObjectNode().put("username", player3));
+
+        when(playerService.getPlayerById(player1)).thenReturn(mockPlayer1);
+        when(playerService.getPlayerById(player2)).thenReturn(mockPlayer2);
+        when(playerService.getPlayerById(player3)).thenReturn(mockPlayer3);
+
+        List<String> receivedMessages = new CopyOnWriteArrayList<>();
+        CountDownLatch messageLatch = new CountDownLatch(3); // Expect multiple broadcasted messages
+
+        var webSocketClientConnection = BasicWebSocketConnector.create()
+                .baseUri(serverUri)
+                .path("/game")
+                .onTextMessage((connection, message) -> {
+                    receivedMessages.add(message);
+                    messageLatch.countDown();
+                })
+                .connectAndAwait();
+
+        String sentMessage = objectMapper.writeValueAsString(placeSettlementMessageDTO);
+        webSocketClientConnection.sendTextAndAwait(sentMessage);
+
+        assertTrue(messageLatch.await(5, TimeUnit.SECONDS), "Message not received in time");
+
+        MessageDTO responseMessage = objectMapper.readValue(receivedMessages.get(receivedMessages.size() - 1), MessageDTO.class);
+
+        JsonNode playersNode = responseMessage.getMessageNode("players");
+        assertNotNull(playersNode, "Players node missing from message payload");
+
+        assertTrue(playersNode.has(player1), "Missing player1 in response");
+        assertTrue(playersNode.has(player2), "Missing player2 in response");
+        assertTrue(playersNode.has(player3), "Missing player3 in response");
+
+        assertEquals(player1, playersNode.get(player1).get("username").asText());
+        assertEquals(player2, playersNode.get(player2).get("username").asText());
+        assertEquals(player3, playersNode.get(player3).get("username").asText());
     }
 
 

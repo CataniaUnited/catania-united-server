@@ -91,13 +91,20 @@ public class GameService {
         message.put("winner", winner.getUsername());
 
         ArrayNode leaderboard = message.putArray("leaderboard");
-        playerService.getAllPlayers().stream()
-                .sorted(Comparator.comparingInt(Player::getVictoryPoints).reversed())
-                .forEach(p -> {
-                    ObjectNode entry = leaderboard.addObject();
-                    entry.put("username", p.getUsername());
-                    entry.put("vp", p.getVictoryPoints());
-                });
+        try {
+            lobbyService.getLobbyById(lobbyId).getPlayers().stream()
+                    .map(playerService::getPlayerById)
+                    .filter(p -> p != null)
+                    .sorted(Comparator.comparingInt(Player::getVictoryPoints).reversed())
+                    .forEach(p -> {
+                        ObjectNode entry = leaderboard.addObject();
+                        entry.put("username", p.getUsername());
+                        entry.put("vp", p.getVictoryPoints());
+                    });
+        } catch (GameException e) {
+            logger.errorf("Failed to fetch players for lobby %s: %s", lobbyId, e.getMessage());
+            message.put("error", "Failed to build leaderboard");
+        }
 
         MessageDTO messageDTO = new MessageDTO(MessageType.GAME_WON, winnerPlayerId, lobbyId, message);
         logger.infof("Player %s has won the game in lobby %s", winnerPlayerId, lobbyId);

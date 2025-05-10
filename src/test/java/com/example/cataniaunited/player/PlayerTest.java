@@ -1,7 +1,11 @@
 package com.example.cataniaunited.player;
 
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import static io.smallrye.common.constraint.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class PlayerTest {
 
@@ -18,7 +22,7 @@ class PlayerTest {
     void testCustomConstructor() {
         String customUsername = "Alice1";
         Player player = new Player(customUsername);
-        Assertions.assertEquals(customUsername, player.getUsername());
+        assertEquals(customUsername, player.getUsername());
         Assertions.assertNotNull(player.getUniqueId(), "uniqueId should not be null");
     }
 
@@ -27,7 +31,7 @@ class PlayerTest {
         Player player = new Player();
         String newUsername = "Bob";
         player.setUsername(newUsername);
-        Assertions.assertEquals(newUsername, player.getUsername());
+        assertEquals(newUsername, player.getUsername());
     }
 
     @Test
@@ -36,5 +40,17 @@ class PlayerTest {
         Player player2 = new Player();
         Assertions.assertNotEquals(player1.getUniqueId(), player2.getUniqueId(),
                 "Each Player should have a unique ID");
+    }
+
+    @Test
+    void testToJsonIncludesUsernameAndVictoryPoints() {
+        Player player = new Player("TestUser");
+        player.addVictoryPoints(3);
+
+        ObjectNode json = player.toJson();
+
+        assertNotNull(json);
+        assertEquals("TestUser", json.get("username").asText());
+        assertEquals(3, json.get("victoryPoints").asInt());
     }
 }

@@ -1,5 +1,7 @@
 package com.example.cataniaunited.player;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.websockets.next.WebSocketConnection;
 
 import java.util.Random;
@@ -52,6 +54,14 @@ public class Player {
 
     public void addVictoryPoints(int victoryPoints) {
         this.victoryPoints += victoryPoints;
+    }
+
+    public ObjectNode toJson() {
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode playerNode = mapper.createObjectNode();
+        playerNode.put("username", this.username);
+        playerNode.put("victoryPoints", this.victoryPoints);
+        return playerNode;
     }
 
     @Override
