@@ -92,9 +92,7 @@ public class SettlementPosition implements Placable, Subscriber<TileType> {
     }
 
     public void setBuilding(Building building) throws GameException {
-        if (this.building != null && !this.building.getPlayer().equals(building.getPlayer())) {
-            throw new GameException("Player mismatch when placing building: positionId = %s, playerId = %s", id, building.getPlayer().getUniqueId());
-        } else if (this.building != null) {
+        if (this.building != null) {
             logger.errorf("Placement of building not allowed -> intersection occupied: positionId = %s, playerId = %s", id, building.getPlayer().getUniqueId());
             throw new IntersectionOccupiedException();
         }
