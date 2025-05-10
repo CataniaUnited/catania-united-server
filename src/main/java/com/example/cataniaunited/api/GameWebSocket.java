@@ -54,7 +54,27 @@ public class GameWebSocket {
     @OnTextMessage
     public Uni<MessageDTO> onText(MessageDTO m, WebSocketConnection c) {
         try {
+
             return switch (m.getType()) {
+            logger.infof("Received message: client = %s, message = %s", connection.id(), message);
+            return switch (message.getType()) {
+                case CREATE_LOBBY -> createLobby(message);
+                case JOIN_LOBBY -> joinLobby(message, connection);
+                case SET_USERNAME -> setUsername(message, connection);
+                case CREATE_GAME_BOARD ->
+                        createGameBoard(message, connection); // TODO: Remove after regular game start is implemented
+                case SET_ACTIVE_PLAYER -> setActivePlayer(message);
+                case PLACE_SETTLEMENT -> placeSettlement(message, connection);
+                case PLACE_ROAD -> placeRoad(message, connection);
+                case ROLL_DICE -> handleDiceRoll(message, connection);
+                case ERROR, CONNECTION_SUCCESSFUL, CLIENT_DISCONNECTED, LOBBY_CREATED, LOBBY_UPDATED, PLAYER_JOINED,
+                     GAME_BOARD_JSON, GAME_WON, DICE_RESULT -> throw new GameException("Invalid client command");
+            };
+        } catch (GameException ge) {
+            logger.errorf("Unexpected Error occurred: message = %s, error = %s", message, ge.getMessage());
+            return Uni.createFrom().item(createErrorMessage(ge.getMessage()));
+        }
+    }
 
 
                 case CREATE_LOBBY     -> createLobby(m);
@@ -151,4 +171,22 @@ public class GameWebSocket {
         /* Return START_GAME so the caller sees success */
         return Uni.createFrom().item(startPacket);
     }
+
 }
+
+
+    Uni<MessageDTO> handleDiceRoll(MessageDTO message, WebSocketConnection connection) throws GameException {
+        ObjectNode diceResult = gameService.rollDice(message.getLobbyId());
+        MessageDTO resultMessage = new MessageDTO(
+                MessageType.DICE_RESULT,
+                message.getPlayer(),
+                message.getLobbyId(),
+                diceResult
+        );
+
+        return connection.broadcast()
+                .sendText(resultMessage)
+                .chain(() -> Uni.createFrom().item(resultMessage));
+    }
+}
+

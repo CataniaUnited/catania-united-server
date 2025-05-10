@@ -11,8 +11,13 @@ public enum MessageType {
     LOBBY_CREATED,
     GAME_WON,
     GAME_BOARD_JSON,
+
     START_GAME,
     GAME_STARTED,
+
+    DICE_RESULT,
+
+
     //Client Messages
     CREATE_LOBBY,
     JOIN_LOBBY,
@@ -21,4 +26,5 @@ public enum MessageType {
     PLACE_SETTLEMENT,
     PLACE_ROAD,
     CREATE_GAME_BOARD,
+    ROLL_DICE
 }

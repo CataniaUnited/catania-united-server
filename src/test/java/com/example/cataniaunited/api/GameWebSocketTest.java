@@ -11,6 +11,7 @@ import com.example.cataniaunited.lobby.LobbyService;
 import com.example.cataniaunited.player.PlayerColor;
 import com.example.cataniaunited.player.PlayerService;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -664,4 +665,58 @@ public class GameWebSocketTest {
         assertEquals(expectedErrorMessage, responseMessage.getMessageNode("error").asText(), "Error message text should match");
     }
 
+    @Test
+    void testHandleDiceRoll() throws GameException, JsonProcessingException, InterruptedException {
+        String player1 = "Player1";
+        String player2 = "Player2";
+        String lobbyId = lobbyService.createLobby(player1);
+        lobbyService.joinLobbyByCode(lobbyId, player2);
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+        lobby.setActivePlayer(player1);
+
+        gameService.createGameboard(lobbyId);
+
+        MessageDTO rollDiceMessageDTO = new MessageDTO(MessageType.ROLL_DICE, player1, lobbyId);
+
+        List<String> receivedMessages = new CopyOnWriteArrayList<>();
+        CountDownLatch messageLatch = new CountDownLatch(1);
+
+        var webSocketClientConnection = BasicWebSocketConnector.create()
+                .baseUri(serverUri)
+                .path("/game")
+                .onTextMessage((connection, message) -> {
+                    if (message.startsWith("{")) {
+                        try {
+                            MessageDTO dto = objectMapper.readValue(message, MessageDTO.class);
+                            if (dto.getType() == MessageType.DICE_RESULT) {
+                                receivedMessages.add(message);
+                                messageLatch.countDown();
+                            }
+                        } catch (JsonProcessingException e) {
+                            fail("Failed to parse message");
+                        }
+                    }
+                }).connectAndAwait();
+
+        String sentMessage = objectMapper.writeValueAsString(rollDiceMessageDTO);
+        webSocketClientConnection.sendTextAndAwait(sentMessage);
+
+        boolean messageReceived = messageLatch.await(5, TimeUnit.SECONDS);
+        assertTrue(messageReceived, "Dice result message not received in time!");
+
+        MessageDTO responseMessage = objectMapper.readValue(receivedMessages.get(0), MessageDTO.class);
+        assertEquals(MessageType.DICE_RESULT, responseMessage.getType());
+        assertEquals(player1, responseMessage.getPlayer());
+        assertEquals(lobbyId, responseMessage.getLobbyId());
+
+        JsonNode diceResult = responseMessage.getMessage();
+        assertNotNull(diceResult);
+        int dice1 = diceResult.get("dice1").asInt();
+        int dice2 = diceResult.get("dice2").asInt();
+        assertTrue(dice1 >= 1 && dice1 <= 6, "Dice 1 value out of range");
+        assertTrue(dice2 >= 1 && dice2 <= 6, "Dice 2 value out of range");
+        assertEquals(dice1 + dice2, diceResult.get("total").asInt());
+
+        verify(gameService).rollDice(lobbyId);
+    }
 }

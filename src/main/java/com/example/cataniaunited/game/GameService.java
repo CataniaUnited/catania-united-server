@@ -122,6 +122,7 @@ public class GameService {
     }
 
 
+
     public Uni<MessageDTO> broadcastWin(WebSocketConnection conn,
                                         String lobbyId,
                                         String winnerId) {
@@ -140,5 +141,16 @@ public class GameService {
         return conn.broadcast()
                 .sendText(m)
                 .chain(i -> Uni.createFrom().item(m));
+
+    public ObjectNode rollDice(String lobbyId) throws GameException {
+        return getGameboardByLobbyId(lobbyId).rollDice();
+    }
+  
+    public Uni<MessageDTO> broadcastWin(WebSocketConnection connection, String lobbyId, String winnerPlayerId) {
+        ObjectNode message = JsonNodeFactory.instance.objectNode();
+        message.put("winner", winnerPlayerId);
+        MessageDTO messageDTO = new MessageDTO(MessageType.GAME_WON, winnerPlayerId, lobbyId, message);
+        logger.infof("Player %s has won the game in lobby %s", winnerPlayerId, lobbyId);
+        return connection.broadcast().sendText(messageDTO).chain(i -> Uni.createFrom().item(messageDTO));
     }
 }
