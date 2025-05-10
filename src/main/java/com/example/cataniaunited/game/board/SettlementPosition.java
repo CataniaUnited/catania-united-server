@@ -63,6 +63,7 @@ public class SettlementPosition implements Placable, Subscriber<TileType> {
             throw new IllegalStateException("Cannot assign more than 3 Tiles to SettlementPosition " + id);
         }
         tiles.add(tileToAdd);
+        tileToAdd.addSubscriber(this);
     }
 
     public void addRoad(Road road) {

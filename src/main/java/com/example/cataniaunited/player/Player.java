@@ -35,6 +35,9 @@ public class Player {
         this.username = username;
         this.uniqueId = UUID.randomUUID().toString();
         this.connectionId = null;
+        for (TileType resource: TileType.values()){
+            resources.put(resource, 0);
+        }
     }
 
     public Player(WebSocketConnection connection) {
@@ -45,6 +48,9 @@ public class Player {
         this.username = username;
         this.uniqueId = UUID.randomUUID().toString();
         this.connectionId = connection.id();
+        for (TileType resource: TileType.values()){
+            resources.put(resource, 0);
+        }
     }
 
     public String getUsername() {
@@ -66,7 +72,9 @@ public class Player {
     public void addVictoryPoints(int victoryPoints) {
         this.victoryPoints += victoryPoints;
     }
-
+    public int getResourceCount(TileType type) {
+        return resources.getOrDefault(type, 0);
+    }
     @Override
     public String toString() {
         return "Player{" +

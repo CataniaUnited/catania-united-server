@@ -89,4 +89,9 @@ public class GameService {
         logger.infof("Player %s has won the game in lobby %s", winnerPlayerId, lobbyId);
         return connection.broadcast().sendText(messageDTO).chain(i -> Uni.createFrom().item(messageDTO));
     }
+
+    public void clearGameBoardsForTesting() {
+        lobbyToGameboardMap.clear();
+        logger.info("All game boards have been cleared for testing.");
+    }
 }
