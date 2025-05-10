@@ -52,8 +52,8 @@ class PlayerTest {
     }
 
     @Test
-    void defaultConstructorInitializesResourcesToZeroAndConnectionIdToNull() {
-        assertNull(player.connectionId, "connectionId should be null for default constructor.");
+    void defaultConstructorInitializesResourcesToZeroAndConnectionToNull() {
+        assertNull(player.getConnection(), "connection should be null for default constructor.");
 
         for (TileType type : TileType.values()) {
             if (type == TileType.WASTE){
@@ -67,7 +67,7 @@ class PlayerTest {
     @Test
     void constructorWithUsernameInitializesConnectionIdAsNull() {
         Player customPlayer = new Player("TestUser");
-        assertNull(customPlayer.connectionId, "connectionId should be null for username-only constructor.");
+        assertNull(customPlayer.getConnection(), "connection should be null for username-only constructor.");
     }
 
     @Test
@@ -80,7 +80,7 @@ class PlayerTest {
 
         assertTrue(customPlayer.getUsername().startsWith("RandomPlayer_"), "Username should start with 'RandomPlayer_'.");
         assertNotNull(customPlayer.getUniqueId(), "uniqueId should not be null.");
-        assertEquals(expectedConnectionId, customPlayer.connectionId, "connectionId should match the mock connection's ID.");
+        assertEquals(expectedConnectionId, customPlayer.getConnection().id(), "connectionId should match the mock connection's ID.");
     }
 
     @Test
@@ -94,7 +94,7 @@ class PlayerTest {
 
         assertEquals(customUsername, customPlayer.getUsername());
         assertNotNull(customPlayer.getUniqueId(), "uniqueId should not be null.");
-        assertEquals(expectedConnectionId, customPlayer.connectionId, "connectionId should match the mock connection's ID.");
+        assertEquals(expectedConnectionId, customPlayer.getConnection().id(), "connectionId should match the mock connection's ID.");
     }
 
     @Test

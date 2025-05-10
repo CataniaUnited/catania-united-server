@@ -1,52 +1,42 @@
+// src/main/java/com/example/cataniaunited/lobby/Lobby.java
 package com.example.cataniaunited.lobby;
 
 import com.example.cataniaunited.player.PlayerColor;
+import java.util.*;
+import java.util.concurrent.*;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.CopyOnWriteArraySet;
 
 public class Lobby {
     private final String lobbyId;
+    private final String hostPlayer;
     private final Set<String> players = new CopyOnWriteArraySet<>();
     private final Map<String, PlayerColor> playerColors = new ConcurrentHashMap<>();
     private final List<PlayerColor> availableColors = new CopyOnWriteArrayList<>();
     private volatile String activePlayer;
+    private volatile boolean gameStarted = false;
 
     public Lobby(String lobbyId, String hostPlayer) {
         this.lobbyId = lobbyId;
-        this.players.add(hostPlayer);
+        this.hostPlayer = hostPlayer;
+        players.add(hostPlayer);
         Collections.addAll(availableColors, PlayerColor.values());
     }
 
-    public String getLobbyId() {
-        return lobbyId;
-    }
-
-    public Set<String> getPlayers() {
-        return players;
-    }
+    public String getLobbyId() { return lobbyId; }
+    public String getHostPlayer() { return hostPlayer; }
+    public Set<String> getPlayers() { return players; }
 
     public void addPlayer(String player) {
         players.add(player);
     }
 
     public boolean removePlayer(String player) {
+        playerColors.remove(player);
         return players.remove(player);
     }
 
-    public String getActivePlayer() {
-        return activePlayer;
-    }
-
-    //TODO: Remove after implementation of player turn order
-    public void setActivePlayer(String activePlayer) {
-        this.activePlayer = activePlayer;
-    }
+    public String getActivePlayer() { return activePlayer; }
+    public void setActivePlayer(String activePlayer) { this.activePlayer = activePlayer; }
 
     public boolean isPlayerTurn(String player) {
         return player != null && player.equals(activePlayer);
@@ -79,4 +69,44 @@ public class Lobby {
             availableColors.add(color);
         }
     }
+
+    public boolean isGameStarted() { return gameStarted; }
+    public void setGameStarted(boolean started) { this.gameStarted = started; }
+
+
+    public boolean canStartGame(String requestingPlayer) {
+        return hostPlayer.equals(requestingPlayer)
+                && players.size() >= 2
+                && !gameStarted;
+    }
+
+
+    public void randomizePlayerOrder() {
+        List<String> order = new ArrayList<>(players);
+        Collections.shuffle(order);
+        players.clear();
+        players.addAll(order);
+        activePlayer = order.get(0);
+        gameStarted = true;
+    }
+
+
+    public void nextPlayerTurn() {
+        if (players.isEmpty() || activePlayer == null) return;
+        List<String> order = new ArrayList<>(players);
+        int idx = order.indexOf(activePlayer);
+        activePlayer = order.get((idx + 1) % order.size());
+    }
+
+    public void resetForNewGame() {
+        this.gameStarted = false;
+        this.activePlayer = null;
+    }
+
+
+    public void setPlayerOrder(List<String> order) {
+        players.clear();
+        players.addAll(order);
+    }
+
 }

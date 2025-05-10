@@ -16,6 +16,10 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import io.quarkus.websockets.next.WebSocketConnection;
 import io.smallrye.mutiny.Uni;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 @ApplicationScoped
@@ -51,6 +55,38 @@ public class GameService {
         GameBoard gameboard = getGameboardByLobbyId(lobbyId);
         PlayerColor color = lobbyService.getPlayerColor(lobbyId, playerId);
         gameboard.placeRoad(playerId, color, roadId);
+    }
+
+    public MessageDTO startGame(String lobbyId) throws GameException {
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+
+        if (lobby.isGameStarted())
+            throw new GameException("Game already started");
+        if (lobby.getPlayers().size() < 2)
+            throw new GameException("Need at least 2 players");
+
+        GameBoard board = createGameboard(lobbyId);
+
+        List<String> order = new ArrayList<>(lobby.getPlayers());
+        Collections.shuffle(order);
+        lobby.setPlayerOrder(order);
+        lobby.setActivePlayer(order.get(0));
+        lobby.setGameStarted(true);
+
+        ObjectNode payload = JsonNodeFactory.instance.objectNode();
+        payload.putPOJO("playerOrder", order);
+        payload.set("board", board.getJson());
+
+        MessageDTO dto = new MessageDTO(
+                MessageType.GAME_STARTED, null, lobbyId, payload);
+
+        order.stream()
+                .map(playerService::getPlayerById)
+                .filter(Objects::nonNull)
+                .forEach(p -> p.sendMessage(dto));
+
+        logger.infof("Game started in lobby: lobbyId=%s, order=%s", lobbyId, order);
+        return dto;
     }
 
     public ObjectNode getGameboardJsonByLobbyId(String lobbyId) throws GameException {

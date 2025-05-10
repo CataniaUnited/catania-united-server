@@ -2,6 +2,7 @@ package com.example.cataniaunited.lobby;
 
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.player.PlayerColor;
+import com.example.cataniaunited.dto.MessageDTO;
 
 import java.util.List;
 
@@ -23,4 +24,7 @@ public interface LobbyService {
     boolean isPlayerTurn(String lobbyId, String playerId) throws GameException;
 
     PlayerColor getPlayerColor(String lobbyId, String playerId) throws GameException;
+
+    void notifyPlayers(String lobbyId, MessageDTO dto) throws GameException;
+
 }

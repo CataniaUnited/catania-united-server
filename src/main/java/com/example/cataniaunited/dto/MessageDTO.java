@@ -68,7 +68,6 @@ public class MessageDTO {
         this.lobbyId = lobbyId;
     }
 
-    // NEW getters/setters for players
     public List<String> getPlayers() {
         return players;
     }
@@ -77,10 +76,7 @@ public class MessageDTO {
         return message;
     }
 
-    /**
-     * Returns the json node of this message with the given name.
-     * If no node is found, an empty object node is returned to prevent NullPointerException
-     */
+
     public JsonNode getMessageNode(String nodeName) {
         return Optional.ofNullable(message.get(nodeName)).orElse(JsonNodeFactory.instance.objectNode());
     }
