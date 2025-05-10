@@ -14,7 +14,7 @@ public abstract class Building {
     protected final PlayerColor color;
 
     protected Building(Player player, PlayerColor color) throws GameException {
-        if (player == null || player.getUniqueId() == null || player.getUniqueId().isEmpty()) {
+        if (player == null || Util.isEmpty(player.getUniqueId())) {
             throw new GameException("Owner of building must not be empty");
         }
         if (color == null) {
