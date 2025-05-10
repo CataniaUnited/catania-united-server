@@ -411,6 +411,108 @@ public class GameWebSocketTest {
     }
 
     @Test
+    void placeSettlementShouldTriggerBroadcastWinIfPlayerWins() throws Exception {
+        ObjectMapper localObjectMapper = new ObjectMapper();
+        List<String> messages = new CopyOnWriteArrayList<>();
+
+        CountDownLatch connectionLatch1 = new CountDownLatch(1);
+        CountDownLatch connectionLatch2 = new CountDownLatch(1);
+        CountDownLatch gameLatch = new CountDownLatch(3);
+
+        final String[] player1IdHolder = new String[1];
+        var client1 = BasicWebSocketConnector.create()
+                .baseUri(serverUri)
+                .path("/game")
+                .onTextMessage((conn, msg) -> {
+                    if (msg.startsWith("{")) {
+                        messages.add(msg);
+                        try {
+                            MessageDTO dto = localObjectMapper.readValue(msg, MessageDTO.class);
+                            if (dto.getType() == MessageType.CONNECTION_SUCCESSFUL) {
+                                player1IdHolder[0] = dto.getMessageNode("playerId").asText();
+                                connectionLatch1.countDown();
+                            } else {
+                                gameLatch.countDown();
+                            }
+                        } catch (Exception e) {
+                            throw new RuntimeException("Failed to parse WebSocket message", e);
+                        }
+                    }
+                }).connectAndAwait();
+
+        assertTrue(connectionLatch1.await(5, TimeUnit.SECONDS), "Did not receive player1 connection message");
+        String player1Id = player1IdHolder[0];
+        assertNotNull(player1Id, "Failed to capture playerId for winning player");
+
+        final String[] player2IdHolder = new String[1];
+        BasicWebSocketConnector.create()
+                .baseUri(serverUri)
+                .path("/game")
+                .onTextMessage((conn, msg) -> {
+                    if (msg.startsWith("{")) {
+                        try {
+                            MessageDTO dto = localObjectMapper.readValue(msg, MessageDTO.class);
+                            if (dto.getType() == MessageType.CONNECTION_SUCCESSFUL) {
+                                player2IdHolder[0] = dto.getMessageNode("playerId").asText();
+                                connectionLatch2.countDown();
+                            } else {
+                                gameLatch.countDown();
+                            }
+                        } catch (Exception e) {
+                            throw new RuntimeException("Failed to parse WebSocket message", e);
+                        }
+                    }
+                }).connectAndAwait();
+
+        assertTrue(connectionLatch2.await(5, TimeUnit.SECONDS), "Did not receive player2 connection message");
+        String player2Id = player2IdHolder[0];
+        assertNotNull(player2Id, "Failed to capture playerId for dummy player");
+
+        String lobbyId = lobbyService.createLobby(player1Id);
+        lobbyService.joinLobbyByCode(lobbyId, player2Id);
+
+        GameBoard board = gameService.createGameboard(lobbyId);
+        int settlementId = board.getSettlementPositionGraph().get(0).getId();
+        board.getSettlementPositionGraph().get(0).getRoads().get(0).setOwnerPlayerId(player1Id);
+        lobbyService.getLobbyById(lobbyId).setActivePlayer(player1Id);
+
+        doReturn(true).when(playerService).checkForWin(player1Id);
+
+        ObjectNode msgNode = JsonNodeFactory.instance.objectNode().put("settlementPositionId", settlementId);
+        MessageDTO msg = new MessageDTO(MessageType.PLACE_SETTLEMENT, player1Id, lobbyId, msgNode);
+        client1.sendTextAndAwait(localObjectMapper.writeValueAsString(msg));
+
+        assertTrue(gameLatch.await(5, TimeUnit.SECONDS), "Expected game messages were not received");
+
+        MessageDTO response = messages.stream()
+                .map(m -> {
+                    try {
+                        return localObjectMapper.readValue(m, MessageDTO.class);
+                    } catch (JsonProcessingException e) {
+                        return null;
+                    }
+                })
+                .filter(m -> m != null && m.getType() == MessageType.GAME_WON)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("No GAME_WON message received"));
+
+        assertEquals(MessageType.GAME_WON, response.getType());
+        assertEquals(player1Id, response.getPlayer());
+
+        String winnerUsername = playerService.getAllPlayers().stream()
+                .filter(p -> p.getUniqueId().equals(player1Id))
+                .findFirst()
+                .orElseThrow()
+                .getUsername();
+
+        assertEquals(winnerUsername, response.getMessageNode("winner").asText());
+
+        verify(gameService).broadcastWin(any(), eq(lobbyId), eq(player1Id));
+    }
+
+
+
+    @Test
     void testPlacementOfRoad() throws GameException, JsonProcessingException, InterruptedException {
         //Setup Players, Lobby and Gameboard
         String player1 = "Player1";
