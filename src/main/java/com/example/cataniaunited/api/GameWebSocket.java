@@ -115,9 +115,9 @@ public class GameWebSocket {
         ObjectNode gameboardJson = updatedGameboard.getJson();
 
         ObjectNode victoryPoints = gameboardJson.putObject("victoryPoints");
-        playerService.getAllPlayers().forEach(p -> {
-            victoryPoints.put(p.getUsername(), p.getVictoryPoints());
-        });
+        playerService.getAllPlayers().forEach(p ->
+            victoryPoints.put(p.getUsername(), p.getVictoryPoints())
+        );
 
         MessageDTO update = new MessageDTO(
                 MessageType.PLACE_SETTLEMENT,

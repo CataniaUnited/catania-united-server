@@ -431,7 +431,7 @@ public class GameWebSocketTest {
 
     @Test
     void placeSettlementShouldTriggerBroadcastWinIfPlayerWins() throws Exception {
-        ObjectMapper objectMapper = new ObjectMapper();
+        ObjectMapper localObjectMapper = new ObjectMapper();
         List<String> messages = new CopyOnWriteArrayList<>();
 
         CountDownLatch connectionLatch1 = new CountDownLatch(1);
@@ -446,14 +446,16 @@ public class GameWebSocketTest {
                     if (msg.startsWith("{")) {
                         messages.add(msg);
                         try {
-                            MessageDTO dto = objectMapper.readValue(msg, MessageDTO.class);
+                            MessageDTO dto = localObjectMapper.readValue(msg, MessageDTO.class);
                             if (dto.getType() == MessageType.CONNECTION_SUCCESSFUL) {
                                 player1IdHolder[0] = dto.getMessageNode("playerId").asText();
                                 connectionLatch1.countDown();
                             } else {
                                 gameLatch.countDown();
                             }
-                        } catch (Exception ignored) {}
+                        } catch (Exception e) {
+                            throw new RuntimeException("Failed to parse WebSocket message", e);
+                        }
                     }
                 }).connectAndAwait();
 
@@ -462,20 +464,22 @@ public class GameWebSocketTest {
         assertNotNull(player1Id, "Failed to capture playerId for winning player");
 
         final String[] player2IdHolder = new String[1];
-        var client2 = BasicWebSocketConnector.create()
+        BasicWebSocketConnector.create()
                 .baseUri(serverUri)
                 .path("/game")
                 .onTextMessage((conn, msg) -> {
                     if (msg.startsWith("{")) {
                         try {
-                            MessageDTO dto = objectMapper.readValue(msg, MessageDTO.class);
+                            MessageDTO dto = localObjectMapper.readValue(msg, MessageDTO.class);
                             if (dto.getType() == MessageType.CONNECTION_SUCCESSFUL) {
                                 player2IdHolder[0] = dto.getMessageNode("playerId").asText();
                                 connectionLatch2.countDown();
                             } else {
                                 gameLatch.countDown();
                             }
-                        } catch (Exception ignored) {}
+                        } catch (Exception e) {
+                            throw new RuntimeException("Failed to parse WebSocket message", e);
+                        }
                     }
                 }).connectAndAwait();
 
@@ -495,14 +499,14 @@ public class GameWebSocketTest {
 
         ObjectNode msgNode = JsonNodeFactory.instance.objectNode().put("settlementPositionId", settlementId);
         MessageDTO msg = new MessageDTO(MessageType.PLACE_SETTLEMENT, player1Id, lobbyId, msgNode);
-        client1.sendTextAndAwait(objectMapper.writeValueAsString(msg));
+        client1.sendTextAndAwait(localObjectMapper.writeValueAsString(msg));
 
         assertTrue(gameLatch.await(5, TimeUnit.SECONDS), "Expected game messages were not received");
 
         MessageDTO response = messages.stream()
                 .map(m -> {
                     try {
-                        return objectMapper.readValue(m, MessageDTO.class);
+                        return localObjectMapper.readValue(m, MessageDTO.class);
                     } catch (JsonProcessingException e) {
                         return null;
                     }
