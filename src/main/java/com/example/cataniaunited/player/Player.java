@@ -90,7 +90,7 @@ public class Player {
 
     public ObjectNode getResourceJSON() {
         ObjectNode resourcesNode = JsonNodeFactory.instance.objectNode();
-        for (EnumMap.Entry<TileType, Integer> entry : this.resources.entrySet()) {
+        for (Map.Entry<TileType, Integer> entry : this.resources.entrySet()) {
             if (entry.getKey() != TileType.WASTE) {
                 resourcesNode.put(entry.getKey().name(), entry.getValue());
             }
