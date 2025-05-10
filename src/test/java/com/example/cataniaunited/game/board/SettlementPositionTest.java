@@ -1,6 +1,9 @@
 package com.example.cataniaunited.game.board;
 
 import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.exception.IntersectionOccupiedException;
+import com.example.cataniaunited.exception.NoAdjacentRoadException;
+import com.example.cataniaunited.exception.SpacingRuleViolationException;
 import com.example.cataniaunited.game.board.tile_list_builder.Tile;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.example.cataniaunited.game.buildings.Building;
@@ -268,8 +271,8 @@ class SettlementPositionTest {
         Player mockPlayer2 = mock(Player.class);
         when(mockPlayer2.getUniqueId()).thenReturn(secondPlayerId);
         Settlement settlement2 = new Settlement(mockPlayer2, PlayerColor.BLUE);
-        GameException ge = assertThrows(GameException.class, () -> settlementPosition.setBuilding(settlement2));
-        assertEquals("Player mismatch when placing building: positionId = %s, playerId = %s".formatted(settlementPosition.id, secondPlayerId), ge.getMessage());
+        GameException ge = assertThrows(IntersectionOccupiedException.class, () -> settlementPosition.setBuilding(settlement2));
+        assertEquals("Intersection occupied!", ge.getMessage());
     }
 
     @Test
@@ -286,8 +289,8 @@ class SettlementPositionTest {
         Player mockPlayer2 = mock(Player.class);
         when(mockPlayer2.getUniqueId()).thenReturn(secondPlayerId);
         Settlement settlement = new Settlement(mockPlayer2, PlayerColor.BLUE);
-        GameException ge = assertThrows(GameException.class, () -> settlementPosition.setBuilding(settlement));
-        assertEquals("Placement of building is not allowed -> spacing rule violated: positionId = %s, playerId = %s".formatted(settlementPosition.id, secondPlayerId), ge.getMessage());
+        GameException ge = assertThrows(SpacingRuleViolationException.class, () -> settlementPosition.setBuilding(settlement));
+        assertEquals("Too close to another settlement or city", ge.getMessage());
     }
 
     @Test
@@ -296,8 +299,8 @@ class SettlementPositionTest {
         Player mockPlayer = mock(Player.class);
         when(mockPlayer.getUniqueId()).thenReturn(playerId);
         Settlement settlement = new Settlement(mockPlayer, PlayerColor.BLUE);
-        GameException ge = assertThrows(GameException.class, () -> settlementPosition.setBuilding(settlement));
-        assertEquals("Placement of building is not allowed -> no owned road adjacent: positionId = %s, playerId = %s".formatted(settlementPosition.id, playerId), ge.getMessage());
+        GameException ge = assertThrows(NoAdjacentRoadException.class, () -> settlementPosition.setBuilding(settlement));
+        assertEquals("No adjacent roads found", ge.getMessage());
     }
 
     @Test
@@ -311,8 +314,8 @@ class SettlementPositionTest {
         Player mockPlayer = mock(Player.class);
         when(mockPlayer.getUniqueId()).thenReturn(secondPlayerId);
         Settlement settlement = new Settlement(mockPlayer, PlayerColor.BLUE);
-        GameException ge = assertThrows(GameException.class, () -> settlementPosition.setBuilding(settlement));
-        assertEquals("Placement of building is not allowed -> no owned road adjacent: positionId = %s, playerId = %s".formatted(settlementPosition.id, secondPlayerId), ge.getMessage());
+        GameException ge = assertThrows(NoAdjacentRoadException.class, () -> settlementPosition.setBuilding(settlement));
+        assertEquals("No adjacent roads found", ge.getMessage());
     }
 
     @Test

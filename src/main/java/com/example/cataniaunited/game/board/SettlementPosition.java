@@ -2,6 +2,9 @@ package com.example.cataniaunited.game.board;
 
 import com.example.cataniaunited.Subscriber;
 import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.exception.IntersectionOccupiedException;
+import com.example.cataniaunited.exception.NoAdjacentRoadException;
+import com.example.cataniaunited.exception.SpacingRuleViolationException;
 import com.example.cataniaunited.game.board.tile_list_builder.Tile;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.example.cataniaunited.game.buildings.Building;
@@ -10,11 +13,15 @@ import com.example.cataniaunited.util.Util;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.jboss.logging.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class SettlementPosition implements Placable, Subscriber<TileType> {
+
+    private static final Logger logger = Logger.getLogger(SettlementPosition.class);
+
     Building building = null;
     List<Road> roads = new ArrayList<>(3);
     ArrayList<Tile> tiles = new ArrayList<>(3);
@@ -87,6 +94,9 @@ public class SettlementPosition implements Placable, Subscriber<TileType> {
     public void setBuilding(Building building) throws GameException {
         if (this.building != null && !this.building.getPlayer().equals(building.getPlayer())) {
             throw new GameException("Player mismatch when placing building: positionId = %s, playerId = %s", id, building.getPlayer().getUniqueId());
+        } else if (this.building != null) {
+            logger.errorf("Placement of building not allowed -> intersection occupied: positionId = %s, playerId = %s", id, building.getPlayer().getUniqueId());
+            throw new IntersectionOccupiedException();
         }
 
         /*
@@ -95,12 +105,14 @@ public class SettlementPosition implements Placable, Subscriber<TileType> {
          */
         boolean hasNoNeighbouringBuildings = getNeighbours().stream().allMatch(sp -> sp.getBuildingOwner() == null);
         if (!hasNoNeighbouringBuildings) {
-            throw new GameException("Placement of building is not allowed -> spacing rule violated: positionId = %s, playerId = %s", id, building.getPlayer().getUniqueId());
+            logger.errorf("Placement of building is not allowed -> spacing rule violated: positionId = %s, playerId = %s", id, building.getPlayer().getUniqueId());
+            throw new SpacingRuleViolationException();
         }
 
         boolean atLeastOneOwnedRoad = getRoads().stream().anyMatch(road -> !Util.isEmpty(road.getOwnerPlayerId()) && road.getOwnerPlayerId().equals(building.getPlayer().getUniqueId()));
         if (!atLeastOneOwnedRoad) {
-            throw new GameException("Placement of building is not allowed -> no owned road adjacent: positionId = %s, playerId = %s", id, building.getPlayer().getUniqueId());
+            logger.errorf("Placement of building is not allowed -> no owned road adjacent: positionId = %s, playerId = %s", id, building.getPlayer().getUniqueId());
+            throw new NoAdjacentRoadException();
         }
 
         this.building = building;
