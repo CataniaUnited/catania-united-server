@@ -5,6 +5,7 @@ import com.example.cataniaunited.game.board.tile_list_builder.Tile;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.example.cataniaunited.game.buildings.Building;
 import com.example.cataniaunited.game.buildings.Settlement;
+import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerColor;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -240,19 +241,23 @@ class SettlementPositionTest {
     @Test
     void testSetBuilding() throws GameException {
         String playerId = "Player1";
+        Player mockPlayer = mock(Player.class);
+        when(mockPlayer.getUniqueId()).thenReturn(playerId);
         when(mockRoad1.getOwnerPlayerId()).thenReturn(playerId);
         when(mockRoad1.getNeighbour(any(SettlementPosition.class))).thenReturn(mockNeighbour1);
         settlementPosition.addRoad(mockRoad1);
-        Settlement settlement = new Settlement(playerId, PlayerColor.BLUE);
+        Settlement settlement = new Settlement(mockPlayer, PlayerColor.BLUE);
         settlementPosition.setBuilding(settlement);
         assertEquals(settlement, settlementPosition.building);
-        assertEquals(playerId, settlementPosition.getBuildingOwner());
+        assertEquals(playerId, settlementPosition.getBuildingOwner().getUniqueId());
     }
 
     @Test
     void setBuildingShouldThrowErrorOnPlayerMismatch() throws GameException {
         String playerId = "Player1";
-        Settlement settlement1 = new Settlement(playerId, PlayerColor.BLUE);
+        Player mockPlayer = mock(Player.class);
+        when(mockPlayer.getUniqueId()).thenReturn(playerId);
+        Settlement settlement1 = new Settlement(mockPlayer, PlayerColor.BLUE);
         when(mockRoad1.getOwnerPlayerId()).thenReturn(playerId);
         when(mockRoad1.getNeighbour(any(SettlementPosition.class))).thenReturn(mockNeighbour1);
         settlementPosition.addRoad(mockRoad1);
@@ -260,7 +265,9 @@ class SettlementPositionTest {
         assertEquals(settlement1, settlementPosition.building);
 
         String secondPlayerId = "Player2";
-        Settlement settlement2 = new Settlement(secondPlayerId, PlayerColor.BLUE);
+        Player mockPlayer2 = mock(Player.class);
+        when(mockPlayer2.getUniqueId()).thenReturn(secondPlayerId);
+        Settlement settlement2 = new Settlement(mockPlayer2, PlayerColor.BLUE);
         GameException ge = assertThrows(GameException.class, () -> settlementPosition.setBuilding(settlement2));
         assertEquals("Player mismatch when placing building: positionId = %s, playerId = %s".formatted(settlementPosition.id, secondPlayerId), ge.getMessage());
     }
@@ -268,13 +275,17 @@ class SettlementPositionTest {
     @Test
     void setBuildingShouldThrowErrorWhenSpacingRuleGetsViolated() throws GameException {
         String playerId = "Player1";
+        Player mockPlayer = mock(Player.class);
+        when(mockPlayer.getUniqueId()).thenReturn(playerId);
         when(mockRoad1.getOwnerPlayerId()).thenReturn(playerId);
         when(mockRoad1.getNeighbour(any(SettlementPosition.class))).thenReturn(mockNeighbour1);
-        when(mockNeighbour1.getBuildingOwner()).thenReturn(playerId);
+        when(mockNeighbour1.getBuildingOwner()).thenReturn(mockPlayer);
         settlementPosition.addRoad(mockRoad1);
 
         String secondPlayerId = "Player2";
-        Settlement settlement = new Settlement(secondPlayerId, PlayerColor.BLUE);
+        Player mockPlayer2 = mock(Player.class);
+        when(mockPlayer2.getUniqueId()).thenReturn(secondPlayerId);
+        Settlement settlement = new Settlement(mockPlayer2, PlayerColor.BLUE);
         GameException ge = assertThrows(GameException.class, () -> settlementPosition.setBuilding(settlement));
         assertEquals("Placement of building is not allowed -> spacing rule violated: positionId = %s, playerId = %s".formatted(settlementPosition.id, secondPlayerId), ge.getMessage());
     }
@@ -282,7 +293,9 @@ class SettlementPositionTest {
     @Test
     void setBuildingShouldThrowErrorWhenPlayerHasNoAdjacentRoad() throws GameException {
         String playerId = "Player1";
-        Settlement settlement = new Settlement(playerId, PlayerColor.BLUE);
+        Player mockPlayer = mock(Player.class);
+        when(mockPlayer.getUniqueId()).thenReturn(playerId);
+        Settlement settlement = new Settlement(mockPlayer, PlayerColor.BLUE);
         GameException ge = assertThrows(GameException.class, () -> settlementPosition.setBuilding(settlement));
         assertEquals("Placement of building is not allowed -> no owned road adjacent: positionId = %s, playerId = %s".formatted(settlementPosition.id, playerId), ge.getMessage());
     }
@@ -295,7 +308,9 @@ class SettlementPositionTest {
         settlementPosition.addRoad(mockRoad1);
 
         String secondPlayerId = "Player2";
-        Settlement settlement = new Settlement(secondPlayerId, PlayerColor.BLUE);
+        Player mockPlayer = mock(Player.class);
+        when(mockPlayer.getUniqueId()).thenReturn(secondPlayerId);
+        Settlement settlement = new Settlement(mockPlayer, PlayerColor.BLUE);
         GameException ge = assertThrows(GameException.class, () -> settlementPosition.setBuilding(settlement));
         assertEquals("Placement of building is not allowed -> no owned road adjacent: positionId = %s, playerId = %s".formatted(settlementPosition.id, secondPlayerId), ge.getMessage());
     }
@@ -311,10 +326,12 @@ class SettlementPositionTest {
         settlementPosition.addRoad(mockRoad1);
         settlementPosition.addRoad(mockRoad2);
 
-        Settlement settlement = new Settlement(secondPlayerId, PlayerColor.BLUE);
+        Player mockPlayer2 = mock(Player.class);
+        when(mockPlayer2.getUniqueId()).thenReturn(secondPlayerId);
+        Settlement settlement = new Settlement(mockPlayer2, PlayerColor.BLUE);
         settlementPosition.setBuilding(settlement);
         assertEquals(settlement, settlementPosition.building);
-        assertEquals(secondPlayerId, settlementPosition.getBuildingOwner());
+        assertEquals(secondPlayerId, settlementPosition.getBuildingOwner().getUniqueId());
     }
 
     @Test
@@ -351,10 +368,12 @@ class SettlementPositionTest {
         double expectedX = -25.5;
         double expectedY = 100.1;
         String buildingOwner = "Player1";
+        Player mockPlayer = mock(Player.class);
+        when(mockPlayer.getUniqueId()).thenReturn(buildingOwner);
         PlayerColor color = PlayerColor.LIGHT_ORANGE;
 
         // Use a mock Building
-        Building mockBuilding = new Settlement(buildingOwner, color);
+        Building mockBuilding = new Settlement(mockPlayer, color);
         when(mockRoad1.getOwnerPlayerId()).thenReturn(buildingOwner);
         when(mockRoad1.getNeighbour(any(SettlementPosition.class))).thenReturn(mockNeighbour1);
         settlementPosition.addRoad(mockRoad1);
@@ -425,6 +444,8 @@ class SettlementPositionTest {
     @Test
     void update_whenBuildingExists_distributesResources() throws GameException {
         String playerId = "test";
+        Player player = mock(Player.class);
+        when(player.getUniqueId()).thenReturn(playerId);
         settlementPosition.addRoad(mockRoad1);
         when(mockRoad1.getOwnerPlayerId()).thenReturn(playerId);
 
@@ -432,7 +453,7 @@ class SettlementPositionTest {
         when(mockNeighbour1.getBuildingOwner()).thenReturn(null);
 
         Building mockBuilding = mock(Building.class);
-        when(mockBuilding.getOwnerPlayerId()).thenReturn(playerId); // Building's owner
+        when(mockBuilding.getPlayer()).thenReturn(player); // Building's owner
 
         // Place the mock building
         settlementPosition.setBuilding(mockBuilding);

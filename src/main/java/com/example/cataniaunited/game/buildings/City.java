@@ -12,13 +12,13 @@ public class City extends Building {
     @Inject
     PlayerService playerService;
 
-    public City(String playerId, PlayerColor color) throws GameException {
-        super(playerId, color);
+    public City(Player player, PlayerColor color) throws GameException {
+        super(player, color);
     }
 
 
     @Override
     public void distributeResourcesToPlayer(TileType type) {
-        playerService.getPlayerById(super.ownerPlayerId).getResource(type, 2);
+        super.player.getResource(type, 2);
     }
 }

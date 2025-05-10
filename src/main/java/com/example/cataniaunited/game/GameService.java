@@ -42,7 +42,7 @@ public class GameService {
         checkPlayerTurn(lobbyId, playerId);
         GameBoard gameboard = getGameboardByLobbyId(lobbyId);
         PlayerColor color = lobbyService.getPlayerColor(lobbyId, playerId);
-        gameboard.placeSettlement(playerId, color, settlementPositionId);
+        gameboard.placeSettlement(playerService.getPlayerById(playerId), color, settlementPositionId);
         playerService.addVictoryPoints(playerId, 1);
     }
 

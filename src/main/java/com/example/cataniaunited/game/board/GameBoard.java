@@ -7,6 +7,7 @@ import com.example.cataniaunited.game.board.tile_list_builder.TileListBuilder;
 import com.example.cataniaunited.game.board.tile_list_builder.TileListDirector;
 import com.example.cataniaunited.game.buildings.Settlement;
 import com.example.cataniaunited.game.dice.DiceRoller;
+import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerColor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -77,10 +78,10 @@ public class GameBoard {
         roadList = graphBuilder.getRoadList();
     }
 
-    public void placeSettlement(String playerId, PlayerColor color, int positionId) throws GameException {
+    public void placeSettlement(Player player, PlayerColor color, int positionId) throws GameException {
         try {
             SettlementPosition settlementPosition = settlementPositionGraph.get(positionId - 1);
-            settlementPosition.setBuilding(new Settlement(playerId, color));
+            settlementPosition.setBuilding(new Settlement(player, color));
 
         } catch (IndexOutOfBoundsException e) {
             throw new GameException("Settlement position not found: id = %s", positionId);

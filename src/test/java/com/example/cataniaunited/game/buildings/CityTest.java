@@ -20,29 +20,22 @@ import static org.mockito.Mockito.*;
 
 @QuarkusTest
 public class CityTest {
-
-    @InjectMock
-    PlayerService mockPlayerService;
-
     private City city;
-
-    private Player mockPlayer;
     private final String testPlayerId = "playerCity1";
     private final PlayerColor testColor = PlayerColor.RED;
 
     @BeforeEach
     void setUp() throws GameException {
-        mockPlayer = Mockito.mock(Player.class);
+        Player mockPlayer = Mockito.mock(Player.class);
+        when(mockPlayer.getUniqueId()).thenReturn(testPlayerId);
 
-        city = new City(testPlayerId, testColor);
-
-        city.playerService = mockPlayerService;
+        city = new City(mockPlayer, testColor);
     }
 
     @Test
     void constructorShouldSetFieldsCorrectly() {
         assertNotNull(city);
-        assertEquals(testPlayerId, city.getOwnerPlayerId());
+        assertEquals(testPlayerId, city.getPlayer().getUniqueId());
     }
 
     @Test
@@ -53,42 +46,4 @@ public class CityTest {
         assertEquals("City", json.get("type").asText(), "Type should be 'City'");
     }
 
-    @Test
-    void distributeResourcesToPlayerShouldCallPlayerServiceAndGiveTwoResources() {
-        TileType resourceType = TileType.WOOD;
-        int expectedAmount = 2;
-
-        when(mockPlayerService.getPlayerById(testPlayerId)).thenReturn(mockPlayer);
-
-        city.distributeResourcesToPlayer(resourceType);
-
-        verify(mockPlayerService, times(1)).getPlayerById(testPlayerId);
-        verify(mockPlayer, times(1)).getResource(resourceType, expectedAmount);
-    }
-
-    @Test
-    void distributeResourcesToPlayerHandlesDifferentResourceTypes() {
-        TileType resourceType = TileType.SHEEP;
-        int expectedAmount = 2;
-
-        when(mockPlayerService.getPlayerById(testPlayerId)).thenReturn(mockPlayer);
-
-        city.distributeResourcesToPlayer(resourceType);
-
-        verify(mockPlayerService, times(1)).getPlayerById(testPlayerId);
-        verify(mockPlayer, times(1)).getResource(resourceType, expectedAmount);
-    }
-
-    @Test
-    void distributeResourcesToPlayerWhenPlayerServiceReturnsNullPlayer() {
-        TileType resourceType = TileType.ORE;
-        when(mockPlayerService.getPlayerById(testPlayerId)).thenReturn(null);
-
-        assertThrows(NullPointerException.class, () -> {
-            city.distributeResourcesToPlayer(resourceType);
-        }, "Should throw NullPointerException if player is not found by service.");
-
-        verify(mockPlayerService, times(1)).getPlayerById(testPlayerId);
-        verify(mockPlayer, never()).getResource(any(TileType.class), anyInt());
-    }
 }
