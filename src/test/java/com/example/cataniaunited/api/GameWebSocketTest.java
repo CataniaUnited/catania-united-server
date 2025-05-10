@@ -46,6 +46,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.eq;
@@ -294,11 +295,13 @@ public class GameWebSocketTest {
     }
 
     @Test
-    void testPlayerJoinedLobbySuccess() throws JsonProcessingException, InterruptedException {
+    void testPlayerJoinedLobbySuccess() throws JsonProcessingException, InterruptedException, GameException {
         String player = "TestPlayer";
-        String lobbyId = "xyz123";
+        PlayerColor assignedColor = PlayerColor.RED;
 
-        doReturn(true).when(lobbyService).joinLobbyByCode(lobbyId, player);
+        String lobbyId = lobbyService.createLobby("HostPlayer");
+        Lobby lobby = spy(lobbyService.getLobbyById(lobbyId));
+        when(lobby.assignAvailableColor()).thenReturn(assignedColor);
 
         MessageDTO joinLobbyMessage = new MessageDTO(MessageType.JOIN_LOBBY, player, lobbyId);
 
@@ -325,11 +328,7 @@ public class GameWebSocketTest {
         assertEquals(MessageType.PLAYER_JOINED, responseMessage.getType());
         assertEquals(player, responseMessage.getPlayer());
         assertEquals(lobbyId, responseMessage.getLobbyId());
-
-        String color = responseMessage.getMessageNode("color").textValue();
-        assertNotNull(color, "Color should be present");
-        assertTrue(color.matches("#[0-9A-Fa-f]{6}"), "Color should be a valid hex code");
-
+        assertEquals(assignedColor.getHexCode(), responseMessage.getMessageNode("color").textValue());
     }
 
     @Test
