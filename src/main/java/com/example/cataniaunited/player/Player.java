@@ -8,6 +8,7 @@ import org.jboss.logging.Logger;
 import java.util.Random;
 import java.util.UUID;
 
+/** Runtime representation of a connected player. */
 public class Player {
 
     private static final Logger LOG = Logger.getLogger(Player.class);
@@ -17,7 +18,9 @@ public class Player {
     private final WebSocketConnection connection;
     private int     victoryPoints = 0;
 
-
+    /* ------------------------------------------------------------------ */
+    /*  Constructors                                                      */
+    /* ------------------------------------------------------------------ */
 
     public Player(WebSocketConnection conn) {
         this("RandomPlayer_" + new Random().nextInt(10_000), conn);
@@ -29,11 +32,16 @@ public class Player {
         this.connection = conn;
     }
 
+    /* ------------------------------------------------------------------ */
+    /*  Accessors                                                         */
+    /* ------------------------------------------------------------------ */
 
+    /** Original method still referenced by PlayerService */
     public String getUniqueId() {                 // ▶ added back
         return uniqueId;
     }
 
+    /** Short alias used in newer code */
     public String getId() {                       // unchanged
         return uniqueId;
     }
@@ -44,7 +52,9 @@ public class Player {
     public void    addVictoryPoints(int v) { victoryPoints += v; }
     public WebSocketConnection getConnection() { return connection; }
 
-
+    /* ------------------------------------------------------------------ */
+    /*  Messaging                                                         */
+    /* ------------------------------------------------------------------ */
 
     /** Send a {@link MessageDTO} to this player without blocking. */
     public void sendMessage(MessageDTO dto) {
