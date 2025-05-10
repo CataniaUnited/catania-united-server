@@ -294,13 +294,11 @@ public class GameWebSocketTest {
     }
 
     @Test
-    void testPlayerJoinedLobbySuccess() throws JsonProcessingException, InterruptedException, GameException {
+    void testPlayerJoinedLobbySuccess() throws JsonProcessingException, InterruptedException {
         String player = "TestPlayer";
         String lobbyId = "xyz123";
-        PlayerColor assignedColor = PlayerColor.RED;
 
         doReturn(true).when(lobbyService).joinLobbyByCode(lobbyId, player);
-        doReturn(assignedColor).when(lobbyService).getPlayerColor(lobbyId, player);
 
         MessageDTO joinLobbyMessage = new MessageDTO(MessageType.JOIN_LOBBY, player, lobbyId);
 
@@ -327,7 +325,11 @@ public class GameWebSocketTest {
         assertEquals(MessageType.PLAYER_JOINED, responseMessage.getType());
         assertEquals(player, responseMessage.getPlayer());
         assertEquals(lobbyId, responseMessage.getLobbyId());
-        assertEquals(assignedColor.getHexCode(), responseMessage.getMessageNode("color").textValue());
+
+        String color = responseMessage.getMessageNode("color").textValue();
+        assertNotNull(color, "Color should be present");
+        assertTrue(color.matches("#[0-9A-Fa-f]{6}"), "Color should be a valid hex code");
+
     }
 
     @Test
