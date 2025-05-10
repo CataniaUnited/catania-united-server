@@ -8,6 +8,7 @@ import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.lobby.Lobby;
 import com.example.cataniaunited.lobby.LobbyService;
 import com.example.cataniaunited.player.Player;
+import com.example.cataniaunited.player.PlayerColor;
 import com.example.cataniaunited.player.PlayerService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -37,10 +38,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -128,6 +126,10 @@ public class GameWebSocketTest {
         assertEquals(MessageType.LOBBY_CREATED, responseMessage.getType()); // Expect LOBBY_CREATED response
         assertEquals("Player 1", responseMessage.getPlayer()); // Player should remain the same
         assertNotNull(responseMessage.getLobbyId());
+
+        String color = responseMessage.getMessageNode("color").textValue();
+        assertNotNull(color, "Color should be present");
+        assertTrue(color.matches("#[0-9A-Fa-f]{6}"), "Color should be a valid hex code");
     }
 
     @Test
@@ -304,7 +306,7 @@ public class GameWebSocketTest {
     }
 
     @Test
-    void testJoinLobbySuccess() throws InterruptedException, JsonProcessingException {
+    void testJoinLobbySuccess() throws InterruptedException, JsonProcessingException, GameException {
         MessageDTO joinLobbyMessage = new MessageDTO(MessageType.JOIN_LOBBY, "Player 1", "abc123");
 
         doReturn(true).when(lobbyService).joinLobbyByCode("abc123", "Player 1");
@@ -319,14 +321,16 @@ public class GameWebSocketTest {
     }
 
     @Test
-    void testPlayerJoinedLobbySuccess() throws JsonProcessingException, InterruptedException {
+    void testPlayerJoinedLobbySuccess() throws JsonProcessingException, InterruptedException, GameException {
         String player = "TestPlayer";
+        PlayerColor assignedColor = PlayerColor.BLUE;
         String lobbyId = "xyz123";
-
-        doReturn(true).when(lobbyService).joinLobbyByCode(lobbyId, player);
+        Lobby mockLobby = mock(Lobby.class);
+        doReturn(mockLobby).when(lobbyService).getLobbyById(lobbyId);
+        doReturn(assignedColor).when(mockLobby).assignAvailableColor();
+        doReturn(assignedColor).when(mockLobby).getPlayerColor(player);
 
         MessageDTO joinLobbyMessage = new MessageDTO(MessageType.JOIN_LOBBY, player, lobbyId);
-
         List<String> receivedMessages = new CopyOnWriteArrayList<>();
         CountDownLatch messageLatch = new CountDownLatch(3);
 
@@ -350,10 +354,11 @@ public class GameWebSocketTest {
         assertEquals(MessageType.PLAYER_JOINED, responseMessage.getType());
         assertEquals(player, responseMessage.getPlayer());
         assertEquals(lobbyId, responseMessage.getLobbyId());
+        assertNotNull(assignedColor.getHexCode(), responseMessage.getMessageNode("color").asText());
     }
 
     @Test
-    void testJoinLobbyFailure() throws InterruptedException, JsonProcessingException {
+    void testJoinLobbyFailure() throws InterruptedException, JsonProcessingException, GameException {
         MessageDTO joinLobbyMessage = new MessageDTO(MessageType.JOIN_LOBBY, "Player 1", "invalidLobbyId");
 
         doReturn(false).when(lobbyService).joinLobbyByCode("invalidLobbyId", "Player 1");
