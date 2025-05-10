@@ -103,9 +103,9 @@ class LobbyServiceImplTest {
 
     @Test
     void testJoinLobbyByInvalidCode() throws GameException {
-        boolean joined = lobbyService.joinLobbyByCode("InvalidCode", "New Player");
-
-        assertFalse(joined, "Player should not be able to join the lobby with a valid code");
+        String invalidLobbyCode = "InvalidCode";
+        GameException exception = assertThrows(GameException.class, () -> lobbyService.joinLobbyByCode(invalidLobbyCode, "New Player"));
+        assertEquals("Lobby with id %s not found".formatted(invalidLobbyCode), exception.getMessage());
     }
 
     @Test
