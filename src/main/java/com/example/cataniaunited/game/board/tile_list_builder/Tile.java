@@ -1,13 +1,18 @@
 package com.example.cataniaunited.game.board.tile_list_builder;
 
-import com.example.cataniaunited.game.board.Placable;
+import com.example.cataniaunited.Publisher;
 import com.example.cataniaunited.Subscriber;
+import com.example.cataniaunited.game.board.Placable;
+import com.example.cataniaunited.game.board.SettlementPosition;
 import com.example.cataniaunited.game.dice.DiceRoller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-public class Tile implements Placable, Subscriber<DiceRoller, Integer> {
+import java.util.ArrayList;
+import java.util.List;
+
+public class Tile implements Placable, Publisher<SettlementPosition, TileType>, Subscriber<Integer> {
     final TileType type;
     int value = 0; // To set later
 
@@ -15,7 +20,7 @@ public class Tile implements Placable, Subscriber<DiceRoller, Integer> {
 
     int id;
 
-    private boolean hasResource = false;
+    List<SettlementPosition> settlementsOfTile = new ArrayList<>(6);
 
     public Tile(TileType type) {
         this.type = type;
@@ -86,23 +91,34 @@ public class Tile implements Placable, Subscriber<DiceRoller, Integer> {
         return tileNode;
     }
 
+    @Override
+    public void addSubscriber(SettlementPosition subscriber){
+        settlementsOfTile.add(subscriber);
+    }
+
+    @Override
+    public void removeSubscriber(SettlementPosition subscriber){
+        settlementsOfTile.remove(subscriber);
+    }
+
+    @Override
+    public void notifySubscribers(TileType notification) {
+        for (SettlementPosition subscriber: settlementsOfTile){
+            subscriber.update(notification);
+        }
+    }
+
+    @Override
+    public void update(Integer notification) {
+        if (value == notification)
+            notifySubscribers(type);
+    }
     public void subscribeToDice(DiceRoller diceRoller) {
         diceRoller.addSubscriber(this);
     }
 
-    @Override
-    public void update(Integer diceTotal) {
-        if (this.value == diceTotal && this.type != TileType.WASTE) {
-            this.hasResource = true;
-            // notify buildings here
-        }
-    }
 
-    public boolean hasResource() {
-        return hasResource;
-    }
-
-    public void resetResource() {
-        this.hasResource = false;
+    public List<SettlementPosition> getSettlementsOfTile() {
+        return settlementsOfTile;
     }
 }

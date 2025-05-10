@@ -9,7 +9,7 @@ package com.example.cataniaunited;
  * @param <N> The type of notification data this publisher will send via
  *            the 'notifySubscribers' method.
  */
-public interface Publisher<T, N> {
+public interface Publisher<T extends Subscriber<N>, N> {
 
     /**
      * Registers (adds) a new subscriber to the publisher's list.
@@ -19,7 +19,7 @@ public interface Publisher<T, N> {
      * The added subscriber will receive future notifications of type N.
      *                   Must implement Subscriber<T, N>.
      */
-    void addSubscriber(Subscriber<T, N> subscriber);
+    void addSubscriber(T subscriber);
 
     /**
      * Unregisters (removes) an existing subscriber from the publisher's list.
@@ -28,7 +28,7 @@ public interface Publisher<T, N> {
      * @param subscriber The subscriber instance to remove.
      *                   Must implement Subscriber<T, N>.
      */
-    void removeSubscriber(Subscriber<T, N> subscriber);
+    void removeSubscriber(T subscriber);
 
     /**
      * Notifies all currently registered subscribers about an event or state change.

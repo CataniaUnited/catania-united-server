@@ -3,6 +3,7 @@ package com.example.cataniaunited.game.board;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.board.tile_list_builder.Tile;
 import com.example.cataniaunited.game.buildings.Settlement;
+import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerColor;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -23,6 +24,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @QuarkusTest
 class GameBoardTest {
@@ -104,7 +107,6 @@ class GameBoardTest {
                     "Board generation failed unexpectedly for " + playerCount + " players.");
         } catch (Exception e) {
             // Log the actual exception if assertDoesNotThrow isn't available or for more detail
-            System.err.println("GameBoard constructor failed: " + e.getMessage());
             fail("GameBoard constructor threw an unexpected exception.");
         }
 
@@ -181,17 +183,20 @@ class GameBoardTest {
         var settlementPosition = gameBoard.getSettlementPositionGraph().get(0);
         Road road = settlementPosition.roads.get(0);
         road.setOwnerPlayerId(playerId);
+        Player player = mock(Player.class);
+        when(player.getUniqueId()).thenReturn(playerId);
 
-        gameBoard.placeSettlement(playerId, PlayerColor.BLUE, settlementPosition.getId());
+        gameBoard.placeSettlement(player, PlayerColor.BLUE, settlementPosition.getId());
         assertNotNull(settlementPosition.building);
         assertEquals(Settlement.class, settlementPosition.building.getClass());
-        assertEquals(playerId, settlementPosition.building.getOwnerPlayerId());
+        assertEquals(playerId, settlementPosition.building.getPlayer().getUniqueId());
     }
 
     @Test
     void placeSettlementShouldThrowExceptionIfPositionIsLessThanZero() {
         GameBoard gameBoard = new GameBoard(2);
-        GameException ge = assertThrows(GameException.class, () -> gameBoard.placeSettlement("Player1", PlayerColor.BLUE, -1));
+        Player player = mock(Player.class);
+        GameException ge = assertThrows(GameException.class, () -> gameBoard.placeSettlement(player, PlayerColor.BLUE, -1));
         assertEquals("Settlement position not found: id = %s".formatted(-1), ge.getMessage());
     }
 
@@ -199,7 +204,8 @@ class GameBoardTest {
     void placeSettlementShouldThrowExceptionIfPositionIsBiggerThanSize() {
         GameBoard gameBoard = new GameBoard(2);
         int positionId = gameBoard.getSettlementPositionGraph().size() + 1;
-        GameException ge = assertThrows(GameException.class, () -> gameBoard.placeSettlement("Player1", PlayerColor.BLUE, positionId));
+        Player player = mock(Player.class);
+        GameException ge = assertThrows(GameException.class, () -> gameBoard.placeSettlement(player, PlayerColor.BLUE, positionId));
         assertEquals("Settlement position not found: id = %s".formatted(positionId), ge.getMessage());
     }
 
@@ -208,8 +214,11 @@ class GameBoardTest {
     void placeSettlementShouldThrowExceptionIfPlayerIdIsEmpty(String playerId) {
         GameBoard gameBoard = new GameBoard(2);
         int positionId = gameBoard.getSettlementPositionGraph().get(0).getId();
-        GameException ge = assertThrows(GameException.class, () -> gameBoard.placeSettlement(playerId, PlayerColor.BLUE, positionId));
-        assertEquals("Owner Id of building must not be empty", ge.getMessage());
+        Player player = mock(Player.class);
+        when(player.getUniqueId()).thenReturn(playerId);
+
+        GameException ge = assertThrows(GameException.class, () -> gameBoard.placeSettlement(player, PlayerColor.BLUE, positionId));
+        assertEquals("Owner of building must not be empty", ge.getMessage());
     }
 
     @Test
@@ -324,26 +333,10 @@ class GameBoardTest {
         }
     }
 
-    //@Disabled("test used for debugging purposes, passes automatically")
     @Test
     void debuggingTest() {
         GameBoard board = new GameBoard(4);
         board.generateBoard();
-        System.out.println(board.getJson());
         assertTrue(true);
-    }
-
-    @Test
-    void testGameBoardInitializesDiceRollerAndSubscribesTiles() {
-        GameBoard gameBoard = new GameBoard(4);
-        List<Tile> tileList = gameBoard.getTileList();
-        assertNotNull(tileList);
-        assertFalse(tileList.isEmpty(), "Tile list should not be empty");
-
-        boolean atLeastOneTileHadResource = tileList.stream().anyMatch(Tile::hasResource);
-        assertTrue(atLeastOneTileHadResource || tileList.stream().noneMatch(Tile::hasResource),
-                "Tiles should receive resources if dice matches tile value");
-
-        assertTrue(tileList.stream().noneMatch(Tile::hasResource), "Resources should be reset after distribution");
     }
 }
