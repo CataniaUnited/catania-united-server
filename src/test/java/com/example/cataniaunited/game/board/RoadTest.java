@@ -201,11 +201,17 @@ class RoadTest {
     }
 
     @Test
-    void setOwnerPlayerIdShouldThrowErrorIfRoadIsAlreadyPlaced() throws GameException {
+    void setOwnerPlayerShouldThrowErrorIfRoadIsAlreadyPlaced() throws GameException {
         var player = new Player("Player1");
         road.setOwner(player);
         GameException ge = assertThrows(GameException.class, () -> road.setOwner(player));
         assertEquals("Road cannot be placed twice: roadId = %s, playerId = %s".formatted(road.id, player.getUniqueId()), ge.getMessage());
+    }
+
+    @Test
+    void setOwnerPlayerShouldThrowErrorIfOwnerIsNull() throws GameException {
+        GameException ge = assertThrows(GameException.class, () -> road.setOwner(null));
+        assertEquals("Owner of road must not be null: roadId = %s".formatted(road.id), ge.getMessage());
     }
 
     @Test

@@ -30,7 +30,7 @@ public class Road implements Placable, Buildable {
 
     public void setOwner(Player owner) throws GameException {
         if (owner == null) {
-            throw new GameException("Owner of road must not be null");
+            throw new GameException("Owner of road must not be null: roadId = %s", id);
         }
 
         if (this.owner != null) {
