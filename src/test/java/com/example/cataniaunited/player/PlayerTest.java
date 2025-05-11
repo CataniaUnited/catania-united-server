@@ -17,7 +17,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.*;
-import static org.mockito.ArgumentMatchers.any;
 import com.example.cataniaunited.dto.MessageType;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
