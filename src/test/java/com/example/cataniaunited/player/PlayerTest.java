@@ -320,7 +320,6 @@ class PlayerTest {
         assertDoesNotThrow(() -> player.sendMessage(dto));
         verify(conn).sendText(anyString());
     }
-    //check sonar
 
 }
 
