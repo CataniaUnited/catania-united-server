@@ -98,7 +98,9 @@ public class GameWebSocket {
             throw new GameException("Invalid road id: id = %s", roadId.toString());
         }
         GameBoard updatedGameboard = gameService.getGameboardByLobbyId(message.getLobbyId());
-        MessageDTO update = new MessageDTO(MessageType.PLACE_ROAD, message.getPlayer(), message.getLobbyId(), updatedGameboard.getJson());
+        ObjectNode payload = JsonNodeFactory.instance.objectNode();
+        payload.set("gameboard", updatedGameboard.getJson());
+        MessageDTO update = new MessageDTO(MessageType.PLACE_ROAD, message.getPlayer(), message.getLobbyId(), payload);
         return connection.broadcast().sendText(update).chain(i -> Uni.createFrom().item(update));
     }
 
@@ -127,10 +129,10 @@ public class GameWebSocket {
 
         GameBoard updatedGameboard = gameService.getGameboardByLobbyId(message.getLobbyId());
 
-        ObjectNode root = JsonNodeFactory.instance.objectNode();
-        root.set("gameboard", updatedGameboard.getJson());
+        ObjectNode payload = JsonNodeFactory.instance.objectNode();
+        payload.set("gameboard", updatedGameboard.getJson());
 
-        ObjectNode playersJson = root.putObject("players");
+        ObjectNode playersJson = payload.putObject("players");
         lobbyService.getLobbyById(message.getLobbyId())
                 .getPlayers().forEach(playerId -> {
                     Player player = playerService.getPlayerById(playerId);
@@ -143,7 +145,7 @@ public class GameWebSocket {
                 message.getType(),
                 message.getPlayer(),
                 message.getLobbyId(),
-                root
+                payload
         );
 
         return connection.broadcast().sendText(update).chain(i -> Uni.createFrom().item(update));
@@ -198,7 +200,9 @@ public class GameWebSocket {
 
     Uni<MessageDTO> createGameBoard(MessageDTO message, WebSocketConnection connection) throws GameException {
         GameBoard board = gameService.createGameboard(message.getLobbyId());
-        MessageDTO updateJson = new MessageDTO(MessageType.GAME_BOARD_JSON, null, message.getLobbyId(), board.getJson());
+        ObjectNode payload = JsonNodeFactory.instance.objectNode();
+        payload.set("gameboard", board.getJson());
+        MessageDTO updateJson = new MessageDTO(MessageType.GAME_BOARD_JSON, null, message.getLobbyId(), payload);
         return connection.broadcast().sendText(updateJson).chain(i -> Uni.createFrom().item(updateJson));
 
     }

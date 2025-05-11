@@ -741,7 +741,7 @@ public class GameWebSocketTest {
         assertNull(responseMessage.getPlayer(), "Player field should be null for GAME_BOARD_JSON");
         assertEquals(responseMessage.getLobbyId(), lobbyId, "LobbyId field should be null for GAME_BOARD_JSON");
         assertNotNull(responseMessage.getMessage(), "Message payload (board JSON) should not be null");
-        assertEquals(expectedBoardJson, responseMessage.getMessage(), "Board JSON in message should match expected");
+        assertEquals(expectedBoardJson, responseMessage.getMessage().get("gameboard"), "Board JSON in message should match expected");
     }
 
     @Test
