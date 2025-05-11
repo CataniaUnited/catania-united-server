@@ -187,5 +187,27 @@ class LobbyTest {
         fLobby.setGameStarted(false);
         assertFalse(fLobby.isGameStarted(), "can turn back off");
     }
+
+    @Test
+    void canStartGame_returnsFalseForNonHostEvenWithEnoughPlayers() {
+        assertFalse(lobby.canStartGame("p2"), "only the host may start the game");
+        assertFalse(lobby.canStartGame("p3"), "only the host may start the game");
+    }
+
+    @Test
+    void assignAvailableColor_exhaustsToNullThenRestores() {
+        Lobby colorLobby = new Lobby("L-col", "host");
+
+        int totalColors = colorLobby.getAvailableColors().size();
+        for (int i = 0; i < totalColors; i++) {
+            assertNotNull(colorLobby.assignAvailableColor(), "should still have colors");
+        }
+        assertNull(colorLobby.assignAvailableColor(), "no colors left → should be null");
+
+        PlayerColor comeback = PlayerColor.RED;
+        colorLobby.restoreColor(comeback);
+
+        PlayerColor got = colorLobby.assignAvailableColor();
+        assertEquals(comeback, got, "restored color must come back immediately");
+    }
 }
-//
