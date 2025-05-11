@@ -205,3 +205,4 @@ class LobbyTest {
         assertEquals(comeback, got, "restored color must come back immediately");
     }
 }
+//
