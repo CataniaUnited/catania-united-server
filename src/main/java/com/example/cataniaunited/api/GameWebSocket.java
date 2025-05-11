@@ -70,10 +70,12 @@ public class GameWebSocket {
                         createGameBoard(message, connection); // TODO: Remove after regular game start is implemented
                 case SET_ACTIVE_PLAYER -> setActivePlayer(message);
                 case PLACE_SETTLEMENT -> placeSettlement(message, connection);
+                case UPGRADE_SETTLEMENT -> upgradeSettlement(message, connection);
                 case PLACE_ROAD -> placeRoad(message, connection);
                 case ROLL_DICE -> handleDiceRoll(message, connection);
                 case ERROR, CONNECTION_SUCCESSFUL, CLIENT_DISCONNECTED, LOBBY_CREATED, LOBBY_UPDATED, PLAYER_JOINED,
-                        GAME_BOARD_JSON, GAME_WON, DICE_RESULT, PLAYER_RESOURCES -> throw new GameException("Invalid client command");
+                     GAME_BOARD_JSON, GAME_WON, DICE_RESULT, PLAYER_RESOURCES ->
+                        throw new GameException("Invalid client command");
             };
         } catch (GameException ge) {
             logger.errorf("Unexpected Error occurred: message = %s, error = %s", message, ge.getMessage());
@@ -101,11 +103,20 @@ public class GameWebSocket {
     }
 
     Uni<MessageDTO> placeSettlement(MessageDTO message, WebSocketConnection connection) throws GameException {
+        SettlementAction placeAction = (positionId) -> gameService.placeSettlement(message.getLobbyId(), message.getPlayer(), positionId);
+        return handleSettlementAction(message, connection, placeAction);
+    }
+
+    Uni<MessageDTO> upgradeSettlement(MessageDTO message, WebSocketConnection connection) throws GameException {
+        SettlementAction upgradeAction = (positionId) -> gameService.upgradeSettlement(message.getLobbyId(), message.getPlayer(), positionId);
+        return handleSettlementAction(message, connection, upgradeAction);
+    }
+
+    Uni<MessageDTO> handleSettlementAction(MessageDTO message, WebSocketConnection connection, SettlementAction action) throws GameException {
         JsonNode settlementPosition = message.getMessageNode("settlementPositionId");
         try {
             int position = Integer.parseInt(settlementPosition.toString());
-            gameService.placeSettlement(message.getLobbyId(), message.getPlayer(), position);
-
+            action.execute(position);
         } catch (NumberFormatException e) {
             throw new GameException("Invalid settlement position id: id = %s", settlementPosition.toString());
         }
@@ -129,13 +140,14 @@ public class GameWebSocket {
                 });
 
         MessageDTO update = new MessageDTO(
-                MessageType.PLACE_SETTLEMENT,
+                message.getType(),
                 message.getPlayer(),
                 message.getLobbyId(),
                 root
         );
 
         return connection.broadcast().sendText(update).chain(i -> Uni.createFrom().item(update));
+
     }
 
     Uni<MessageDTO> joinLobby(MessageDTO message, WebSocketConnection connection) throws GameException {
@@ -244,4 +256,9 @@ public class GameWebSocket {
                 .chain(() -> finalresourceUpdatesUni)
                 .chain(() -> Uni.createFrom().item(diceResultMessage));
     }
+}
+
+@FunctionalInterface
+interface SettlementAction {
+    void execute(int settlementPositionId) throws GameException;
 }

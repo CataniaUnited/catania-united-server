@@ -1,6 +1,7 @@
 package com.example.cataniaunited.game.buildings;
 
 import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.game.Buildable;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerColor;
@@ -8,7 +9,7 @@ import com.example.cataniaunited.util.Util;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-public abstract class Building {
+public abstract class Building implements Buildable {
     protected final Player player;
     protected final PlayerColor color;
 

@@ -1,12 +1,16 @@
 package com.example.cataniaunited.player;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.websockets.next.WebSocketConnection;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Random;
+import java.util.UUID;
 
 public class Player {
 
@@ -42,11 +46,11 @@ public class Player {
         initializeResources();
     }
 
-    void initializeResources(){
-        for (TileType resource: TileType.values()){
+    void initializeResources() {
+        for (TileType resource : TileType.values()) {
             if (resource == TileType.WASTE)
                 continue; // No waste resource
-            resources.put(resource, 0);
+            resources.put(resource, resource.getInitialAmount());
         }
     }
 
@@ -92,11 +96,11 @@ public class Player {
     }
 
     public void getResource(TileType resource, int amount) {
-        if(resource == TileType.WASTE)
+        if (resource == TileType.WASTE)
             return;
 
         Integer resourceCount = resources.get(resource);
-        resources.put(resource, resourceCount+amount);
+        resources.put(resource, resourceCount + amount);
     }
 
     public ObjectNode getResourceJSON() {
@@ -107,5 +111,17 @@ public class Player {
             }
         }
         return resourcesNode;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        Player player = (Player) o;
+        return Objects.equals(uniqueId, player.uniqueId);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(uniqueId);
     }
 }

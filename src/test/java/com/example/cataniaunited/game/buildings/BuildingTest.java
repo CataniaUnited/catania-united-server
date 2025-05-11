@@ -8,9 +8,11 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Test;
 
+import java.util.Map;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertNotNull; // Added for the new test
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -44,6 +46,7 @@ class BuildingTest {
         GameException ge = assertThrows(GameException.class, () -> new TestBuilding(player, null));
         assertEquals("Color of building must not be null", ge.getMessage());
     }
+
     @Test
     void testSuccessfulConstructorInitialization() throws GameException {
         Player player = mock(Player.class);
@@ -75,5 +78,10 @@ class TestBuilding extends Building {
     @Override
     public void distributeResourcesToPlayer(TileType type) {
         // do Nothing
+    }
+
+    @Override
+    public Map<TileType, Integer> getRequiredResources() {
+        return Map.of();
     }
 }

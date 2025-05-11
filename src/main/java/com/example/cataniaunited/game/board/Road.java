@@ -1,16 +1,19 @@
 package com.example.cataniaunited.game.board;
 
 import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.game.Buildable;
+import com.example.cataniaunited.game.board.tile_list_builder.TileType;
+import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerColor;
-import com.example.cataniaunited.util.Util;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.util.Arrays;
+import java.util.Map;
 
-public class Road implements Placable {
-    String ownerPlayerId;
+public class Road implements Placable, Buildable {
+    Player owner;
     PlayerColor color;
     final SettlementPosition positionA;
     final SettlementPosition positionB;
@@ -25,15 +28,15 @@ public class Road implements Placable {
         this.id = id;
     }
 
-    public void setOwnerPlayerId(String ownerPlayerId) throws GameException {
-        if (Util.isEmpty(ownerPlayerId)) {
-            throw new GameException("Owner Id of road must not be empty");
+    public void setOwner(Player owner) throws GameException {
+        if (owner == null) {
+            throw new GameException("Owner of road must not be null");
         }
 
-        if (!Util.isEmpty(this.ownerPlayerId)) {
-            throw new GameException("Road cannot be placed twice: roadId = %s, playerId = %s", id, ownerPlayerId);
+        if (this.owner != null) {
+            throw new GameException("Road cannot be placed twice: roadId = %s, playerId = %s", id, owner.getUniqueId());
         }
-        this.ownerPlayerId = ownerPlayerId;
+        this.owner = owner;
     }
 
     public SettlementPosition getNeighbour(SettlementPosition currentSettlement) {
@@ -92,8 +95,8 @@ public class Road implements Placable {
         this.rotationAngle = StrictMath.atan2(yMin, xMin); // No need to assert that since no Road will be placed on 0,0
     }
 
-    public String getOwnerPlayerId() {
-        return ownerPlayerId;
+    public Player getOwner() {
+        return owner;
     }
 
     public PlayerColor getColor() {
@@ -110,7 +113,7 @@ public class Road implements Placable {
     @Override
     public String toString() {
         return "Road:{owner: %s; (%s, %s); position: (%s); angle: %f}"
-                .formatted(ownerPlayerId, positionA.getId(), positionB.getId(), Arrays.toString(coordinates), rotationAngle);
+                .formatted(owner, positionA.getId(), positionB.getId(), Arrays.toString(coordinates), rotationAngle);
     }
 
     @Override
@@ -119,8 +122,8 @@ public class Road implements Placable {
         ObjectNode roadNode = mapper.createObjectNode();
         roadNode.put("id", this.id);
 
-        if (this.ownerPlayerId != null) {
-            roadNode.put("owner", this.ownerPlayerId);
+        if (this.owner != null) {
+            roadNode.put("owner", this.owner.getUniqueId());
         } else {
             roadNode.putNull("owner");
         }
@@ -139,4 +142,10 @@ public class Road implements Placable {
         return roadNode;
     }
 
+    @Override
+    public Map<TileType, Integer> getRequiredResources() {
+        return Map.of(
+                TileType.WOOD, 1,
+                TileType.CLAY, 1);
+    }
 }
