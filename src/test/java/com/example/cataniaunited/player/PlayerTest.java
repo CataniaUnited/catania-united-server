@@ -320,6 +320,51 @@ class PlayerTest {
         assertDoesNotThrow(() -> player.sendMessage(dto));
         verify(conn).sendText(anyString());
     }
-//sonarclould
+    @Test
+    void sendMessage_withNoConnection_doesNothing() {
+        Player p = new Player("someUser");
+        // never call p.setConnection(...)
+        MessageDTO dto = new MessageDTO();
+        dto.setType(MessageType.CREATE_LOBBY);
+
+        // this must not throw, and since there's no connection we can't verify any sendText
+        assertDoesNotThrow(() -> p.sendMessage(dto));
+    }
+
+    @Test
+    void sendMessage_successfulSend_invokesSendText() {
+        WebSocketConnection conn = mock(WebSocketConnection.class);
+        // mock a successful, non‐blocking send
+        when(conn.sendText(anyString()))
+                .thenReturn(Uni.createFrom().voidItem());
+
+        // use the ctor that takes a connection
+        Player p = new Player(conn);
+        MessageDTO dto = new MessageDTO();
+        dto.setType(MessageType.CREATE_LOBBY);
+
+        p.sendMessage(dto);
+
+        // we should have hit sendText exactly once with a JSON payload
+        verify(conn, times(1)).sendText(anyString());
+    }
+
+    @Test
+    void sendMessage_whenSendFails_stillInvokesSendText_andSwallowsException() {
+        WebSocketConnection conn = mock(WebSocketConnection.class);
+        // mock a failure path
+        when(conn.sendText(anyString()))
+                .thenReturn(Uni.createFrom().failure(new RuntimeException("kaboom")));
+
+        Player p = new Player(conn);
+        MessageDTO dto = new MessageDTO();
+        dto.setType(MessageType.CREATE_LOBBY);
+
+        // no exception should bubble out
+        assertDoesNotThrow(() -> p.sendMessage(dto));
+
+        // but sendText must still have been called
+        verify(conn, times(1)).sendText(anyString());
+    }
 }
 
