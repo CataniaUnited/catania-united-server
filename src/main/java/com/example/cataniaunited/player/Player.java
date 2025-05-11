@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 
+//small change
 public class Player {
 
     private static final Logger LOG = Logger.getLogger(Player.class);
