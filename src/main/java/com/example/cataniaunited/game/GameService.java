@@ -86,7 +86,7 @@ public class GameService {
 
         ObjectNode payload = JsonNodeFactory.instance.objectNode();
         payload.putPOJO("playerOrder", order);
-        payload.set("board", board.getJson());
+        payload.set("gameboard", board.getJson());
 
         MessageDTO dto = new MessageDTO(
                 MessageType.GAME_STARTED, null, lobbyId, payload);
