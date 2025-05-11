@@ -97,21 +97,18 @@ public class GameWebSocket {
         } catch (NumberFormatException e) {
             throw new GameException("Invalid road id: id = %s", roadId.toString());
         }
-        GameBoard updatedGameboard = gameService.getGameboardByLobbyId(message.getLobbyId());
-        ObjectNode payload = JsonNodeFactory.instance.objectNode();
-        payload.set("gameboard", updatedGameboard.getJson());
-        MessageDTO update = new MessageDTO(MessageType.PLACE_ROAD, message.getPlayer(), message.getLobbyId(), payload);
+        MessageDTO update = new MessageDTO(MessageType.PLACE_ROAD, message.getPlayer(), message.getLobbyId(), createGameBoardObjectNode(message.getLobbyId()));
         return sendPlayerResources(playerService.getPlayerById(message.getPlayer()), message.getLobbyId(), connection)
                 .chain(() -> connection.broadcast().sendText(update).chain(i -> Uni.createFrom().item(update)));
     }
 
     Uni<MessageDTO> placeSettlement(MessageDTO message, WebSocketConnection connection) throws GameException {
-        SettlementAction placeAction = (positionId) -> gameService.placeSettlement(message.getLobbyId(), message.getPlayer(), positionId);
+        SettlementAction placeAction = positionId -> gameService.placeSettlement(message.getLobbyId(), message.getPlayer(), positionId);
         return handleSettlementAction(message, connection, placeAction);
     }
 
     Uni<MessageDTO> upgradeSettlement(MessageDTO message, WebSocketConnection connection) throws GameException {
-        SettlementAction upgradeAction = (positionId) -> gameService.upgradeSettlement(message.getLobbyId(), message.getPlayer(), positionId);
+        SettlementAction upgradeAction = positionId -> gameService.upgradeSettlement(message.getLobbyId(), message.getPlayer(), positionId);
         return handleSettlementAction(message, connection, upgradeAction);
     }
 
@@ -128,11 +125,7 @@ public class GameWebSocket {
             return gameService.broadcastWin(connection, message.getLobbyId(), message.getPlayer());
         }
 
-        GameBoard updatedGameboard = gameService.getGameboardByLobbyId(message.getLobbyId());
-
-        ObjectNode payload = JsonNodeFactory.instance.objectNode();
-        payload.set("gameboard", updatedGameboard.getJson());
-
+        ObjectNode payload = createGameBoardObjectNode(message.getLobbyId());
         ObjectNode playersJson = payload.putObject("players");
         lobbyService.getLobbyById(message.getLobbyId())
                 .getPlayers().forEach(playerId -> {
@@ -200,10 +193,7 @@ public class GameWebSocket {
     }
 
     Uni<MessageDTO> createGameBoard(MessageDTO message, WebSocketConnection connection) throws GameException {
-        GameBoard board = gameService.createGameboard(message.getLobbyId());
-        ObjectNode payload = JsonNodeFactory.instance.objectNode();
-        payload.set("gameboard", board.getJson());
-        MessageDTO updateJson = new MessageDTO(MessageType.GAME_BOARD_JSON, null, message.getLobbyId(), payload);
+        MessageDTO updateJson = new MessageDTO(MessageType.GAME_BOARD_JSON, null, message.getLobbyId(), createGameBoardObjectNode(message.getLobbyId()));
         return connection.broadcast().sendText(updateJson).chain(i -> Uni.createFrom().item(updateJson));
 
     }
@@ -265,6 +255,13 @@ public class GameWebSocket {
         return connection.sendText(resourceMsg)
                 .onFailure()
                 .invoke(e -> logger.errorf("Failed to send PLAYER_RESOURCES to %s: %s", player.getUniqueId(), e.getMessage()));
+    }
+
+    private ObjectNode createGameBoardObjectNode(String lobbyId) throws GameException {
+        GameBoard updatedGameboard = gameService.getGameboardByLobbyId(lobbyId);
+        ObjectNode payload = JsonNodeFactory.instance.objectNode();
+        payload.set("gameboard", updatedGameboard.getJson());
+        return payload;
     }
 }
 
