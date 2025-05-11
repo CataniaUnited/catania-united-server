@@ -64,8 +64,8 @@ public class LobbyServiceImpl implements LobbyService {
     }
 
     @Override
-    public boolean joinLobbyByCode(String lobbyId, String player) {
-        Lobby lobby = lobbies.get(lobbyId);
+    public boolean joinLobbyByCode(String lobbyId, String player) throws GameException {
+        Lobby lobby = getLobbyById(lobbyId);
         if (lobby != null) {
             PlayerColor assignedColor = setPlayerColor(lobby, player);
             if (assignedColor == null) {

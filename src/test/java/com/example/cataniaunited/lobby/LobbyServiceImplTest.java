@@ -102,10 +102,10 @@ class LobbyServiceImplTest {
     }
 
     @Test
-    void testJoinLobbyByInvalidCode() {
-        boolean joined = lobbyService.joinLobbyByCode("InvalidCode", "New Player");
-
-        assertFalse(joined, "Player should not be able to join the lobby with a valid code");
+    void testJoinLobbyByInvalidCode() throws GameException {
+        String invalidLobbyCode = "InvalidCode";
+        GameException exception = assertThrows(GameException.class, () -> lobbyService.joinLobbyByCode(invalidLobbyCode, "New Player"));
+        assertEquals("Lobby with id %s not found".formatted(invalidLobbyCode), exception.getMessage());
     }
 
     @Test
@@ -123,7 +123,7 @@ class LobbyServiceImplTest {
     }
 
     @Test
-    void testJoinLobbyFailsWhenNoColorsAvailable() {
+    void testJoinLobbyFailsWhenNoColorsAvailable() throws GameException {
         String lobbyId = lobbyService.createLobby("HostPlayer");
 
         for (int i = 0; i < PlayerColor.values().length; i++) {
@@ -147,7 +147,7 @@ class LobbyServiceImplTest {
     }
 
     @Test
-    void testRemovePlayerRestoresColor() {
+    void testRemovePlayerRestoresColor() throws GameException {
         String lobbyId = lobbyService.createLobby("HostPlayer");
         lobbyService.joinLobbyByCode(lobbyId, "Player1");
 
