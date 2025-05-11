@@ -206,6 +206,11 @@ class GameServiceTest {
     void broadcastWinShouldSendCorrectGameWonMessage() {
         String lobbyId = "lobby123";
         String winnerPlayerId = "playerABC";
+        String winnerUsername = "ChickenNugget";
+
+        Player mockPlayer = mock(Player.class);
+        when(mockPlayer.getUsername()).thenReturn(winnerUsername);
+        doReturn(mockPlayer).when(playerService).getPlayerById(winnerPlayerId);
 
         WebSocketConnection mockConnection = mock(WebSocketConnection.class, RETURNS_DEEP_STUBS);
         when(mockConnection.broadcast().sendText(any(MessageDTO.class)))
@@ -218,9 +223,10 @@ class GameServiceTest {
         assertEquals(MessageType.GAME_WON, result.getType());
         assertEquals(lobbyId, result.getLobbyId());
         assertEquals(winnerPlayerId, result.getPlayer());
-        assertEquals(winnerPlayerId, result.getMessageNode("winner").asText());
+        assertEquals(winnerUsername, result.getMessageNode("winner").asText());
 
         verify(mockConnection.broadcast()).sendText(any(MessageDTO.class));
     }
+
 
 }

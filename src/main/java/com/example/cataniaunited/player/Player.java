@@ -1,6 +1,9 @@
 package com.example.cataniaunited.player;
 
 import com.example.cataniaunited.dto.MessageDTO;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
@@ -79,6 +82,7 @@ public class Player {
         this.victoryPoints += victoryPoints;
     }
 
+
     public WebSocketConnection getConnection() {
         return connection;
     }
@@ -99,6 +103,13 @@ public class Player {
         } catch (Exception e) {
             LOG.errorf(e, "Failed to serialise DTO for player %s", uniqueId);
         }
+
+    public ObjectNode toJson() {
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode playerNode = mapper.createObjectNode();
+        playerNode.put("username", this.username);
+        playerNode.put("victoryPoints", this.victoryPoints);
+        return playerNode;
     }
 
     public int getResourceCount(TileType type) {

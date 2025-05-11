@@ -13,7 +13,7 @@ public interface LobbyService {
 
     List<String> getOpenLobbies();
 
-    boolean joinLobbyByCode(String lobbyId, String player);
+    boolean joinLobbyByCode(String lobbyId, String player) throws GameException;
 
     void removePlayerFromLobby(String lobbyId, String player);
 
