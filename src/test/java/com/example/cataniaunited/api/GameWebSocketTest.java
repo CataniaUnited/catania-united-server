@@ -37,6 +37,7 @@ import java.net.URI;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -47,10 +48,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
@@ -60,6 +58,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.lenient;
+import org.mockito.Answers;
 
 
 @QuarkusTest
@@ -178,6 +178,7 @@ public class GameWebSocketTest {
         assertNotNull(responseMessage.getMessageNode("playerId").textValue());
         verify(playerService).removePlayerByConnectionId(any());
     }
+
 
     @Test
     void testInvalidCommand() throws InterruptedException, JsonProcessingException {
@@ -1468,5 +1469,57 @@ public class GameWebSocketTest {
         verify(playerService, never()).checkForWin(anyString());
         verify(gameService, never()).getGameboardByLobbyId(anyString());
         verify(gameService, never()).broadcastWin(any(WebSocketConnection.class), anyString(), anyString());
+    }
+
+    @Test
+    void testHandleStartGame_simple() throws Exception {
+        Lobby lobbyMock = mock(Lobby.class);
+        when(lobbyMock.getLobbyId()).thenReturn("L1");
+        when(lobbyMock.getPlayers()).thenReturn(Set.of("hostPlayer"));
+        doReturn(lobbyMock).when(lobbyService).getLobbyById("L1");
+
+        ObjectNode empty = objectMapper.createObjectNode();
+        MessageDTO startedDto = new MessageDTO(
+                MessageType.GAME_STARTED,
+                /* player */ null,
+                /* lobbyId */ "L1",
+                /* message */ empty
+        );
+        doReturn(startedDto).when(gameService).startGame("L1");
+
+        GameBoard boardMock = mock(GameBoard.class);
+        doReturn(boardMock)
+                .when(gameService)
+                .getGameboardByLobbyId("L1");
+        when(boardMock.getJson()).thenReturn(empty);
+
+        CopyOnWriteArrayList<MessageDTO> seen = new CopyOnWriteArrayList<>();
+        CountDownLatch latch = new CountDownLatch(1);
+
+        var client = BasicWebSocketConnector
+                .create()
+                .baseUri(serverUri)
+                .path("/game")
+                .onTextMessage((conn, text) -> {
+                    try {
+                        MessageDTO dto = objectMapper.readValue(text, MessageDTO.class);
+                        if (dto.getType() == MessageType.GAME_STARTED) {
+                            seen.add(dto);
+                            latch.countDown();
+                        }
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                })
+                .connectAndAwait();
+
+        client.sendTextAndAwait("{\"type\":\"START_GAME\",\"lobbyId\":\"L1\"}");
+
+        assertTrue(latch.await(5, TimeUnit.SECONDS), "never saw GAME_STARTED");
+        assertEquals(1, seen.size());
+        assertEquals(MessageType.GAME_STARTED, seen.get(0).getType());
+
+        verify(gameService).startGame("L1");
+        verify(lobbyService, atLeastOnce()).getLobbyById("L1");
     }
 }
