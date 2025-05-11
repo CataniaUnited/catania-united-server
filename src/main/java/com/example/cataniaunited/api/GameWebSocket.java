@@ -193,7 +193,10 @@ public class GameWebSocket {
     }
 
     Uni<MessageDTO> createGameBoard(MessageDTO message, WebSocketConnection connection) throws GameException {
-        MessageDTO updateJson = new MessageDTO(MessageType.GAME_BOARD_JSON, null, message.getLobbyId(), createGameBoardObjectNode(message.getLobbyId()));
+        GameBoard board = gameService.createGameboard(message.getLobbyId());
+        ObjectNode payload = JsonNodeFactory.instance.objectNode();
+        payload.set("gameboard", board.getJson());
+        MessageDTO updateJson = new MessageDTO(MessageType.GAME_BOARD_JSON, null, message.getLobbyId(), payload);
         return connection.broadcast().sendText(updateJson).chain(i -> Uni.createFrom().item(updateJson));
 
     }
@@ -258,9 +261,9 @@ public class GameWebSocket {
     }
 
     private ObjectNode createGameBoardObjectNode(String lobbyId) throws GameException {
-        GameBoard updatedGameboard = gameService.getGameboardByLobbyId(lobbyId);
+        GameBoard gameboard = gameService.getGameboardByLobbyId(lobbyId);
         ObjectNode payload = JsonNodeFactory.instance.objectNode();
-        payload.set("gameboard", updatedGameboard.getJson());
+        payload.set("gameboard", gameboard.getJson());
         return payload;
     }
 }
