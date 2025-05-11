@@ -271,7 +271,7 @@ class PlayerTest {
     }
 
     @Test
-    void removeResourceShouldThrowExceptionIfResourcseAmountIsTooSmall() throws GameException {
+    void removeResourceShouldThrowExceptionIfResourcseAmountIsTooSmall() {
         int woodResource = player.resources.get(TileType.WOOD);
         assertThrows(InsufficientResourcesException.class, () -> player.removeResource(TileType.WOOD, woodResource + 1));
     }

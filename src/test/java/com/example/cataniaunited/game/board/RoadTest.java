@@ -209,7 +209,7 @@ class RoadTest {
     }
 
     @Test
-    void setOwnerPlayerShouldThrowErrorIfOwnerIsNull() throws GameException {
+    void setOwnerPlayerShouldThrowErrorIfOwnerIsNull() {
         GameException ge = assertThrows(GameException.class, () -> road.setOwner(null));
         assertEquals("Owner of road must not be null: roadId = %s".formatted(road.id), ge.getMessage());
     }
