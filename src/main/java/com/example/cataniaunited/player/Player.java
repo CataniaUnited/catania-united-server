@@ -104,6 +104,7 @@ public class Player {
         } catch (Exception e) {
             LOG.errorf(e, "Failed to serialise DTO for player %s", uniqueId);
         }
+    }
 
     public ObjectNode toJson() {
         ObjectMapper mapper = new ObjectMapper();
