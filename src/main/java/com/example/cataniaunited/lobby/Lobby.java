@@ -23,7 +23,6 @@ public class Lobby {
     }
 
     public String getLobbyId() { return lobbyId; }
-    public String getHostPlayer() { return hostPlayer; }
     public Set<String> getPlayers() { return players; }
 
     public void addPlayer(String player) {
