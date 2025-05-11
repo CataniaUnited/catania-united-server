@@ -7,8 +7,8 @@ import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.lobby.Lobby;
 import com.example.cataniaunited.lobby.LobbyService;
 import com.example.cataniaunited.player.Player;
-import com.example.cataniaunited.player.PlayerService;
 import com.example.cataniaunited.player.PlayerColor;
+import com.example.cataniaunited.player.PlayerService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.test.junit.QuarkusTest;
@@ -17,15 +17,17 @@ import io.quarkus.websockets.next.WebSocketConnection;
 import io.smallrye.mutiny.Uni;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
-import static org.mockito.ArgumentMatchers.any;
+
 import java.util.Set;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -204,15 +206,17 @@ class GameServiceTest {
 
     @Test
     void setRoadShouldCallPlaceRoadOnGameboard() throws GameException {
-        String playerId = "playerId1";
+        Player player = new Player("player1");
+        String playerId = player.getUniqueId();
         int settlementPositionId = 15;
         String lobbyId = lobbyMock.getLobbyId();
         doReturn(lobbyMock).when(lobbyService).getLobbyById(lobbyId);
         doReturn(true).when(lobbyMock).isPlayerTurn(playerId);
         doReturn(PlayerColor.BLUE).when(lobbyMock).getPlayerColor(playerId);
         doReturn(gameboardMock).when(gameService).getGameboardByLobbyId(lobbyId);
+        doReturn(player).when(playerService).getPlayerById(playerId);
         gameService.placeRoad(lobbyId, playerId, settlementPositionId);
-        verify(gameboardMock).placeRoad(playerId, PlayerColor.BLUE, settlementPositionId);
+        verify(gameboardMock).placeRoad(player, PlayerColor.BLUE, settlementPositionId);
     }
 
     @Test

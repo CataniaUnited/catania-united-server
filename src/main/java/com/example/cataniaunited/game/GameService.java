@@ -1,22 +1,22 @@
 package com.example.cataniaunited.game;
 
+import com.example.cataniaunited.dto.MessageDTO;
+import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.lobby.Lobby;
 import com.example.cataniaunited.lobby.LobbyService;
 import com.example.cataniaunited.player.Player;
-import com.example.cataniaunited.player.PlayerService;
 import com.example.cataniaunited.player.PlayerColor;
+import com.example.cataniaunited.player.PlayerService;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.quarkus.websockets.next.WebSocketConnection;
+import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
-import com.example.cataniaunited.dto.MessageDTO;
-import com.example.cataniaunited.dto.MessageType;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import io.quarkus.websockets.next.WebSocketConnection;
-import io.smallrye.mutiny.Uni;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -53,11 +53,19 @@ public class GameService {
         playerService.addVictoryPoints(playerId, 1);
     }
 
+    public void upgradeSettlement(String lobbyId, String playerId, int settlementPositionId) throws GameException {
+        checkPlayerTurn(lobbyId, playerId);
+        GameBoard gameboard = getGameboardByLobbyId(lobbyId);
+        PlayerColor color = lobbyService.getPlayerColor(lobbyId, playerId);
+        gameboard.placeCity(playerService.getPlayerById(playerId), color, settlementPositionId);
+        playerService.addVictoryPoints(playerId, 2);
+    }
+
     public void placeRoad(String lobbyId, String playerId, int roadId) throws GameException {
         checkPlayerTurn(lobbyId, playerId);
         GameBoard gameboard = getGameboardByLobbyId(lobbyId);
         PlayerColor color = lobbyService.getPlayerColor(lobbyId, playerId);
-        gameboard.placeRoad(playerId, color, roadId);
+        gameboard.placeRoad(playerService.getPlayerById(playerId), color, roadId);
     }
 
     public MessageDTO startGame(String lobbyId) throws GameException {
@@ -120,7 +128,7 @@ public class GameService {
     public ObjectNode rollDice(String lobbyId) throws GameException {
         return getGameboardByLobbyId(lobbyId).rollDice();
     }
-  
+
     public Uni<MessageDTO> broadcastWin(WebSocketConnection connection, String lobbyId, String winnerPlayerId) {
         ObjectNode message = JsonNodeFactory.instance.objectNode();
         Player winner = playerService.getPlayerById(winnerPlayerId);

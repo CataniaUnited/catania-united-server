@@ -1,10 +1,14 @@
 package com.example.cataniaunited.game.board;
 
 import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.game.Buildable;
 import com.example.cataniaunited.game.board.tile_list_builder.StandardTileListBuilder;
 import com.example.cataniaunited.game.board.tile_list_builder.Tile;
 import com.example.cataniaunited.game.board.tile_list_builder.TileListBuilder;
 import com.example.cataniaunited.game.board.tile_list_builder.TileListDirector;
+import com.example.cataniaunited.game.board.tile_list_builder.TileType;
+import com.example.cataniaunited.game.buildings.Building;
+import com.example.cataniaunited.game.buildings.City;
 import com.example.cataniaunited.game.buildings.Settlement;
 import com.example.cataniaunited.game.dice.DiceRoller;
 import com.example.cataniaunited.player.Player;
@@ -13,7 +17,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.jboss.logging.Logger;
+
 import java.util.List;
+import java.util.Map;
 
 public class GameBoard {
     private static final Logger logger = Logger.getLogger(GameBoard.class);
@@ -79,22 +85,46 @@ public class GameBoard {
     }
 
     public void placeSettlement(Player player, PlayerColor color, int positionId) throws GameException {
-        try {
-            SettlementPosition settlementPosition = settlementPositionGraph.get(positionId - 1);
-            settlementPosition.setBuilding(new Settlement(player, color));
+        placeBuilding(positionId, new Settlement(player, color));
+    }
 
+    public void placeCity(Player player, PlayerColor color, int positionId) throws GameException {
+        placeBuilding(positionId, new City(player, color));
+    }
+
+    private void placeBuilding(int positionId, Building building) throws GameException {
+        try {
+            removeRequiredResources(building.getPlayer(), building);
+            logger.debugf("Placing building: playerId = %s, positionId = %s, type = %s", building.getPlayer().getUniqueId(), positionId, building.getClass().getSimpleName());
+            SettlementPosition settlementPosition = settlementPositionGraph.get(positionId - 1);
+            settlementPosition.setBuilding(building);
         } catch (IndexOutOfBoundsException e) {
             throw new GameException("Settlement position not found: id = %s", positionId);
         }
     }
 
-    public void placeRoad(String playerId, PlayerColor color, int roadId) throws GameException {
+    public void placeRoad(Player player, PlayerColor color, int roadId) throws GameException {
         try {
             Road road = roadList.get(roadId - 1);
-            road.setOwnerPlayerId(playerId);
+            removeRequiredResources(player, road);
+            logger.debugf("Placing road: playerId = %s, roadId = %s", player.getUniqueId(), roadId);
+            road.setOwner(player);
             road.setColor(color);
         } catch (IndexOutOfBoundsException e) {
             throw new GameException("Road not found: id = %s", roadId);
+        }
+    }
+
+    private void removeRequiredResources(Player player, Buildable buildable) throws GameException {
+        if (player == null) {
+            throw new GameException("Player must not be null");
+        }
+
+        for (Map.Entry<TileType, Integer> entry : buildable.getRequiredResources().entrySet()) {
+            TileType tileType = entry.getKey();
+            Integer amount = entry.getValue();
+            logger.debugf("Removing resource of player: playerId = %s, tileType = %s, amount = %s", player.getUniqueId(), tileType, amount);
+            player.removeResource(tileType, amount);
         }
     }
 
@@ -149,8 +179,9 @@ public class GameBoard {
         tileList.forEach(tile -> tile.subscribeToDice(diceRoller));
     }
 
-    public ObjectNode rollDice()  {
+    public ObjectNode rollDice() {
         return diceRoller.rollDice();
     }
+
 
 }

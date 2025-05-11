@@ -1,5 +1,7 @@
 package com.example.cataniaunited.player;
 
+import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.exception.InsufficientResourcesException;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.websockets.next.WebSocketConnection;
@@ -7,7 +9,14 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import java.util.Objects;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -16,7 +25,7 @@ class PlayerTest {
     Player player;
 
     @BeforeEach
-    void setUp(){
+    void setUp() {
         player = new Player();
     }
 
@@ -56,11 +65,11 @@ class PlayerTest {
         assertNull(player.getConnection(), "connection should be null for default constructor.");
 
         for (TileType type : TileType.values()) {
-            if (type == TileType.WASTE){
+            if (type == TileType.WASTE) {
                 assertNull(player.resources.get(type), "Waste should be null");
                 continue;
             }
-            assertEquals(0, player.resources.get(type), "Initial resource count for " + type + " should be 0.");
+            assertEquals(type.getInitialAmount(), player.resources.get(type), "Initial resource count for " + type + " should be 0.");
         }
     }
 
@@ -110,7 +119,7 @@ class PlayerTest {
     }
 
 
-        @Test
+    @Test
     void toStringContainsAllRelevantFields() {
         String username = "TestUserToString";
         WebSocketConnection mockConnection = mock(WebSocketConnection.class);
@@ -147,20 +156,20 @@ class PlayerTest {
         TileType testResource = TileType.WHEAT;
         int amount = 5;
 
-        player.getResource(testResource, amount);
+        player.receiveResource(testResource, amount);
 
-        assertEquals(amount, (int) player.resources.get(testResource), "Resource count should be updated after getting resources.");
+        assertEquals(testResource.getInitialAmount() + amount, (int) player.resources.get(testResource), "Resource count should be updated after getting resources.");
     }
 
     @Test
     void getResourceAddsToExistingResourceAmount() {
         TileType testResource = TileType.WOOD;
-        int initialAmount = 3;
-        int additionalAmount = 7;
-        int expectedTotal = initialAmount + additionalAmount;
+        int firstIncrease = 3;
+        int secondIncrease = 7;
+        int expectedTotal = testResource.getInitialAmount() + firstIncrease + secondIncrease;
 
-        player.getResource(testResource, initialAmount);
-        player.getResource(testResource, additionalAmount);
+        player.receiveResource(testResource, firstIncrease);
+        player.receiveResource(testResource, secondIncrease);
 
         assertEquals(expectedTotal, (int) player.resources.get(testResource), "Resource count should be the sum of initial and additional amounts.");
     }
@@ -169,35 +178,36 @@ class PlayerTest {
     void getResourceWorksForAllTileTypes() {
         int amount = 2;
         for (TileType type : TileType.values()) {
-            if (type == TileType.WASTE){
+            if (type == TileType.WASTE) {
                 assertNull(player.resources.get(type), "Waste should be null");
                 continue;
             }
-            player.getResource(type, amount);
-            assertEquals(amount, (int) player.resources.get(type), "Resource count for " + type + " should be " + amount + " after first get.");
-            player.getResource(type, amount);
-            assertEquals(amount * 2, (int) player.resources.get(type), "Resource count for " + type + " should be " + (amount * 2) + " after second get.");
+            int ressourceAmount = player.resources.get(type);
+            player.receiveResource(type, amount);
+            assertEquals(ressourceAmount + amount, (int) player.resources.get(type), "Resource count for " + type + " should be " + amount + " after first get.");
+            player.receiveResource(type, amount);
+            assertEquals(ressourceAmount + amount * 2, (int) player.resources.get(type), "Resource count for " + type + " should be " + (amount * 2) + " after second get.");
         }
     }
 
 
     @Test
     void getResourceJSONWithSomeResourcesReturnsCorrectJSON() {
-        player.getResource(TileType.WHEAT, 3);
-        player.getResource(TileType.SHEEP, 1);
-        player.getResource(TileType.ORE, 0);
+        player.receiveResource(TileType.WHEAT, 3);
+        player.receiveResource(TileType.SHEEP, 1);
+        player.receiveResource(TileType.ORE, 0);
 
         ObjectNode json = player.getResourceJSON();
         assertNotNull(json);
 
-        assertEquals(3, json.get(TileType.WHEAT.name()).asInt());
-        assertEquals(1, json.get(TileType.SHEEP.name()).asInt());
-        assertEquals(0, json.get(TileType.ORE.name()).asInt());
+        assertEquals(TileType.WHEAT.getInitialAmount() + 3, json.get(TileType.WHEAT.name()).asInt());
+        assertEquals(TileType.SHEEP.getInitialAmount() + 1, json.get(TileType.SHEEP.name()).asInt());
+        assertEquals(TileType.ORE.getInitialAmount(), json.get(TileType.ORE.name()).asInt());
 
         assertTrue(json.has(TileType.WOOD.name()), "JSON should have WOOD field");
-        assertEquals(0, json.get(TileType.WOOD.name()).asInt(), "WOOD count should be 0");
+        assertEquals(TileType.WOOD.getInitialAmount(), json.get(TileType.WOOD.name()).asInt(), "WOOD count should be 0");
         assertTrue(json.has(TileType.CLAY.name()), "JSON should have CLAY field");
-        assertEquals(0, json.get(TileType.CLAY.name()).asInt(), "CLAY count should be 0");
+        assertEquals(TileType.CLAY.getInitialAmount(), json.get(TileType.CLAY.name()).asInt(), "CLAY count should be 0");
 
 
         assertNull(json.get(TileType.WASTE.name()), "JSON should not contain WASTE resource.");
@@ -206,8 +216,8 @@ class PlayerTest {
 
     @Test
     void getResourceJSONDoesNotIncludeWaste() {
-        player.getResource(TileType.WHEAT, 2);
-        player.getResource(TileType.WASTE, 5);
+        player.receiveResource(TileType.WHEAT, 2);
+        player.receiveResource(TileType.WASTE, 5);
 
         ObjectNode json = player.getResourceJSON();
         assertNotNull(json);
@@ -218,8 +228,8 @@ class PlayerTest {
     @Test
     void getResourceJSONDoesNotIncludeWasteEvenIfInList() {
         player.resources.put(TileType.WASTE, 256);
-        player.getResource(TileType.WHEAT, 2);
-        player.getResource(TileType.WASTE, 5);
+        player.receiveResource(TileType.WHEAT, 2);
+        player.receiveResource(TileType.WASTE, 5);
 
         ObjectNode json = player.getResourceJSON();
         assertNotNull(json);
@@ -229,11 +239,10 @@ class PlayerTest {
 
     @Test
     void getResourceWithWasteTypeDoesNotChangeResourceCounts() {
-        player.getResource(TileType.WOOD, 3);
         int initialWoodCount = player.getResourceCount(TileType.WOOD);
         int initialWheatCount = player.getResourceCount(TileType.WHEAT);
 
-        player.getResource(TileType.WASTE, 5);
+        player.receiveResource(TileType.WASTE, 5);
 
         assertEquals(initialWoodCount, player.getResourceCount(TileType.WOOD), "Adding WASTE should not affect WOOD count.");
         assertEquals(initialWheatCount, player.getResourceCount(TileType.WHEAT), "Adding WASTE should not affect WHEAT count.");
@@ -241,7 +250,42 @@ class PlayerTest {
     }
 
     @Test
-    void getResourceWithNullResourceTypeShouldIdeallyThrowExceptionOrHandleGracefully() {
-        assertThrows(NullPointerException.class, () -> player.getResource(null, 5), "Getting a null resource type should throw an exception or be handled.");
+    void receiveResourceWithNullResourceTypeShouldDoNothing() {
+        var previousResource = player.resources;
+        player.receiveResource(null, 5);
+        assertEquals(previousResource, player.resources);
+    }
+
+    @Test
+    void removeResourceOfTypeWasteShouldDoNothing() throws GameException {
+        var previousResource = player.resources;
+        player.removeResource(TileType.WASTE, 5);
+        assertEquals(previousResource, player.resources);
+    }
+
+    @Test
+    void removeResourceOfNullShouldDoNothing() throws GameException {
+        var previousResource = player.resources;
+        player.removeResource(null, 5);
+        assertEquals(previousResource, player.resources);
+    }
+
+    @Test
+    void removeResourceShouldThrowExceptionIfResourcseAmountIsTooSmall() {
+        int woodResource = player.resources.get(TileType.WOOD);
+        assertThrows(InsufficientResourcesException.class, () -> player.removeResource(TileType.WOOD, woodResource + 1));
+    }
+
+    @Test
+    void removeResourceShouldRemoveCorrectResourceAmount() throws GameException {
+        int woodResource = 4;
+        player.resources.put(TileType.WOOD, woodResource);
+        player.removeResource(TileType.WOOD, 2);
+        assertEquals(woodResource - 2, player.resources.get(TileType.WOOD));
+    }
+
+    @Test
+    void testHashCode() {
+        assertEquals(Objects.hashCode(player.getUniqueId()), player.hashCode());
     }
 }

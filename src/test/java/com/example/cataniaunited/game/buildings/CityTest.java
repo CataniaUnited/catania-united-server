@@ -51,7 +51,7 @@ class CityTest {
 
         city.distributeResourcesToPlayer(testResource);
 
-        verify(mockPlayer).getResource(testResource, 2);
+        verify(mockPlayer).receiveResource(testResource, 2);
     }
 
     @Test

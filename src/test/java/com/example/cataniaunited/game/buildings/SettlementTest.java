@@ -51,7 +51,7 @@ class SettlementTest {
 
         settlement.distributeResourcesToPlayer(testResource);
 
-        verify(mockPlayer).getResource(testResource, 1);
+        verify(mockPlayer).receiveResource(testResource, 1);
     }
 
     @Test
