@@ -140,4 +140,51 @@ class LobbyTest {
         lobby.setGameStarted(true);
         assertFalse(lobby.canStartGame("host"), "already started ⇒ false");
     }
+
+    @Test
+    void testResetForNewGame_resetsActivePlayerAndStartedFlag() {
+        lobby.setActivePlayer("p2");
+        lobby.setGameStarted(true);
+
+        lobby.resetForNewGame();
+
+        assertFalse(lobby.isGameStarted(), "gameStarted should be reset to false");
+        assertNull(lobby.getActivePlayer(),   "activePlayer should be reset to null");
+    }
+
+    @Test
+    void testSetPlayerOrder_overwritesExistingOrder() {
+        List<String> customOrder = List.of("alice", "bob", "carol");
+
+        lobby.setPlayerOrder(customOrder);
+
+        List<String> playersList = new ArrayList<>(lobby.getPlayers());
+        assertEquals(customOrder, playersList, "setPlayerOrder should replace the entire players list");
+    }
+
+    @Test
+    void testAssignAvailableColor_removesColorAndRestoreAddsBack() {
+        Lobby colorLobby = new Lobby("L-color", "host");
+        int before = colorLobby.getAvailableColors().size();
+
+        PlayerColor picked = colorLobby.assignAvailableColor();
+        assertNotNull(picked);
+        assertEquals(before - 1, colorLobby.getAvailableColors().size());
+
+        colorLobby.restoreColor(picked);
+        assertTrue(colorLobby.getAvailableColors().contains(picked));
+        assertEquals(before, colorLobby.getAvailableColors().size());
+    }
+
+    @Test
+    void testSetGameStarted_flagToggles() {
+        Lobby fLobby = new Lobby("L-flag", "host");
+        assertFalse(fLobby.isGameStarted(), "should start false");
+
+        fLobby.setGameStarted(true);
+        assertTrue(fLobby.isGameStarted(),  "should now be true");
+
+        fLobby.setGameStarted(false);
+        assertFalse(fLobby.isGameStarted(), "can turn back off");
+    }
 }
