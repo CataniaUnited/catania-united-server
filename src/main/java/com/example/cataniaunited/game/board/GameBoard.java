@@ -1,7 +1,6 @@
 package com.example.cataniaunited.game.board;
 
 import com.example.cataniaunited.exception.GameException;
-import com.example.cataniaunited.exception.InsufficientResourcesException;
 import com.example.cataniaunited.game.Buildable;
 import com.example.cataniaunited.game.board.tile_list_builder.StandardTileListBuilder;
 import com.example.cataniaunited.game.board.tile_list_builder.Tile;
@@ -96,6 +95,7 @@ public class GameBoard {
     private void placeBuilding(int positionId, Building building) throws GameException {
         try {
             removeRequiredResources(building.getPlayer(), building);
+            logger.debugf("Placing building: playerId = %s, positionId = %s, type = %s", building.getPlayer().getUniqueId(), positionId, building.getClass().getSimpleName());
             SettlementPosition settlementPosition = settlementPositionGraph.get(positionId - 1);
             settlementPosition.setBuilding(building);
         } catch (IndexOutOfBoundsException e) {
@@ -107,6 +107,7 @@ public class GameBoard {
         try {
             Road road = roadList.get(roadId - 1);
             removeRequiredResources(player, road);
+            logger.debugf("Placing road: playerId = %s, roadId = %s", player.getUniqueId(), roadId);
             road.setOwner(player);
             road.setColor(color);
         } catch (IndexOutOfBoundsException e) {
@@ -118,9 +119,11 @@ public class GameBoard {
         if (player == null) {
             throw new GameException("Player must not be null");
         }
+
         for (Map.Entry<TileType, Integer> entry : buildable.getRequiredResources().entrySet()) {
             TileType tileType = entry.getKey();
             Integer amount = entry.getValue();
+            logger.debugf("Removing resource of player: playerId = %s, tileType = %s, amount = %s", player.getUniqueId(), tileType, amount);
             player.removeResource(tileType, amount);
         }
     }

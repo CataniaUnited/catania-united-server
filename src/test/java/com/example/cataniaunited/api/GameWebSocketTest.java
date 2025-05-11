@@ -7,6 +7,8 @@ import com.example.cataniaunited.game.GameService;
 import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.game.board.SettlementPosition;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
+import com.example.cataniaunited.game.buildings.City;
+import com.example.cataniaunited.game.buildings.Settlement;
 import com.example.cataniaunited.lobby.Lobby;
 import com.example.cataniaunited.lobby.LobbyService;
 import com.example.cataniaunited.player.Player;
@@ -596,6 +598,55 @@ public class GameWebSocketTest {
         assertEquals(player1, playersNode.get(player1).get("username").asText());
         assertEquals(player2, playersNode.get(player2).get("username").asText());
         assertEquals(player3, playersNode.get(player3).get("username").asText());
+    }
+
+    @Test
+    void testUpgradeOfSettlement() throws GameException, JsonProcessingException, InterruptedException {
+        Player player = new Player("Player1");
+        player.receiveResource(TileType.WHEAT, 2);
+        player.receiveResource(TileType.ORE, 3);
+        String playerId = player.getUniqueId();
+        when(playerService.getPlayerById(playerId)).thenReturn(player);
+
+        String lobbyId = lobbyService.createLobby("Host Player");
+        lobbyService.joinLobbyByCode(lobbyId, playerId);
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+        lobby.setActivePlayer(playerId);
+        GameBoard gameBoard = gameService.createGameboard(lobbyId);
+        SettlementPosition settlementPosition = gameBoard.getSettlementPositionGraph().get(0);
+        settlementPosition.getRoads().get(0).setOwner(player);
+        settlementPosition.setBuilding(new Settlement(player, lobby.getPlayerColor(playerId)));
+
+        int positionId = settlementPosition.getId();
+        ObjectNode placeSettlementMessageNode = objectMapper.createObjectNode().put("settlementPositionId", positionId);
+        var upgradeSettlementMessageDTO = new MessageDTO(MessageType.UPGRADE_SETTLEMENT, playerId, lobbyId, placeSettlementMessageNode);
+
+        List<String> receivedMessages = new CopyOnWriteArrayList<>();
+        CountDownLatch messageLatch = new CountDownLatch(4); // Expect multiple broadcasted messages
+
+        var webSocketClientConnection = BasicWebSocketConnector.create()
+                .baseUri(serverUri)
+                .path("/game")
+                .onTextMessage((connection, message) -> {
+                    receivedMessages.add(message);
+                    messageLatch.countDown();
+                })
+                .connectAndAwait();
+
+        String sentMessage = objectMapper.writeValueAsString(upgradeSettlementMessageDTO);
+        webSocketClientConnection.sendTextAndAwait(sentMessage);
+
+        assertTrue(messageLatch.await(5, TimeUnit.SECONDS), "Message not received in time");
+
+        MessageDTO responseMessage = objectMapper.readValue(receivedMessages.get(receivedMessages.size() - 1), MessageDTO.class);
+        assertEquals(MessageType.UPGRADE_SETTLEMENT, responseMessage.getType());
+        assertEquals(playerId, responseMessage.getPlayer());
+        assertEquals(lobbyId, responseMessage.getLobbyId());
+
+        var building = gameService.getGameboardByLobbyId(lobbyId).getJson().get("settlementPositions").get(0).get("building");
+        assertEquals(player, settlementPosition.getBuildingOwner());
+        assertEquals(City.class.getSimpleName(), building.get("type").asText());
+        verify(gameService).upgradeSettlement(lobbyId, playerId, settlementPosition.getId());
     }
 
 

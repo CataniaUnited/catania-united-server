@@ -106,7 +106,7 @@ public class Player {
     }
 
     public void removeResource(TileType resource, int amount) throws GameException {
-        if (resource == TileType.WASTE)
+        if (resource == null || resource == TileType.WASTE)
             return;
 
         int resourceCount = getResourceCount(resource) - amount;

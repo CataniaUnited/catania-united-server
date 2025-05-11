@@ -1,11 +1,15 @@
 package com.example.cataniaunited.player;
 
+import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.exception.InsufficientResourcesException;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.websockets.next.WebSocketConnection;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -250,5 +254,38 @@ class PlayerTest {
         var previousResource = player.resources;
         player.receiveResource(null, 5);
         assertEquals(previousResource, player.resources);
+    }
+
+    @Test
+    void removeResourceOfTypeWasteShouldDoNothing() throws GameException {
+        var previousResource = player.resources;
+        player.removeResource(TileType.WASTE, 5);
+        assertEquals(previousResource, player.resources);
+    }
+
+    @Test
+    void removeResourceOfNullShouldDoNothing() throws GameException {
+        var previousResource = player.resources;
+        player.removeResource(null, 5);
+        assertEquals(previousResource, player.resources);
+    }
+
+    @Test
+    void removeResourceShouldThrowExceptionIfResourcseAmountIsTooSmall() throws GameException {
+        int woodResource = player.resources.get(TileType.WOOD);
+        assertThrows(InsufficientResourcesException.class, () -> player.removeResource(TileType.WOOD, woodResource + 1));
+    }
+
+    @Test
+    void removeResourceShouldRemoveCorrectResourceAmount() throws GameException {
+        int woodResource = 4;
+        player.resources.put(TileType.WOOD, woodResource);
+        player.removeResource(TileType.WOOD, 2);
+        assertEquals(woodResource - 2, player.resources.get(TileType.WOOD));
+    }
+
+    @Test
+    void testHashCode() {
+        assertEquals(Objects.hashCode(player.getUniqueId()), player.hashCode());
     }
 }
