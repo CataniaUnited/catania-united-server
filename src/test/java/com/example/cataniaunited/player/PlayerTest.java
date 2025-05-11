@@ -1,24 +1,26 @@
 package com.example.cataniaunited.player;
 
+import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.exception.InsufficientResourcesException;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.websockets.next.WebSocketConnection;
+import io.smallrye.mutiny.Uni;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Objects;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
+import com.example.cataniaunited.dto.MessageType;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+
 
 class PlayerTest {
 
@@ -56,7 +58,7 @@ class PlayerTest {
     void testUniqueIdIsDifferentForEachPlayer() {
         Player player1 = new Player();
         Player player2 = new Player();
-        Assertions.assertNotEquals(player1.getUniqueId(), player2.getUniqueId(),
+        assertNotEquals(player1.getUniqueId(), player2.getUniqueId(),
                 "Each Player should have a unique ID");
     }
 
@@ -288,4 +290,36 @@ class PlayerTest {
     void testHashCode() {
         assertEquals(Objects.hashCode(player.getUniqueId()), player.hashCode());
     }
+
+    @Test
+    void sendMessage_successfulSend_invokesConnection() {
+        WebSocketConnection conn = mock(WebSocketConnection.class);
+        when(conn.sendText(anyString()))
+                .thenReturn(Uni.createFrom().voidItem());
+
+        Player player = new Player(conn);
+
+        MessageDTO dto = new MessageDTO();
+        dto.setType(MessageType.CREATE_LOBBY);
+        player.sendMessage(dto);
+
+        verify(conn).sendText(anyString());
+    }
+
+    @Test
+    void sendMessage_failureDoesNotThrow_stillInvokesConnection() {
+        WebSocketConnection conn = mock(WebSocketConnection.class);
+        when(conn.sendText(anyString()))
+                .thenReturn(Uni.createFrom().failure(new RuntimeException("boom")));
+
+        Player player = new Player(conn);
+
+        MessageDTO dto = new MessageDTO();
+        dto.setType(MessageType.CREATE_LOBBY);
+
+        assertDoesNotThrow(() -> player.sendMessage(dto));
+        verify(conn).sendText(anyString());
+    }
+
 }
+
