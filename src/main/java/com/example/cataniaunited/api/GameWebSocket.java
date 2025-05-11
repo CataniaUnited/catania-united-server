@@ -311,7 +311,8 @@ public class GameWebSocket {
         return Uni.createFrom().item(startPkt);
     }
 
-    private Uni<Void> sendPlayerResources(Player player, String lobbyId, WebSocketConnection connection){
+
+    Uni<Void> sendPlayerResources(Player player, String lobbyId, WebSocketConnection connection){
         ObjectNode resourcesPayload = player.getResourceJSON();
         MessageDTO resourceMsg = new MessageDTO(
                 MessageType.PLAYER_RESOURCES,
