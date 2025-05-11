@@ -68,12 +68,14 @@ public class GameWebSocket {
                 case SET_USERNAME -> setUsername(message, connection);
                 case CREATE_GAME_BOARD ->
                         createGameBoard(message, connection); // TODO: Remove after regular game start is implemented
-                case SET_ACTIVE_PLAYER -> setActivePlayer(message);
+                case SET_ACTIVE_PLAYER -> setActivePlayer(message, connection);
                 case PLACE_SETTLEMENT -> placeSettlement(message, connection);
+                case UPGRADE_SETTLEMENT -> upgradeSettlement(message, connection);
                 case PLACE_ROAD -> placeRoad(message, connection);
                 case ROLL_DICE -> handleDiceRoll(message, connection);
                 case ERROR, CONNECTION_SUCCESSFUL, CLIENT_DISCONNECTED, LOBBY_CREATED, LOBBY_UPDATED, PLAYER_JOINED,
-                        GAME_BOARD_JSON, GAME_WON, DICE_RESULT, PLAYER_RESOURCES -> throw new GameException("Invalid client command");
+                     GAME_BOARD_JSON, GAME_WON, DICE_RESULT, PLAYER_RESOURCES ->
+                        throw new GameException("Invalid client command");
             };
         } catch (GameException ge) {
             logger.errorf("Unexpected Error occurred: message = %s, error = %s", message, ge.getMessage());
@@ -95,17 +97,26 @@ public class GameWebSocket {
         } catch (NumberFormatException e) {
             throw new GameException("Invalid road id: id = %s", roadId.toString());
         }
-        GameBoard updatedGameboard = gameService.getGameboardByLobbyId(message.getLobbyId());
-        MessageDTO update = new MessageDTO(MessageType.PLACE_ROAD, message.getPlayer(), message.getLobbyId(), updatedGameboard.getJson());
-        return connection.broadcast().sendText(update).chain(i -> Uni.createFrom().item(update));
+        MessageDTO update = new MessageDTO(MessageType.PLACE_ROAD, message.getPlayer(), message.getLobbyId(), createGameBoardObjectNode(message.getLobbyId()));
+        return sendPlayerResources(playerService.getPlayerById(message.getPlayer()), message.getLobbyId(), connection)
+                .chain(() -> connection.broadcast().sendText(update).chain(i -> Uni.createFrom().item(update)));
     }
 
     Uni<MessageDTO> placeSettlement(MessageDTO message, WebSocketConnection connection) throws GameException {
+        SettlementAction placeAction = positionId -> gameService.placeSettlement(message.getLobbyId(), message.getPlayer(), positionId);
+        return handleSettlementAction(message, connection, placeAction);
+    }
+
+    Uni<MessageDTO> upgradeSettlement(MessageDTO message, WebSocketConnection connection) throws GameException {
+        SettlementAction upgradeAction = positionId -> gameService.upgradeSettlement(message.getLobbyId(), message.getPlayer(), positionId);
+        return handleSettlementAction(message, connection, upgradeAction);
+    }
+
+    Uni<MessageDTO> handleSettlementAction(MessageDTO message, WebSocketConnection connection, SettlementAction action) throws GameException {
         JsonNode settlementPosition = message.getMessageNode("settlementPositionId");
         try {
             int position = Integer.parseInt(settlementPosition.toString());
-            gameService.placeSettlement(message.getLobbyId(), message.getPlayer(), position);
-
+            action.execute(position);
         } catch (NumberFormatException e) {
             throw new GameException("Invalid settlement position id: id = %s", settlementPosition.toString());
         }
@@ -114,12 +125,8 @@ public class GameWebSocket {
             return gameService.broadcastWin(connection, message.getLobbyId(), message.getPlayer());
         }
 
-        GameBoard updatedGameboard = gameService.getGameboardByLobbyId(message.getLobbyId());
-
-        ObjectNode root = JsonNodeFactory.instance.objectNode();
-        root.set("gameboard", updatedGameboard.getJson());
-
-        ObjectNode playersJson = root.putObject("players");
+        ObjectNode payload = createGameBoardObjectNode(message.getLobbyId());
+        ObjectNode playersJson = payload.putObject("players");
         lobbyService.getLobbyById(message.getLobbyId())
                 .getPlayers().forEach(playerId -> {
                     Player player = playerService.getPlayerById(playerId);
@@ -129,13 +136,14 @@ public class GameWebSocket {
                 });
 
         MessageDTO update = new MessageDTO(
-                MessageType.PLACE_SETTLEMENT,
+                message.getType(),
                 message.getPlayer(),
                 message.getLobbyId(),
-                root
+                payload
         );
 
-        return connection.broadcast().sendText(update).chain(i -> Uni.createFrom().item(update));
+        return sendPlayerResources(playerService.getPlayerById(message.getPlayer()), message.getLobbyId(), connection)
+                        .chain(() ->  connection.broadcast().sendText(update).chain(i -> Uni.createFrom().item(update)));
     }
 
     Uni<MessageDTO> joinLobby(MessageDTO message, WebSocketConnection connection) throws GameException {
@@ -172,11 +180,11 @@ public class GameWebSocket {
     }
 
     //TODO: Remove after implementation of player order
-    Uni<MessageDTO> setActivePlayer(MessageDTO message) throws GameException {
+    Uni<MessageDTO> setActivePlayer(MessageDTO message, WebSocketConnection connection) throws GameException {
         lobbyService.getLobbyById(message.getLobbyId()).setActivePlayer(message.getPlayer());
-        return Uni.createFrom().item(new MessageDTO(MessageType.SET_ACTIVE_PLAYER, message.getPlayer(), message.getLobbyId()));
+        return sendPlayerResources(playerService.getPlayerById(message.getPlayer()), message.getLobbyId(), connection)
+                .chain(() -> Uni.createFrom().item(new MessageDTO(MessageType.SET_ACTIVE_PLAYER, message.getPlayer(), message.getLobbyId())));
     }
-
 
     MessageDTO createErrorMessage(String errorMessage) {
         ObjectNode errorNode = JsonNodeFactory.instance.objectNode();
@@ -186,7 +194,9 @@ public class GameWebSocket {
 
     Uni<MessageDTO> createGameBoard(MessageDTO message, WebSocketConnection connection) throws GameException {
         GameBoard board = gameService.createGameboard(message.getLobbyId());
-        MessageDTO updateJson = new MessageDTO(MessageType.GAME_BOARD_JSON, null, message.getLobbyId(), board.getJson());
+        ObjectNode payload = JsonNodeFactory.instance.objectNode();
+        payload.set("gameboard", board.getJson());
+        MessageDTO updateJson = new MessageDTO(MessageType.GAME_BOARD_JSON, null, message.getLobbyId(), payload);
         return connection.broadcast().sendText(updateJson).chain(i -> Uni.createFrom().item(updateJson));
 
     }
@@ -216,18 +226,8 @@ public class GameWebSocket {
 
             WebSocketConnection playerConnection = playerService.getConnectionByPlayerId(playerIdInLobby);
             if (playerConnection != null && playerConnection.isOpen()) {
-                ObjectNode resourcesPayload = player.getResourceJSON();
-
-                MessageDTO resourceMsg = new MessageDTO(
-                        MessageType.PLAYER_RESOURCES,
-                        playerIdInLobby,
-                        message.getLobbyId(),
-                        resourcesPayload
-                );
-
-                logger.infof("Sending PLAYER_RESOURCES to %s: %s", playerIdInLobby, resourcesPayload.toString());
                 individualResourceSendUnis.add(
-                        playerConnection.sendText(resourceMsg).onFailure().invoke(e -> logger.errorf("Failed to send PLAYER_RESOURCES to %s: %s", playerIdInLobby, e.getMessage()))
+                        sendPlayerResources(player, message.getLobbyId(), playerConnection)
                 );
             } else {
                 logger.warnf("No open connection for player %s to send PLAYER_RESOURCES.", playerIdInLobby);
@@ -244,4 +244,31 @@ public class GameWebSocket {
                 .chain(() -> finalresourceUpdatesUni)
                 .chain(() -> Uni.createFrom().item(diceResultMessage));
     }
+
+    private Uni<Void> sendPlayerResources(Player player, String lobbyId, WebSocketConnection connection){
+        ObjectNode resourcesPayload = player.getResourceJSON();
+        MessageDTO resourceMsg = new MessageDTO(
+                MessageType.PLAYER_RESOURCES,
+                player.getUniqueId(),
+                lobbyId,
+                resourcesPayload
+        );
+
+        logger.infof("Sending PLAYER_RESOURCES to %s: %s", player.getUniqueId(), resourcesPayload.toString());
+        return connection.sendText(resourceMsg)
+                .onFailure()
+                .invoke(e -> logger.errorf("Failed to send PLAYER_RESOURCES to %s: %s", player.getUniqueId(), e.getMessage()));
+    }
+
+    private ObjectNode createGameBoardObjectNode(String lobbyId) throws GameException {
+        GameBoard gameboard = gameService.getGameboardByLobbyId(lobbyId);
+        ObjectNode payload = JsonNodeFactory.instance.objectNode();
+        payload.set("gameboard", gameboard.getJson());
+        return payload;
+    }
+}
+
+@FunctionalInterface
+interface SettlementAction {
+    void execute(int settlementPositionId) throws GameException;
 }

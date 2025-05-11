@@ -24,8 +24,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 @QuarkusTest
 class GameBoardTest {
@@ -178,13 +176,12 @@ class GameBoardTest {
 
     @Test
     void testPlaceSettlement() throws GameException {
-        String playerId = "Player1";
+        Player player = new Player();
+        String playerId = player.getUniqueId();
         GameBoard gameBoard = new GameBoard(2);
         var settlementPosition = gameBoard.getSettlementPositionGraph().get(0);
         Road road = settlementPosition.roads.get(0);
-        road.setOwnerPlayerId(playerId);
-        Player player = mock(Player.class);
-        when(player.getUniqueId()).thenReturn(playerId);
+        road.setOwner(player);
 
         gameBoard.placeSettlement(player, PlayerColor.BLUE, settlementPosition.getId());
         assertNotNull(settlementPosition.building);
@@ -195,7 +192,7 @@ class GameBoardTest {
     @Test
     void placeSettlementShouldThrowExceptionIfPositionIsLessThanZero() {
         GameBoard gameBoard = new GameBoard(2);
-        Player player = mock(Player.class);
+        Player player = new Player("Player1");
         GameException ge = assertThrows(GameException.class, () -> gameBoard.placeSettlement(player, PlayerColor.BLUE, -1));
         assertEquals("Settlement position not found: id = %s".formatted(-1), ge.getMessage());
     }
@@ -204,20 +201,17 @@ class GameBoardTest {
     void placeSettlementShouldThrowExceptionIfPositionIsBiggerThanSize() {
         GameBoard gameBoard = new GameBoard(2);
         int positionId = gameBoard.getSettlementPositionGraph().size() + 1;
-        Player player = mock(Player.class);
+        Player player = new Player("Player1");
         GameException ge = assertThrows(GameException.class, () -> gameBoard.placeSettlement(player, PlayerColor.BLUE, positionId));
         assertEquals("Settlement position not found: id = %s".formatted(positionId), ge.getMessage());
     }
 
-    @ParameterizedTest
-    @MethodSource("invalidPlayerIds")
-    void placeSettlementShouldThrowExceptionIfPlayerIdIsEmpty(String playerId) {
+    @Test
+    void placeSettlementShouldThrowExceptionIfPlayerIsNull() {
         GameBoard gameBoard = new GameBoard(2);
         int positionId = gameBoard.getSettlementPositionGraph().get(0).getId();
-        Player player = mock(Player.class);
-        when(player.getUniqueId()).thenReturn(playerId);
 
-        GameException ge = assertThrows(GameException.class, () -> gameBoard.placeSettlement(player, PlayerColor.BLUE, positionId));
+        GameException ge = assertThrows(GameException.class, () -> gameBoard.placeSettlement(null, PlayerColor.BLUE, positionId));
         assertEquals("Owner of building must not be empty", ge.getMessage());
     }
 
@@ -225,15 +219,15 @@ class GameBoardTest {
     void testPlaceRoad() throws GameException {
         GameBoard gameBoard = new GameBoard(2);
         var road = gameBoard.roadList.get(0);
-        String playerId = "Player1";
-        gameBoard.placeRoad(playerId, PlayerColor.BLUE, road.getId());
-        assertEquals(playerId, road.getOwnerPlayerId());
+        Player player = new Player("Player1");
+        gameBoard.placeRoad(player, PlayerColor.BLUE, road.getId());
+        assertEquals(player, road.getOwner());
     }
 
     @Test
     void placeRoadShouldThrowExceptionIfRoadIdIsLessThanZero() {
         GameBoard gameBoard = new GameBoard(2);
-        GameException ge = assertThrows(GameException.class, () -> gameBoard.placeRoad("Player1", PlayerColor.BLUE, -1));
+        GameException ge = assertThrows(GameException.class, () -> gameBoard.placeRoad(new Player("Player1"), PlayerColor.BLUE, -1));
         assertEquals("Road not found: id = %s".formatted(-1), ge.getMessage());
     }
 
@@ -241,21 +235,16 @@ class GameBoardTest {
     void placeRoadShouldThrowExceptionIfRoadIdIsGreaterThanSize() {
         GameBoard gameBoard = new GameBoard(2);
         int roadId = gameBoard.roadList.size() + 1;
-        GameException ge = assertThrows(GameException.class, () -> gameBoard.placeRoad("Player1", PlayerColor.BLUE, roadId));
+        GameException ge = assertThrows(GameException.class, () -> gameBoard.placeRoad(new Player("Player1"), PlayerColor.BLUE, roadId));
         assertEquals("Road not found: id = %s".formatted(roadId), ge.getMessage());
     }
 
-    @ParameterizedTest
-    @MethodSource("invalidPlayerIds")
-    void placeRoadShouldThrowExceptionIfPlayerIdIsEmpty(String playerId) {
+    @Test
+    void placeRoadShouldThrowExceptionIfPlayerIsNull() {
         GameBoard gameBoard = new GameBoard(2);
         var road = gameBoard.roadList.get(0);
-        GameException ge = assertThrows(GameException.class, () -> gameBoard.placeRoad(playerId, PlayerColor.BLUE, road.getId()));
-        assertEquals("Owner Id of road must not be empty", ge.getMessage());
-    }
-
-    static Stream<Arguments> invalidPlayerIds() {
-        return Stream.of(null, Arguments.of(""));
+        GameException ge = assertThrows(GameException.class, () -> gameBoard.placeRoad(null, PlayerColor.BLUE, road.getId()));
+        assertEquals("Player must not be null", ge.getMessage());
     }
 
 

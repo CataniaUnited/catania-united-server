@@ -1,6 +1,7 @@
 package com.example.cataniaunited.game.board;
 
 import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerColor;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -194,17 +195,23 @@ class RoadTest {
 
     @Test
     void testSetOwnerPlayerId() throws GameException {
-        String playerId = "Player1";
-        road.setOwnerPlayerId(playerId);
-        assertEquals(playerId, road.getOwnerPlayerId());
+        var player = new Player("Player1");
+        road.setOwner(player);
+        assertEquals(player, road.getOwner());
     }
 
     @Test
-    void setOwnerPlayerIdShouldThrowErrorIfRoadIsAlreadyPlaced() throws GameException {
-        String playerId = "Player1";
-        road.setOwnerPlayerId(playerId);
-        GameException ge = assertThrows(GameException.class, () -> road.setOwnerPlayerId(playerId));
-        assertEquals("Road cannot be placed twice: roadId = %s, playerId = %s".formatted(road.id, playerId), ge.getMessage());
+    void setOwnerPlayerShouldThrowErrorIfRoadIsAlreadyPlaced() throws GameException {
+        var player = new Player("Player1");
+        road.setOwner(player);
+        GameException ge = assertThrows(GameException.class, () -> road.setOwner(player));
+        assertEquals("Road cannot be placed twice: roadId = %s, playerId = %s".formatted(road.id, player.getUniqueId()), ge.getMessage());
+    }
+
+    @Test
+    void setOwnerPlayerShouldThrowErrorIfOwnerIsNull() {
+        GameException ge = assertThrows(GameException.class, () -> road.setOwner(null));
+        assertEquals("Owner of road must not be null: roadId = %s".formatted(road.id), ge.getMessage());
     }
 
     @Test
@@ -252,8 +259,8 @@ class RoadTest {
 
     @Test
     void testToJsonWithOwner() throws GameException {
-        String expectedOwner = "PlayerX";
-        road.setOwnerPlayerId(expectedOwner);
+        var expectedOwner = new Player("PlayerX");
+        road.setOwner(expectedOwner);
 
         ObjectNode jsonNode = road.toJson();
 
@@ -265,7 +272,7 @@ class RoadTest {
         // Check Owner (should be the player ID string)
         assertTrue(jsonNode.has("owner"), "JSON should contain 'owner' field");
         assertFalse(jsonNode.get("owner").isNull(), "Owner should not be null after setting");
-        assertEquals(expectedOwner, jsonNode.get("owner").asText(), "Owner should match the set player ID in JSON");
+        assertEquals(expectedOwner.getUniqueId(), jsonNode.get("owner").asText(), "Owner should match the set player ID in JSON");
 
         assertTrue(jsonNode.get("color").isNull(), "Color should be null");
 
@@ -294,7 +301,7 @@ class RoadTest {
 
     @Test
     void testToJsonAfterCoordinateCalculationAndOwner() throws GameException {
-        String expectedOwner = "Player33";
+        var expectedOwner = new Player("PlayerX");
         PlayerColor expectedColor = PlayerColor.LAVENDER;
 
         // Mock getCoordinates from SettlementPosition for calculation
@@ -304,7 +311,7 @@ class RoadTest {
         when(mockPositionB.getCoordinates()).thenReturn(coordsB);
 
         // Set owner and calculate coordinates/angle
-        road.setOwnerPlayerId(expectedOwner);
+        road.setOwner(expectedOwner);
         road.setColor(expectedColor);
         road.setCoordinatesAndRotationAngle();
 
@@ -325,7 +332,7 @@ class RoadTest {
 
         // Check Owner
         assertTrue(jsonNode.has("owner"), "JSON should contain 'owner' field");
-        assertEquals(expectedOwner, jsonNode.get("owner").asText(), "Owner should match the set player ID in JSON");
+        assertEquals(expectedOwner.getUniqueId(), jsonNode.get("owner").asText(), "Owner should match the set player ID in JSON");
 
         assertTrue(jsonNode.has("color"), "JSON should contain 'color' field");
         assertEquals(expectedColor.getHexCode(), jsonNode.get("color").asText(), "Color should match the hex code of the color in JSON");

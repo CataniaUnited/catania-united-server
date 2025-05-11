@@ -18,7 +18,16 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -246,7 +255,7 @@ class SettlementPositionTest {
         String playerId = "Player1";
         Player mockPlayer = mock(Player.class);
         when(mockPlayer.getUniqueId()).thenReturn(playerId);
-        when(mockRoad1.getOwnerPlayerId()).thenReturn(playerId);
+        when(mockRoad1.getOwner()).thenReturn(mockPlayer);
         when(mockRoad1.getNeighbour(any(SettlementPosition.class))).thenReturn(mockNeighbour1);
         settlementPosition.addRoad(mockRoad1);
         Settlement settlement = new Settlement(mockPlayer, PlayerColor.BLUE);
@@ -261,7 +270,7 @@ class SettlementPositionTest {
         Player mockPlayer = mock(Player.class);
         when(mockPlayer.getUniqueId()).thenReturn(playerId);
         Settlement settlement1 = new Settlement(mockPlayer, PlayerColor.BLUE);
-        when(mockRoad1.getOwnerPlayerId()).thenReturn(playerId);
+        when(mockRoad1.getOwner()).thenReturn(mockPlayer);
         when(mockRoad1.getNeighbour(any(SettlementPosition.class))).thenReturn(mockNeighbour1);
         settlementPosition.addRoad(mockRoad1);
         settlementPosition.setBuilding(settlement1);
@@ -280,7 +289,7 @@ class SettlementPositionTest {
         String playerId = "Player1";
         Player mockPlayer = mock(Player.class);
         when(mockPlayer.getUniqueId()).thenReturn(playerId);
-        when(mockRoad1.getOwnerPlayerId()).thenReturn(playerId);
+        when(mockRoad1.getOwner()).thenReturn(mockPlayer);
         when(mockRoad1.getNeighbour(any(SettlementPosition.class))).thenReturn(mockNeighbour1);
         when(mockNeighbour1.getBuildingOwner()).thenReturn(mockPlayer);
         settlementPosition.addRoad(mockRoad1);
@@ -305,8 +314,8 @@ class SettlementPositionTest {
 
     @Test
     void setBuildingShouldThrowErrorWhenOnlyAnotherPlayerHasAdjacentRoad() throws GameException {
-        String playerId = "Player1";
-        when(mockRoad1.getOwnerPlayerId()).thenReturn(playerId);
+        var player = new Player("Player1");
+        when(mockRoad1.getOwner()).thenReturn(player);
         when(mockRoad1.getNeighbour(any(SettlementPosition.class))).thenReturn(mockNeighbour1);
         settlementPosition.addRoad(mockRoad1);
 
@@ -320,21 +329,19 @@ class SettlementPositionTest {
 
     @Test
     void setBuildingShouldWorkIfTwoPlayersHaveAdjacentRoads() throws GameException {
-        String playerId = "Player1";
-        String secondPlayerId = "Player2";
-        when(mockRoad1.getOwnerPlayerId()).thenReturn(playerId);
+        var player = new Player("Player1");
+        var secondPlayer = new Player("Player2");
+        when(mockRoad1.getOwner()).thenReturn(player);
         when(mockRoad1.getNeighbour(any(SettlementPosition.class))).thenReturn(mockNeighbour1);
-        when(mockRoad2.getOwnerPlayerId()).thenReturn(secondPlayerId);
+        when(mockRoad2.getOwner()).thenReturn(secondPlayer);
         when(mockRoad2.getNeighbour(any(SettlementPosition.class))).thenReturn(mockNeighbour2);
         settlementPosition.addRoad(mockRoad1);
         settlementPosition.addRoad(mockRoad2);
 
-        Player mockPlayer2 = mock(Player.class);
-        when(mockPlayer2.getUniqueId()).thenReturn(secondPlayerId);
-        Settlement settlement = new Settlement(mockPlayer2, PlayerColor.BLUE);
+        Settlement settlement = new Settlement(secondPlayer, PlayerColor.BLUE);
         settlementPosition.setBuilding(settlement);
         assertEquals(settlement, settlementPosition.building);
-        assertEquals(secondPlayerId, settlementPosition.getBuildingOwner().getUniqueId());
+        assertEquals(secondPlayer, settlementPosition.getBuildingOwner());
     }
 
     @Test
@@ -377,7 +384,7 @@ class SettlementPositionTest {
 
         // Use a mock Building
         Building mockBuilding = new Settlement(mockPlayer, color);
-        when(mockRoad1.getOwnerPlayerId()).thenReturn(buildingOwner);
+        when(mockRoad1.getOwner()).thenReturn(mockPlayer);
         when(mockRoad1.getNeighbour(any(SettlementPosition.class))).thenReturn(mockNeighbour1);
         settlementPosition.addRoad(mockRoad1);
 
@@ -450,7 +457,7 @@ class SettlementPositionTest {
         Player player = mock(Player.class);
         when(player.getUniqueId()).thenReturn(playerId);
         settlementPosition.addRoad(mockRoad1);
-        when(mockRoad1.getOwnerPlayerId()).thenReturn(playerId);
+        when(mockRoad1.getOwner()).thenReturn(player);
 
         when(mockRoad1.getNeighbour(settlementPosition)).thenReturn(mockNeighbour1);
         when(mockNeighbour1.getBuildingOwner()).thenReturn(null);

@@ -21,10 +21,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-
 import java.lang.reflect.Field;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.when;
 
 @QuarkusTest
@@ -49,9 +49,8 @@ class ResourceDistributionIntegrationTest {
         Mockito.when(mockWsConn.id()).thenReturn("mock-test-conn-" + System.nanoTime());
         testPlayer = playerService.addPlayer(mockWsConn);
         WebSocketConnection mockWsConn2 = Mockito.mock(WebSocketConnection.class);
-        Mockito.when(mockWsConn2.id()).thenReturn("mock-test-conn-" + System.nanoTime()+1);
+        Mockito.when(mockWsConn2.id()).thenReturn("mock-test-conn-" + System.nanoTime() + 1);
         Player testPlayer2 = playerService.addPlayer(mockWsConn2);
-
 
 
         lobbyId = lobbyService.createLobby(testPlayer.getUniqueId());
@@ -95,7 +94,7 @@ class ResourceDistributionIntegrationTest {
         assertNotNull(playerColor, "Player should have an assigned color");
 
         Road roadToPlace = targetSettlementPosition.getRoads().stream()
-                .filter(r -> r.getOwnerPlayerId() == null)
+                .filter(r -> r.getOwner() == null)
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("No available (unowned) road found for target settlement position " + targetSettlementPosition.getId()));
         gameService.placeRoad(lobbyId, testPlayer.getUniqueId(), roadToPlace.getId());
