@@ -1,24 +1,25 @@
 package com.example.cataniaunited.player;
 
+import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.exception.InsufficientResourcesException;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.websockets.next.WebSocketConnection;
+import io.smallrye.mutiny.Uni;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Objects;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
+import com.example.cataniaunited.dto.MessageType;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+
 
 class PlayerTest {
 
@@ -56,13 +57,13 @@ class PlayerTest {
     void testUniqueIdIsDifferentForEachPlayer() {
         Player player1 = new Player();
         Player player2 = new Player();
-        Assertions.assertNotEquals(player1.getUniqueId(), player2.getUniqueId(),
+        assertNotEquals(player1.getUniqueId(), player2.getUniqueId(),
                 "Each Player should have a unique ID");
     }
 
     @Test
-    void defaultConstructorInitializesResourcesToZeroAndConnectionIdToNull() {
-        assertNull(player.connectionId, "connectionId should be null for default constructor.");
+    void defaultConstructorInitializesResourcesToZeroAndConnectionToNull() {
+        assertNull(player.getConnection(), "connection should be null for default constructor.");
 
         for (TileType type : TileType.values()) {
             if (type == TileType.WASTE) {
@@ -76,7 +77,7 @@ class PlayerTest {
     @Test
     void constructorWithUsernameInitializesConnectionIdAsNull() {
         Player customPlayer = new Player("TestUser");
-        assertNull(customPlayer.connectionId, "connectionId should be null for username-only constructor.");
+        assertNull(customPlayer.getConnection(), "connection should be null for username-only constructor.");
     }
 
     @Test
@@ -89,7 +90,7 @@ class PlayerTest {
 
         assertTrue(customPlayer.getUsername().startsWith("RandomPlayer_"), "Username should start with 'RandomPlayer_'.");
         assertNotNull(customPlayer.getUniqueId(), "uniqueId should not be null.");
-        assertEquals(expectedConnectionId, customPlayer.connectionId, "connectionId should match the mock connection's ID.");
+        assertEquals(expectedConnectionId, customPlayer.getConnection().id(), "connectionId should match the mock connection's ID.");
     }
 
     @Test
@@ -103,7 +104,7 @@ class PlayerTest {
 
         assertEquals(customUsername, customPlayer.getUsername());
         assertNotNull(customPlayer.getUniqueId(), "uniqueId should not be null.");
-        assertEquals(expectedConnectionId, customPlayer.connectionId, "connectionId should match the mock connection's ID.");
+        assertEquals(expectedConnectionId, customPlayer.getConnection().id(), "connectionId should match the mock connection's ID.");
     }
 
     @Test
@@ -288,4 +289,73 @@ class PlayerTest {
     void testHashCode() {
         assertEquals(Objects.hashCode(player.getUniqueId()), player.hashCode());
     }
+
+    @Test
+    void sendMessage_successfulSend_invokesConnection() {
+        WebSocketConnection conn = mock(WebSocketConnection.class);
+        when(conn.sendText(anyString()))
+                .thenReturn(Uni.createFrom().voidItem());
+
+        Player player = new Player(conn);
+
+        MessageDTO dto = new MessageDTO();
+        dto.setType(MessageType.CREATE_LOBBY);
+        player.sendMessage(dto);
+
+        verify(conn).sendText(anyString());
+    }
+
+    @Test
+    void sendMessage_failureDoesNotThrow_stillInvokesConnection() {
+        WebSocketConnection conn = mock(WebSocketConnection.class);
+        when(conn.sendText(anyString()))
+                .thenReturn(Uni.createFrom().failure(new RuntimeException("boom")));
+
+        Player player = new Player(conn);
+
+        MessageDTO dto = new MessageDTO();
+        dto.setType(MessageType.CREATE_LOBBY);
+
+        assertDoesNotThrow(() -> player.sendMessage(dto));
+        verify(conn).sendText(anyString());
+    }
+    @Test
+    void sendMessage_withNoConnection_doesNothing() {
+        Player p = new Player("someUser");
+        MessageDTO dto = new MessageDTO();
+        dto.setType(MessageType.CREATE_LOBBY);
+
+        assertDoesNotThrow(() -> p.sendMessage(dto));
+    }
+
+    @Test
+    void sendMessage_successfulSend_invokesSendText() {
+        WebSocketConnection conn = mock(WebSocketConnection.class);
+        when(conn.sendText(anyString()))
+                .thenReturn(Uni.createFrom().voidItem());
+
+        Player p = new Player(conn);
+        MessageDTO dto = new MessageDTO();
+        dto.setType(MessageType.CREATE_LOBBY);
+
+        p.sendMessage(dto);
+
+        verify(conn, times(1)).sendText(anyString());
+    }
+
+    @Test
+    void sendMessage_whenSendFails_stillInvokesSendText_andSwallowsException() {
+        WebSocketConnection conn = mock(WebSocketConnection.class);
+        when(conn.sendText(anyString()))
+                .thenReturn(Uni.createFrom().failure(new RuntimeException("kaboom")));
+
+        Player p = new Player(conn);
+        MessageDTO dto = new MessageDTO();
+        dto.setType(MessageType.CREATE_LOBBY);
+
+        assertDoesNotThrow(() -> p.sendMessage(dto));
+
+        verify(conn, times(1)).sendText(anyString());
+    }
 }
+

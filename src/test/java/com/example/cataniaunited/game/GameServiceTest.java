@@ -34,6 +34,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.*;
+
 
 @QuarkusTest
 class GameServiceTest {
@@ -54,9 +57,43 @@ class GameServiceTest {
     @BeforeEach
     void init() {
         gameboardMock = mock(GameBoard.class);
-        lobbyMock = mock(Lobby.class);
+        lobbyMock     = mock(Lobby.class);
+
         when(lobbyMock.getLobbyId()).thenReturn("12345");
-        when(lobbyMock.getPlayers()).thenReturn(Set.of("1", "2"));
+        when(lobbyMock.getPlayers()).thenReturn(Set.of("host", "p2"));
+    }
+
+    @Test
+    void startGame_setsFlagsBroadcastsAndReturnsDto() throws GameException {
+        String hostId  = "host";
+        String lobbyId = lobbyService.createLobby(hostId);
+
+
+        Lobby lobbySpy = spy(lobbyService.getLobbyById(lobbyId));
+        lobbySpy.getPlayers().add("p2");
+        doReturn(lobbySpy).when(lobbyService).getLobbyById(lobbyId);
+
+
+        doReturn(gameboardMock).when(gameService).createGameboard(lobbyId);
+        ObjectNode dummyBoardJson = new ObjectMapper().createObjectNode();
+        when(gameboardMock.getJson()).thenReturn(dummyBoardJson);
+
+        Player host = mock(Player.class);
+        Player p2   = mock(Player.class);
+        when(playerService.getPlayerById(hostId)).thenReturn(host);
+        when(playerService.getPlayerById("p2")).thenReturn(p2);
+
+        MessageDTO dto = gameService.startGame(lobbyId);
+        assertNotNull(dto);
+        assertEquals(MessageType.GAME_STARTED, dto.getType());
+        assertEquals(lobbyId, dto.getLobbyId());
+
+        assertFalse(dto.getMessageNode("playerOrder").isArray());
+        assertTrue(dto.getMessageNode("board").isObject());
+
+        verify(host).sendMessage(dto);
+        verify(p2  ).sendMessage(dto);
+        verifyNoMoreInteractions(host, p2);
     }
 
     @Test

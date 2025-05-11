@@ -1,5 +1,6 @@
 package com.example.cataniaunited.player;
 
+import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.exception.InsufficientResourcesException;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
@@ -7,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.websockets.next.WebSocketConnection;
+import org.jboss.logging.Logger;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -16,35 +18,39 @@ import java.util.UUID;
 
 public class Player {
 
+    private static final Logger LOG = Logger.getLogger(Player.class);
+
     private String username;
     private final String uniqueId;
-    final String connectionId;
-
+    private final WebSocketConnection connection;
+    private int victoryPoints = 0;
     HashMap<TileType, Integer> resources = new HashMap<>();
-    private int victoryPoints;
 
     public Player() {
         this.uniqueId = UUID.randomUUID().toString();
         this.username = "RandomPlayer_" + new Random().nextInt(10000);
-        this.connectionId = null;
+        this.connection = null;
+        initializeResources();
+    }
+
+    public Player(WebSocketConnection connection) {
+        this.uniqueId = UUID.randomUUID().toString();
+        this.username = "RandomPlayer_" + new Random().nextInt(10000);
+        this.connection = connection;
         initializeResources();
     }
 
     public Player(String username) {
         this.username = username;
         this.uniqueId = UUID.randomUUID().toString();
-        this.connectionId = null;
+        this.connection = null;
         initializeResources();
-    }
-
-    public Player(WebSocketConnection connection) {
-        this("RandomPlayer_" + new Random().nextInt(10000), connection);
     }
 
     public Player(String username, WebSocketConnection connection) {
         this.username = username;
         this.uniqueId = UUID.randomUUID().toString();
-        this.connectionId = connection.id();
+        this.connection = connection;
         initializeResources();
     }
 
@@ -76,6 +82,29 @@ public class Player {
         this.victoryPoints += victoryPoints;
     }
 
+
+    public WebSocketConnection getConnection() {
+        return connection;
+    }
+
+
+    public void sendMessage(MessageDTO dto) {
+        if (connection == null) {
+            LOG.warnf("No WS connection for player %s – message dropped!", uniqueId);
+            return;
+        }
+        try {
+            String json = new ObjectMapper().writeValueAsString(dto);
+            connection.sendText(json)          // non-blocking
+                    .subscribe().with(
+                            v -> LOG.debugf("Sent to %s : %s", uniqueId, dto.getType()),
+                            err -> LOG.errorf(err, "Failed to send to %s", uniqueId)
+                    );
+        } catch (Exception e) {
+            LOG.errorf(e, "Failed to serialise DTO for player %s", uniqueId);
+        }
+    }
+
     public ObjectNode toJson() {
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode playerNode = mapper.createObjectNode();
@@ -93,7 +122,7 @@ public class Player {
         return "Player{" +
                 "username='" + username + '\'' +
                 ", uniqueId='" + uniqueId + '\'' +
-                ", connectionId='" + connectionId + '\'' +
+                ", connectionId='" + (connection != null ? connection.id() : "null") + '\'' +
                 '}';
     }
 

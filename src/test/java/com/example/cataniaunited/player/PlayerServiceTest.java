@@ -40,7 +40,7 @@ class PlayerServiceTest {
         Player addedPlayer = playerService.addPlayer(mockConnection1);
 
         assertNotNull(addedPlayer, "Added player should not be null.");
-        assertEquals(mockConnId1, addedPlayer.connectionId, "Player's connection ID should match.");
+        assertEquals(mockConnId1, addedPlayer.getConnection().id(), "Player's connection ID should match.");
         assertTrue(addedPlayer.getUsername().startsWith("RandomPlayer_"), "Player should have a random default username.");
         assertNotNull(addedPlayer.getUniqueId(), "Player should have a unique ID.");
 

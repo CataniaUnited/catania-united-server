@@ -1,8 +1,12 @@
 package com.example.cataniaunited.lobby;
 
+import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerColor;
+import com.example.cataniaunited.player.PlayerService;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
 import java.security.SecureRandom;
@@ -18,11 +22,13 @@ public class LobbyServiceImpl implements LobbyService {
     private final Map<String, Lobby> lobbies = new ConcurrentHashMap<>();
     private static final SecureRandom secureRandom = new SecureRandom();
 
+    // Inject the service that holds all connected Player objects
+    @Inject
+    PlayerService playerService;
 
     @Override
     public String createLobby(String hostPlayer) {
         String lobbyId;
-
         do {
             lobbyId = generateLobbyId();
         } while (lobbies.containsKey(lobbyId));
@@ -30,7 +36,6 @@ public class LobbyServiceImpl implements LobbyService {
         setPlayerColor(lobby, hostPlayer);
         lobbies.put(lobbyId, lobby);
         logger.infof("Lobby created: ID=%s, Host=%s", lobbyId, hostPlayer);
-
         return lobbyId;
     }
 
@@ -38,13 +43,11 @@ public class LobbyServiceImpl implements LobbyService {
     public String generateLobbyId() {
         String letters = getRandomCharacters("abcdefghijklmnopqrstuvwxyz", 3);
         String numbers = getRandomCharacters("0123456789", 3);
-
         return secureRandom.nextBoolean() ? letters + numbers : numbers + letters;
     }
 
     private String getRandomCharacters(String characters, int length) {
         StringBuilder stringBuilder = new StringBuilder();
-
         for (int i = 0; i < length; i++) {
             int index = secureRandom.nextInt(characters.length());
             stringBuilder.append(characters.charAt(index));
@@ -64,14 +67,13 @@ public class LobbyServiceImpl implements LobbyService {
         Lobby lobby = getLobbyById(lobbyId);
         if (lobby != null) {
             PlayerColor assignedColor = setPlayerColor(lobby, player);
-            if(assignedColor == null){
+            if (assignedColor == null) {
                 return false;
             }
             lobby.addPlayer(player);
             logger.infof("Player %s joined lobby %s with color %s", player, lobbyId, assignedColor);
             return true;
         }
-
         logger.warnf("Invalid or expired lobby ID: %s", lobbyId);
         return false;
     }
@@ -86,22 +88,21 @@ public class LobbyServiceImpl implements LobbyService {
         return assignedColor;
     }
 
+    @Override
     public void removePlayerFromLobby(String lobbyId, String player) {
         Lobby lobby = lobbies.get(lobbyId);
         if (lobby != null) {
             PlayerColor color = lobby.getPlayerColor(player);
-
             if (color != null) {
                 lobby.restoreColor(color);
                 logger.infof("Color %s returned to pool from player %s", color, player);
             }
-
             lobby.removePlayer(player);
             lobby.removePlayerColor(player);
-
             logger.infof("Player %s removed from lobby %s", player, lobbyId);
+        } else {
+            logger.warnf("Attempted to remove player from non-existing lobby: %s", lobbyId);
         }
-        logger.warnf("Attempted to remove player from non-existing lobby: %s", lobbyId);
     }
 
     @Override
@@ -129,6 +130,17 @@ public class LobbyServiceImpl implements LobbyService {
         }
         return playerColor;
     }
+
+
+    @Override
+    public void notifyPlayers(String lobbyId, MessageDTO dto) throws GameException {
+        Lobby lob = getLobbyById(lobbyId);
+        for (String pid : lob.getPlayers()) {
+            Player p = playerService.getPlayerById(pid);
+            if (p != null) p.sendMessage(dto);
+        }
+    }
+
 
     @Override
     public void clearLobbies() {
