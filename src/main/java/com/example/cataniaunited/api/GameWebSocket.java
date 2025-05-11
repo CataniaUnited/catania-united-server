@@ -68,6 +68,7 @@ public class GameWebSocket {
                 case SET_USERNAME -> setUsername(message, connection);
                 case CREATE_GAME_BOARD ->
                         createGameBoard(message, connection); // TODO: Remove after regular game start is implemented
+                case GET_GAME_BOARD -> getGameBoard(message, connection); // TODO: Remove after regular game start is implemented
                 case SET_ACTIVE_PLAYER -> setActivePlayer(message, connection);
                 case PLACE_SETTLEMENT -> placeSettlement(message, connection);
                 case UPGRADE_SETTLEMENT -> upgradeSettlement(message, connection);
@@ -198,7 +199,11 @@ public class GameWebSocket {
         payload.set("gameboard", board.getJson());
         MessageDTO updateJson = new MessageDTO(MessageType.GAME_BOARD_JSON, null, message.getLobbyId(), payload);
         return connection.broadcast().sendText(updateJson).chain(i -> Uni.createFrom().item(updateJson));
+    }
 
+    private Uni<MessageDTO> getGameBoard(MessageDTO message, WebSocketConnection connection) throws GameException {
+        MessageDTO updateJson = new MessageDTO(MessageType.GAME_BOARD_JSON, null, message.getLobbyId(), createGameBoardObjectNode(message.getLobbyId()));
+        return connection.sendText(updateJson).chain(i -> Uni.createFrom().item(updateJson));
     }
 
     Uni<MessageDTO> handleDiceRoll(MessageDTO message, WebSocketConnection connection) throws GameException {

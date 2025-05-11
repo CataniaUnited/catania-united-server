@@ -23,5 +23,6 @@ public enum MessageType {
     UPGRADE_SETTLEMENT,
     PLACE_ROAD,
     CREATE_GAME_BOARD,
+    GET_GAME_BOARD,
     ROLL_DICE
 }
