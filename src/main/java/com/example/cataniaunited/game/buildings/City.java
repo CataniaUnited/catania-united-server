@@ -14,8 +14,8 @@ public class City extends Building {
     }
 
     @Override
-    public void distributeResourcesToPlayer(TileType type) {
-        super.player.getResource(type, 2);
+    public int getResourceDistributionAmount() {
+        return 2;
     }
 
     @Override

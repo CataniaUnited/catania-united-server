@@ -13,9 +13,10 @@ public class Settlement extends Building {
     }
 
     @Override
-    public void distributeResourcesToPlayer(TileType type) {
-        super.player.getResource(type, 1);
+    public int getResourceDistributionAmount() {
+        return 1;
     }
+
 
     @Override
     public Map<TileType, Integer> getRequiredResources() {

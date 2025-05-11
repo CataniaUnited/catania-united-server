@@ -152,7 +152,7 @@ class PlayerTest {
         TileType testResource = TileType.WHEAT;
         int amount = 5;
 
-        player.getResource(testResource, amount);
+        player.receiveResource(testResource, amount);
 
         assertEquals(testResource.getInitialAmount() + amount, (int) player.resources.get(testResource), "Resource count should be updated after getting resources.");
     }
@@ -164,8 +164,8 @@ class PlayerTest {
         int secondIncrease = 7;
         int expectedTotal = testResource.getInitialAmount() + firstIncrease + secondIncrease;
 
-        player.getResource(testResource, firstIncrease);
-        player.getResource(testResource, secondIncrease);
+        player.receiveResource(testResource, firstIncrease);
+        player.receiveResource(testResource, secondIncrease);
 
         assertEquals(expectedTotal, (int) player.resources.get(testResource), "Resource count should be the sum of initial and additional amounts.");
     }
@@ -179,9 +179,9 @@ class PlayerTest {
                 continue;
             }
             int ressourceAmount = player.resources.get(type);
-            player.getResource(type, amount);
+            player.receiveResource(type, amount);
             assertEquals(ressourceAmount + amount, (int) player.resources.get(type), "Resource count for " + type + " should be " + amount + " after first get.");
-            player.getResource(type, amount);
+            player.receiveResource(type, amount);
             assertEquals(ressourceAmount + amount * 2, (int) player.resources.get(type), "Resource count for " + type + " should be " + (amount * 2) + " after second get.");
         }
     }
@@ -189,9 +189,9 @@ class PlayerTest {
 
     @Test
     void getResourceJSONWithSomeResourcesReturnsCorrectJSON() {
-        player.getResource(TileType.WHEAT, 3);
-        player.getResource(TileType.SHEEP, 1);
-        player.getResource(TileType.ORE, 0);
+        player.receiveResource(TileType.WHEAT, 3);
+        player.receiveResource(TileType.SHEEP, 1);
+        player.receiveResource(TileType.ORE, 0);
 
         ObjectNode json = player.getResourceJSON();
         assertNotNull(json);
@@ -212,8 +212,8 @@ class PlayerTest {
 
     @Test
     void getResourceJSONDoesNotIncludeWaste() {
-        player.getResource(TileType.WHEAT, 2);
-        player.getResource(TileType.WASTE, 5);
+        player.receiveResource(TileType.WHEAT, 2);
+        player.receiveResource(TileType.WASTE, 5);
 
         ObjectNode json = player.getResourceJSON();
         assertNotNull(json);
@@ -224,8 +224,8 @@ class PlayerTest {
     @Test
     void getResourceJSONDoesNotIncludeWasteEvenIfInList() {
         player.resources.put(TileType.WASTE, 256);
-        player.getResource(TileType.WHEAT, 2);
-        player.getResource(TileType.WASTE, 5);
+        player.receiveResource(TileType.WHEAT, 2);
+        player.receiveResource(TileType.WASTE, 5);
 
         ObjectNode json = player.getResourceJSON();
         assertNotNull(json);
@@ -235,11 +235,10 @@ class PlayerTest {
 
     @Test
     void getResourceWithWasteTypeDoesNotChangeResourceCounts() {
-        player.getResource(TileType.WOOD, 3);
         int initialWoodCount = player.getResourceCount(TileType.WOOD);
         int initialWheatCount = player.getResourceCount(TileType.WHEAT);
 
-        player.getResource(TileType.WASTE, 5);
+        player.receiveResource(TileType.WASTE, 5);
 
         assertEquals(initialWoodCount, player.getResourceCount(TileType.WOOD), "Adding WASTE should not affect WOOD count.");
         assertEquals(initialWheatCount, player.getResourceCount(TileType.WHEAT), "Adding WASTE should not affect WHEAT count.");
@@ -247,7 +246,9 @@ class PlayerTest {
     }
 
     @Test
-    void getResourceWithNullResourceTypeShouldIdeallyThrowExceptionOrHandleGracefully() {
-        assertThrows(NullPointerException.class, () -> player.getResource(null, 5), "Getting a null resource type should throw an exception or be handled.");
+    void receiveResourceWithNullResourceTypeShouldDoNothing() {
+        var previousResource = player.resources;
+        player.receiveResource(null, 5);
+        assertEquals(previousResource, player.resources);
     }
 }

@@ -534,19 +534,22 @@ public class GameWebSocketTest {
         Player mockPlayer1 = mock(Player.class);
         when(mockPlayer1.getUniqueId()).thenReturn(player1);
         when(mockPlayer1.getUsername()).thenReturn(player1);
+        when(mockPlayer1.getResourceJSON()).thenReturn(JsonNodeFactory.instance.objectNode());
         when(mockPlayer1.getResourceCount(any(TileType.class))).thenReturn(10);
         when(mockPlayer1.toJson()).thenReturn(objectMapper.createObjectNode().put("username", player1));
 
         Player mockPlayer2 = mock(Player.class);
         when(mockPlayer2.getUniqueId()).thenReturn(player2);
         when(mockPlayer2.getUsername()).thenReturn(player2);
-        when(mockPlayer1.getResourceCount(any(TileType.class))).thenReturn(10);
+        when(mockPlayer2.getResourceJSON()).thenReturn(JsonNodeFactory.instance.objectNode());
+        when(mockPlayer2.getResourceCount(any(TileType.class))).thenReturn(10);
         when(mockPlayer2.toJson()).thenReturn(objectMapper.createObjectNode().put("username", player2));
 
         Player mockPlayer3 = mock(Player.class);
         when(mockPlayer3.getUniqueId()).thenReturn(player3);
         when(mockPlayer3.getUsername()).thenReturn(player3);
-        when(mockPlayer1.getResourceCount(any(TileType.class))).thenReturn(10);
+        when(mockPlayer3.getResourceJSON()).thenReturn(JsonNodeFactory.instance.objectNode());
+        when(mockPlayer3.getResourceCount(any(TileType.class))).thenReturn(10);
         when(mockPlayer3.toJson()).thenReturn(objectMapper.createObjectNode().put("username", player3));
 
         Lobby lobby = lobbyService.getLobbyById(lobbyId);
@@ -565,7 +568,7 @@ public class GameWebSocketTest {
         when(playerService.getPlayerById(player3)).thenReturn(mockPlayer3);
 
         List<String> receivedMessages = new CopyOnWriteArrayList<>();
-        CountDownLatch messageLatch = new CountDownLatch(3); // Expect multiple broadcasted messages
+        CountDownLatch messageLatch = new CountDownLatch(4); // Expect multiple broadcasted messages
 
         var webSocketClientConnection = BasicWebSocketConnector.create()
                 .baseUri(serverUri)
@@ -604,6 +607,7 @@ public class GameWebSocketTest {
 
         Player mockPlayer2 = mock(Player.class);
         when(mockPlayer2.getUniqueId()).thenReturn(player2);
+        when(mockPlayer2.getResourceJSON()).thenReturn(JsonNodeFactory.instance.objectNode());
         when(mockPlayer2.getResourceCount(any(TileType.class))).thenReturn(10);
         when(playerService.getPlayerById(player2)).thenReturn(mockPlayer2);
         String lobbyId = lobbyService.createLobby(player1);
@@ -850,7 +854,10 @@ public class GameWebSocketTest {
 
     @Test
     void testPlaceSettlement_success_noWin() throws Exception {
-        String playerId = "playerPS1";
+        Player player = new Player("Player1");
+        String playerId = player.getUniqueId();
+        doReturn(player).when(playerService).getPlayerById(playerId);
+
         int settlementPositionId = 5;
 
         String actualLobbyId = lobbyService.createLobby(playerId);

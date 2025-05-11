@@ -96,20 +96,23 @@ public class SettlementPosition implements Placable, Subscriber<TileType> {
             throw new IntersectionOccupiedException();
         }
 
-        /*
-            The three intersections surrounding this settlement position MUST NOT have buildings on it,
-            and there may only be one road adjacent to this settlement position
-         */
-        boolean hasNoNeighbouringBuildings = this.building == null && getNeighbours().stream().allMatch(sp -> sp.getBuildingOwner() == null);
-        if (!hasNoNeighbouringBuildings) {
-            logger.errorf("Placement of building is not allowed -> spacing rule violated: positionId = %s, playerId = %s", id, building.getPlayer().getUniqueId());
-            throw new SpacingRuleViolationException();
-        }
+        //Only check on initial placement of building
+        if(this.building == null) {
+            /*
+                The three intersections surrounding this settlement position MUST NOT have buildings on it,
+                and there may only be one road adjacent to this settlement position
+            */
+            boolean hasNoNeighbouringBuildings = getNeighbours().stream().allMatch(sp -> sp.getBuildingOwner() == null);
+            if (!hasNoNeighbouringBuildings) {
+                logger.errorf("Placement of building is not allowed -> spacing rule violated: positionId = %s, playerId = %s", id, building.getPlayer().getUniqueId());
+                throw new SpacingRuleViolationException();
+            }
 
-        boolean atLeastOneOwnedRoad = getRoads().stream().anyMatch(road -> road.getOwner() != null && road.getOwner().equals(building.getPlayer()));
-        if (!atLeastOneOwnedRoad) {
-            logger.errorf("Placement of building is not allowed -> no owned road adjacent: positionId = %s, playerId = %s", id, building.getPlayer().getUniqueId());
-            throw new NoAdjacentRoadException();
+            boolean atLeastOneOwnedRoad = getRoads().stream().anyMatch(road -> road.getOwner() != null && road.getOwner().equals(building.getPlayer()));
+            if (!atLeastOneOwnedRoad) {
+                logger.errorf("Placement of building is not allowed -> no owned road adjacent: positionId = %s, playerId = %s", id, building.getPlayer().getUniqueId());
+                throw new NoAdjacentRoadException();
+            }
         }
 
         this.building = building;

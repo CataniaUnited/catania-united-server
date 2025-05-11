@@ -76,8 +76,8 @@ class TestBuilding extends Building {
     }
 
     @Override
-    public void distributeResourcesToPlayer(TileType type) {
-        // do Nothing
+    public int getResourceDistributionAmount() {
+        return 1;
     }
 
     @Override

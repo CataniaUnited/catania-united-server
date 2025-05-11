@@ -95,7 +95,7 @@ public class GameBoard {
 
     private void placeBuilding(int positionId, Building building) throws GameException {
         try {
-            checkRequiredResources(building.getPlayer(), building);
+            removeRequiredResources(building.getPlayer(), building);
             SettlementPosition settlementPosition = settlementPositionGraph.get(positionId - 1);
             settlementPosition.setBuilding(building);
         } catch (IndexOutOfBoundsException e) {
@@ -106,7 +106,7 @@ public class GameBoard {
     public void placeRoad(Player player, PlayerColor color, int roadId) throws GameException {
         try {
             Road road = roadList.get(roadId - 1);
-            checkRequiredResources(player, road);
+            removeRequiredResources(player, road);
             road.setOwner(player);
             road.setColor(color);
         } catch (IndexOutOfBoundsException e) {
@@ -114,16 +114,14 @@ public class GameBoard {
         }
     }
 
-    private void checkRequiredResources(Player player, Buildable buildable) throws GameException {
+    private void removeRequiredResources(Player player, Buildable buildable) throws GameException {
         if (player == null) {
             throw new GameException("Player must not be null");
         }
         for (Map.Entry<TileType, Integer> entry : buildable.getRequiredResources().entrySet()) {
             TileType tileType = entry.getKey();
             Integer amount = entry.getValue();
-            if (player.getResourceCount(tileType) < amount) {
-                throw new InsufficientResourcesException();
-            }
+            player.removeResource(tileType, amount);
         }
     }
 

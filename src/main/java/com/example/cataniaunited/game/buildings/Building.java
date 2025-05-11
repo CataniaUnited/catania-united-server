@@ -37,6 +37,10 @@ public abstract class Building implements Buildable {
         return result;
     }
 
-    public abstract void distributeResourcesToPlayer(TileType type);
+    public void distributeResourcesToPlayer(TileType type){
+        this.player.receiveResource(type, getResourceDistributionAmount());
+    }
+
+    public abstract int getResourceDistributionAmount();
 
 }

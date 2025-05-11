@@ -1,5 +1,7 @@
 package com.example.cataniaunited.player;
 
+import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.exception.InsufficientResourcesException;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
@@ -95,12 +97,23 @@ public class Player {
                 '}';
     }
 
-    public void getResource(TileType resource, int amount) {
+    public void receiveResource(TileType resource, int amount) {
+        if (resource == null || resource == TileType.WASTE)
+            return;
+
+        int resourceCount = getResourceCount(resource);
+        resources.put(resource, resourceCount + amount);
+    }
+
+    public void removeResource(TileType resource, int amount) throws GameException {
         if (resource == TileType.WASTE)
             return;
 
-        Integer resourceCount = resources.get(resource);
-        resources.put(resource, resourceCount + amount);
+        int resourceCount = getResourceCount(resource) - amount;
+        if (resourceCount < 0) {
+            throw new InsufficientResourcesException();
+        }
+        resources.put(resource, resourceCount);
     }
 
     public ObjectNode getResourceJSON() {
