@@ -1,5 +1,6 @@
 package com.example.cataniaunited.player;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -68,9 +69,19 @@ public class Player {
     public void addVictoryPoints(int victoryPoints) {
         this.victoryPoints += victoryPoints;
     }
+
+    public ObjectNode toJson() {
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode playerNode = mapper.createObjectNode();
+        playerNode.put("username", this.username);
+        playerNode.put("victoryPoints", this.victoryPoints);
+        return playerNode;
+    }
+
     public int getResourceCount(TileType type) {
         return resources.getOrDefault(type, 0);
     }
+
     @Override
     public String toString() {
         return "Player{" +

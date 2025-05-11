@@ -5,6 +5,7 @@ import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.GameService;
 import com.example.cataniaunited.game.board.GameBoard;
+import com.example.cataniaunited.game.board.SettlementPosition;
 import com.example.cataniaunited.lobby.Lobby;
 import com.example.cataniaunited.lobby.LobbyService;
 import com.example.cataniaunited.player.Player;
@@ -411,6 +412,177 @@ public class GameWebSocketTest {
     }
 
     @Test
+    void placeSettlementShouldTriggerBroadcastWinIfPlayerWins() throws Exception {
+        ObjectMapper localObjectMapper = new ObjectMapper();
+        List<String> messages = new CopyOnWriteArrayList<>();
+
+        CountDownLatch connectionLatch1 = new CountDownLatch(1);
+        CountDownLatch connectionLatch2 = new CountDownLatch(1);
+        CountDownLatch gameLatch = new CountDownLatch(3);
+
+        final String[] player1IdHolder = new String[1];
+        var client1 = BasicWebSocketConnector.create()
+                .baseUri(serverUri)
+                .path("/game")
+                .onTextMessage((conn, msg) -> {
+                    if (msg.startsWith("{")) {
+                        messages.add(msg);
+                        try {
+                            MessageDTO dto = localObjectMapper.readValue(msg, MessageDTO.class);
+                            if (dto.getType() == MessageType.CONNECTION_SUCCESSFUL) {
+                                player1IdHolder[0] = dto.getMessageNode("playerId").asText();
+                                connectionLatch1.countDown();
+                            } else {
+                                gameLatch.countDown();
+                            }
+                        } catch (Exception e) {
+                            throw new RuntimeException("Failed to parse WebSocket message", e);
+                        }
+                    }
+                }).connectAndAwait();
+
+        assertTrue(connectionLatch1.await(5, TimeUnit.SECONDS), "Did not receive player1 connection message");
+        String player1Id = player1IdHolder[0];
+        assertNotNull(player1Id, "Failed to capture playerId for winning player");
+
+        final String[] player2IdHolder = new String[1];
+        BasicWebSocketConnector.create()
+                .baseUri(serverUri)
+                .path("/game")
+                .onTextMessage((conn, msg) -> {
+                    if (msg.startsWith("{")) {
+                        try {
+                            MessageDTO dto = localObjectMapper.readValue(msg, MessageDTO.class);
+                            if (dto.getType() == MessageType.CONNECTION_SUCCESSFUL) {
+                                player2IdHolder[0] = dto.getMessageNode("playerId").asText();
+                                connectionLatch2.countDown();
+                            } else {
+                                gameLatch.countDown();
+                            }
+                        } catch (Exception e) {
+                            throw new RuntimeException("Failed to parse WebSocket message", e);
+                        }
+                    }
+                }).connectAndAwait();
+
+        assertTrue(connectionLatch2.await(5, TimeUnit.SECONDS), "Did not receive player2 connection message");
+        String player2Id = player2IdHolder[0];
+        assertNotNull(player2Id, "Failed to capture playerId for dummy player");
+
+        String lobbyId = lobbyService.createLobby(player1Id);
+        lobbyService.joinLobbyByCode(lobbyId, player2Id);
+
+        GameBoard board = gameService.createGameboard(lobbyId);
+        int settlementId = board.getSettlementPositionGraph().get(0).getId();
+        board.getSettlementPositionGraph().get(0).getRoads().get(0).setOwnerPlayerId(player1Id);
+        lobbyService.getLobbyById(lobbyId).setActivePlayer(player1Id);
+
+        doReturn(true).when(playerService).checkForWin(player1Id);
+
+        ObjectNode msgNode = JsonNodeFactory.instance.objectNode().put("settlementPositionId", settlementId);
+        MessageDTO msg = new MessageDTO(MessageType.PLACE_SETTLEMENT, player1Id, lobbyId, msgNode);
+        client1.sendTextAndAwait(localObjectMapper.writeValueAsString(msg));
+
+        assertTrue(gameLatch.await(5, TimeUnit.SECONDS), "Expected game messages were not received");
+
+        MessageDTO response = messages.stream()
+                .map(m -> {
+                    try {
+                        return localObjectMapper.readValue(m, MessageDTO.class);
+                    } catch (JsonProcessingException e) {
+                        return null;
+                    }
+                })
+                .filter(m -> m != null && m.getType() == MessageType.GAME_WON)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("No GAME_WON message received"));
+
+        assertEquals(MessageType.GAME_WON, response.getType());
+        assertEquals(player1Id, response.getPlayer());
+
+        String winnerUsername = playerService.getAllPlayers().stream()
+                .filter(p -> p.getUniqueId().equals(player1Id))
+                .findFirst()
+                .orElseThrow()
+                .getUsername();
+
+        assertEquals(winnerUsername, response.getMessageNode("winner").asText());
+
+        verify(gameService).broadcastWin(any(), eq(lobbyId), eq(player1Id));
+    }
+
+    @Test
+    void testPlaceSettlementIncludesAllPlayersInResponse() throws GameException, JsonProcessingException, InterruptedException {
+        String player1 = "Player1";
+        String player2 = "Player2";
+        String player3 = "Player3";
+        String lobbyId = lobbyService.createLobby(player1);
+        lobbyService.joinLobbyByCode(lobbyId, player2);
+        lobbyService.joinLobbyByCode(lobbyId, player3);
+
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+        lobby.setActivePlayer(player1);
+        GameBoard gameBoard = gameService.createGameboard(lobbyId);
+        SettlementPosition settlementPosition = gameBoard.getSettlementPositionGraph().get(0);
+        settlementPosition.getRoads().get(0).setOwnerPlayerId(player1);
+
+        int positionId = settlementPosition.getId();
+        ObjectNode placeSettlementMessageNode = objectMapper.createObjectNode().put("settlementPositionId", positionId);
+        var placeSettlementMessageDTO = new MessageDTO(MessageType.PLACE_SETTLEMENT, player1, lobbyId, placeSettlementMessageNode);
+
+        Player mockPlayer1 = mock(Player.class);
+        when(mockPlayer1.getUniqueId()).thenReturn(player1);
+        when(mockPlayer1.getUsername()).thenReturn(player1);
+        when(mockPlayer1.toJson()).thenReturn(objectMapper.createObjectNode().put("username", player1));
+
+        Player mockPlayer2 = mock(Player.class);
+        when(mockPlayer2.getUniqueId()).thenReturn(player2);
+        when(mockPlayer2.getUsername()).thenReturn(player2);
+        when(mockPlayer2.toJson()).thenReturn(objectMapper.createObjectNode().put("username", player2));
+
+        Player mockPlayer3 = mock(Player.class);
+        when(mockPlayer3.getUniqueId()).thenReturn(player3);
+        when(mockPlayer3.getUsername()).thenReturn(player3);
+        when(mockPlayer3.toJson()).thenReturn(objectMapper.createObjectNode().put("username", player3));
+
+        when(playerService.getPlayerById(player1)).thenReturn(mockPlayer1);
+        when(playerService.getPlayerById(player2)).thenReturn(mockPlayer2);
+        when(playerService.getPlayerById(player3)).thenReturn(mockPlayer3);
+
+        List<String> receivedMessages = new CopyOnWriteArrayList<>();
+        CountDownLatch messageLatch = new CountDownLatch(3); // Expect multiple broadcasted messages
+
+        var webSocketClientConnection = BasicWebSocketConnector.create()
+                .baseUri(serverUri)
+                .path("/game")
+                .onTextMessage((connection, message) -> {
+                    receivedMessages.add(message);
+                    messageLatch.countDown();
+                })
+                .connectAndAwait();
+
+        String sentMessage = objectMapper.writeValueAsString(placeSettlementMessageDTO);
+        webSocketClientConnection.sendTextAndAwait(sentMessage);
+
+        assertTrue(messageLatch.await(5, TimeUnit.SECONDS), "Message not received in time");
+
+        MessageDTO responseMessage = objectMapper.readValue(receivedMessages.get(receivedMessages.size() - 1), MessageDTO.class);
+
+        JsonNode playersNode = responseMessage.getMessageNode("players");
+        assertNotNull(playersNode, "Players node missing from message payload");
+
+        assertTrue(playersNode.has(player1), "Missing player1 in response");
+        assertTrue(playersNode.has(player2), "Missing player2 in response");
+        assertTrue(playersNode.has(player3), "Missing player3 in response");
+
+        assertEquals(player1, playersNode.get(player1).get("username").asText());
+        assertEquals(player2, playersNode.get(player2).get("username").asText());
+        assertEquals(player3, playersNode.get(player3).get("username").asText());
+    }
+
+
+
+    @Test
     void testPlacementOfRoad() throws GameException, JsonProcessingException, InterruptedException {
         //Setup Players, Lobby and Gameboard
         String player1 = "Player1";
@@ -669,12 +841,14 @@ public class GameWebSocketTest {
         lobby.setActivePlayer(playerId);
 
         GameBoard mockGameBoard = mock(GameBoard.class);
-        ObjectNode updatedBoardJson = objectMapper.createObjectNode().put("boardState", "updatedAfterSettlement");
+        ObjectNode boardStateJson = objectMapper.createObjectNode().put("boardState", "updatedAfterSettlement");
 
-        when(mockGameBoard.getJson()).thenReturn(updatedBoardJson);
+        ObjectNode fullMessage = objectMapper.createObjectNode();
+        fullMessage.set("gameboard", boardStateJson);
+        fullMessage.set("players", objectMapper.createObjectNode()); // Simulates empty player map
 
+        when(mockGameBoard.getJson()).thenReturn(boardStateJson);
         doReturn(mockGameBoard).when(gameService).getGameboardByLobbyId(actualLobbyId);
-
         doNothing().when(gameService).placeSettlement(actualLobbyId, playerId, settlementPositionId);
         when(playerService.checkForWin(playerId)).thenReturn(false);
 
@@ -705,22 +879,21 @@ public class GameWebSocketTest {
         assertTrue(responseLatch.await(5, TimeUnit.SECONDS), "Did not receive PLACE_SETTLEMENT responses in time.");
         assertEquals(2, receivedMessages.size());
 
-        MessageDTO responseDto1 = objectMapper.readValue(receivedMessages.get(0), MessageDTO.class);
-        assertEquals(MessageType.PLACE_SETTLEMENT, responseDto1.getType());
-        assertEquals(playerId, responseDto1.getPlayer());
-        assertEquals(actualLobbyId, responseDto1.getLobbyId());
-        assertEquals(updatedBoardJson, responseDto1.getMessage());
+        for (String msg : receivedMessages) {
+            MessageDTO dto = objectMapper.readValue(msg, MessageDTO.class);
+            assertEquals(MessageType.PLACE_SETTLEMENT, dto.getType());
+            assertEquals(playerId, dto.getPlayer());
+            assertEquals(actualLobbyId, dto.getLobbyId());
 
-        MessageDTO responseDto2 = objectMapper.readValue(receivedMessages.get(1), MessageDTO.class);
-        assertEquals(MessageType.PLACE_SETTLEMENT, responseDto2.getType());
-        assertEquals(playerId, responseDto2.getPlayer());
-        assertEquals(actualLobbyId, responseDto2.getLobbyId());
-        assertEquals(updatedBoardJson, responseDto2.getMessage());
+            assertTrue(dto.getMessage().has("gameboard"));
+            assertEquals("updatedAfterSettlement", dto.getMessage().get("gameboard").get("boardState").asText());
+        }
 
         verify(gameService).placeSettlement(actualLobbyId, playerId, settlementPositionId);
         verify(playerService, atLeastOnce()).checkForWin(playerId);
         verify(gameService, times(1)).getGameboardByLobbyId(actualLobbyId);
     }
+
 
 
     private Player createMockPlayer(String playerId, String username) {
@@ -1076,6 +1249,9 @@ public class GameWebSocketTest {
         doNothing().when(gameService).placeSettlement(actualLobbyId, playerId, settlementPositionId);
         when(playerService.checkForWin(playerId)).thenReturn(true);
 
+        Player mockPlayer = mock(Player.class);
+        when(mockPlayer.getUsername()).thenReturn(playerId);
+        when(playerService.getPlayerById(playerId)).thenReturn(mockPlayer); // <-- Ensure this is how it's resolved
 
         List<String> receivedMessages = new CopyOnWriteArrayList<>();
         CountDownLatch gameWonLatch = new CountDownLatch(2);
@@ -1105,21 +1281,20 @@ public class GameWebSocketTest {
                 "Did not receive 2 GAME_WON responses in time. Received: " + receivedMessages.size());
         assertEquals(2, receivedMessages.size());
 
-        MessageDTO responseDto1 = objectMapper.readValue(receivedMessages.get(0), MessageDTO.class);
-        assertEquals(MessageType.GAME_WON, responseDto1.getType());
-        assertEquals(playerId, responseDto1.getPlayer());
-        assertEquals(actualLobbyId, responseDto1.getLobbyId());
-        assertEquals(playerId, responseDto1.getMessageNode("winner").asText());
-
-        MessageDTO responseDto2 = objectMapper.readValue(receivedMessages.get(1), MessageDTO.class);
-        assertEquals(MessageType.GAME_WON, responseDto2.getType());
-        assertEquals(playerId, responseDto2.getPlayer());
+        for (String msg : receivedMessages) {
+            MessageDTO dto = objectMapper.readValue(msg, MessageDTO.class);
+            assertEquals(MessageType.GAME_WON, dto.getType());
+            assertEquals(playerId, dto.getPlayer());
+            assertEquals(actualLobbyId, dto.getLobbyId());
+            assertEquals(playerId, dto.getMessageNode("winner").asText());
+        }
 
         verify(gameService).placeSettlement(actualLobbyId, playerId, settlementPositionId);
         verify(playerService, atLeastOnce()).checkForWin(playerId);
         verify(gameService, times(1)).broadcastWin(any(WebSocketConnection.class), eq(actualLobbyId), eq(playerId));
         verify(gameService, never()).getGameboardByLobbyId(anyString());
     }
+
 
     @Test
     void testPlaceSettlement_invalidPositionId_string() throws Exception {

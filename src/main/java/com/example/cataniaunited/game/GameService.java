@@ -4,8 +4,10 @@ import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.lobby.Lobby;
 import com.example.cataniaunited.lobby.LobbyService;
+import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerService;
 import com.example.cataniaunited.player.PlayerColor;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -16,6 +18,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import io.quarkus.websockets.next.WebSocketConnection;
 import io.smallrye.mutiny.Uni;
 
+import java.util.Comparator;
 import java.util.concurrent.ConcurrentHashMap;
 
 @ApplicationScoped
@@ -84,10 +87,29 @@ public class GameService {
   
     public Uni<MessageDTO> broadcastWin(WebSocketConnection connection, String lobbyId, String winnerPlayerId) {
         ObjectNode message = JsonNodeFactory.instance.objectNode();
-        message.put("winner", winnerPlayerId);
+        Player winner = playerService.getPlayerById(winnerPlayerId);
+        message.put("winner", winner.getUsername());
+
+        ArrayNode leaderboard = message.putArray("leaderboard");
+        try {
+            lobbyService.getLobbyById(lobbyId).getPlayers().stream()
+                    .map(playerService::getPlayerById)
+                    .filter(p -> p != null)
+                    .sorted(Comparator.comparingInt(Player::getVictoryPoints).reversed())
+                    .forEach(p -> {
+                        ObjectNode entry = leaderboard.addObject();
+                        entry.put("username", p.getUsername());
+                        entry.put("vp", p.getVictoryPoints());
+                    });
+        } catch (GameException e) {
+            logger.errorf("Failed to fetch players for lobby %s: %s", lobbyId, e.getMessage());
+            message.put("error", "Failed to build leaderboard");
+        }
+
         MessageDTO messageDTO = new MessageDTO(MessageType.GAME_WON, winnerPlayerId, lobbyId, message);
         logger.infof("Player %s has won the game in lobby %s", winnerPlayerId, lobbyId);
         return connection.broadcast().sendText(messageDTO).chain(i -> Uni.createFrom().item(messageDTO));
+
     }
 
     public void clearGameBoardsForTesting() {
