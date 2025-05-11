@@ -1,16 +1,27 @@
 package com.example.cataniaunited.lobby;
 
+import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.player.PlayerColor;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.mockito.InjectSpy;
 import org.jboss.logging.Logger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import com.example.cataniaunited.dto.MessageType;
+
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import com.example.cataniaunited.player.PlayerService;
+import com.example.cataniaunited.player.Player;
+
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -21,12 +32,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
+
 
 @QuarkusTest
 class LobbyServiceImplTest {
     private static final Logger logger = Logger.getLogger(LobbyServiceImplTest.class);
-
+    @InjectMock
+    PlayerService playerService;
     @InjectSpy
     LobbyServiceImpl lobbyService;
 
@@ -206,5 +218,28 @@ class LobbyServiceImplTest {
 
         assertFalse(lobbyService.isPlayerTurn(lobbyId, playerId));
     }
+    @Test
+    void notifyPlayers_sendsMessageToEveryPlayerInTheLobby() throws GameException {
+        String hostId = "host";
+        String lobbyId = lobbyService.createLobby(hostId);
+        lobbyService.joinLobbyByCode(lobbyId, "p2");
 
-}
+        // mock the Player objects returned by PlayerService
+        Player host = mock(Player.class);
+        Player p2   = mock(Player.class);
+
+        when(playerService.getPlayerById(hostId)).thenReturn(host);
+        when(playerService.getPlayerById("p2")).thenReturn(p2);
+
+        MessageDTO dto = new MessageDTO(MessageType.ERROR, (ObjectNode) null);
+
+
+        lobbyService.notifyPlayers(lobbyId, dto);
+
+
+        verify(host).sendMessage(dto);
+        verify(p2  ).sendMessage(dto);
+        verifyNoMoreInteractions(host, p2);
+    }
+
+    }

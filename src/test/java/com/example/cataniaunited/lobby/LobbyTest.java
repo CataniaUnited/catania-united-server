@@ -3,12 +3,19 @@ package com.example.cataniaunited.lobby;
 import com.example.cataniaunited.player.PlayerColor;
 import org.junit.jupiter.api.Test;
 
+
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import java.util.ArrayList;
+import java.util.Set;
+import java.util.List;
+import static org.junit.jupiter.api.Assertions.*;
+
 
 class LobbyTest {
 
@@ -87,5 +94,50 @@ class LobbyTest {
         lobby.setActivePlayer(playerId);
 
         assertEquals(playerId, lobby.getActivePlayer());
+    }
+
+    private Lobby lobby;   // reused by the 3 new tests
+
+    @BeforeEach
+    void setUpExtraLobby() {
+        lobby = new Lobby("L-extra", "host");
+        lobby.addPlayer("p2");
+        lobby.addPlayer("p3");
+    }
+
+    @Test
+    void nextPlayerTurn_wrapsAroundToFirstPlayer() {
+        lobby.setActivePlayer("host");
+
+
+        lobby.nextPlayerTurn();
+        assertEquals("p2", lobby.getActivePlayer());
+
+
+        lobby.nextPlayerTurn();
+        assertEquals("p3", lobby.getActivePlayer());
+
+
+        lobby.nextPlayerTurn();
+        assertEquals("host", lobby.getActivePlayer());
+    }
+    @Test
+    void randomizePlayerOrder_changesOrderButKeepsSameElements() {
+        List<String> before = new ArrayList<>(lobby.getPlayers());   // ← convert
+
+        lobby.randomizePlayerOrder();
+
+        List<String> after  = new ArrayList<>(lobby.getPlayers());   // ← convert
+        assertEquals(before.size(), after.size());
+        assertTrue(after.containsAll(before));
+        assertNotEquals(before, after, "Order should be shuffled");
+    }
+
+    @Test
+    void canStartGame_requiresTwoPlayersAndGameNotYetStarted() {
+        assertTrue(lobby.canStartGame("host"), "should start with ≥2 players");
+
+        lobby.setGameStarted(true);
+        assertFalse(lobby.canStartGame("host"), "already started ⇒ false");
     }
 }
