@@ -1,7 +1,9 @@
 package com.example.cataniaunited.game.board;
 
 import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.exception.InsufficientResourcesException;
 import com.example.cataniaunited.game.board.tile_list_builder.Tile;
+import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.example.cataniaunited.game.buildings.Settlement;
 import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerColor;
@@ -24,6 +26,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 @QuarkusTest
 class GameBoardTest {
@@ -213,6 +218,17 @@ class GameBoardTest {
 
         GameException ge = assertThrows(GameException.class, () -> gameBoard.placeSettlement(null, PlayerColor.BLUE, positionId));
         assertEquals("Owner of building must not be empty", ge.getMessage());
+    }
+
+    @Test
+    void placeBuildingShouldThrowExceptionIfPlayerDoesNotHaveResources() {
+        GameBoard gameBoard = new GameBoard(2);
+        int positionId = gameBoard.getSettlementPositionGraph().get(0).getId();
+        Player mockPlayer = spy(new Player("Player1"));
+        when(mockPlayer.getResourceCount(any(TileType.class))).thenReturn(0);
+
+        GameException ge = assertThrows(InsufficientResourcesException.class, () -> gameBoard.placeSettlement(mockPlayer, PlayerColor.BLUE, positionId));
+        assertEquals("Insufficient resources!", ge.getMessage());
     }
 
     @Test

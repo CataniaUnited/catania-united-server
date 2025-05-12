@@ -1,6 +1,7 @@
 package com.example.cataniaunited.game.board;
 
 import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.exception.InsufficientResourcesException;
 import com.example.cataniaunited.game.Buildable;
 import com.example.cataniaunited.game.board.tile_list_builder.StandardTileListBuilder;
 import com.example.cataniaunited.game.board.tile_list_builder.Tile;
@@ -94,10 +95,11 @@ public class GameBoard {
 
     private void placeBuilding(int positionId, Building building) throws GameException {
         try {
-            removeRequiredResources(building.getPlayer(), building);
+            checkRequiredResources(building.getPlayer(), building);
             logger.debugf("Placing building: playerId = %s, positionId = %s, type = %s", building.getPlayer().getUniqueId(), positionId, building.getClass().getSimpleName());
             SettlementPosition settlementPosition = settlementPositionGraph.get(positionId - 1);
             settlementPosition.setBuilding(building);
+            removeRequiredResources(building.getPlayer(), building);
         } catch (IndexOutOfBoundsException e) {
             throw new GameException("Settlement position not found: id = %s", positionId);
         }
@@ -106,10 +108,11 @@ public class GameBoard {
     public void placeRoad(Player player, PlayerColor color, int roadId) throws GameException {
         try {
             Road road = roadList.get(roadId - 1);
-            removeRequiredResources(player, road);
+            checkRequiredResources(player, road);
             logger.debugf("Placing road: playerId = %s, roadId = %s", player.getUniqueId(), roadId);
             road.setOwner(player);
             road.setColor(color);
+            removeRequiredResources(player, road);
         } catch (IndexOutOfBoundsException e) {
             throw new GameException("Road not found: id = %s", roadId);
         }
@@ -125,6 +128,21 @@ public class GameBoard {
             Integer amount = entry.getValue();
             logger.debugf("Removing resource of player: playerId = %s, tileType = %s, amount = %s", player.getUniqueId(), tileType, amount);
             player.removeResource(tileType, amount);
+        }
+    }
+
+    private void checkRequiredResources(Player player, Buildable buildable) throws GameException {
+        if (player == null) {
+            throw new GameException("Player must not be null");
+        }
+        logger.debugf("Checking if player has required amount of resources: playerId = %s, requiredResources = %s",
+                player.getUniqueId(), buildable.getRequiredResources());
+        for (Map.Entry<TileType, Integer> entry : buildable.getRequiredResources().entrySet()) {
+            TileType tileType = entry.getKey();
+            Integer amount = entry.getValue();
+            if (player.getResourceCount(tileType) < amount) {
+                throw new InsufficientResourcesException();
+            }
         }
     }
 

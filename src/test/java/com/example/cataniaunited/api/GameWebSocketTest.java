@@ -750,10 +750,10 @@ public class GameWebSocketTest {
         String playerId = "playerABC";
         MessageDTO createBoardMsg = new MessageDTO(MessageType.CREATE_GAME_BOARD, playerId, lobbyId);
 
-
         GameBoard mockGameBoard = mock(GameBoard.class);
         ObjectNode expectedBoardJson = objectMapper.createObjectNode().put("boardData", "testValue");
         when(mockGameBoard.getJson()).thenReturn(expectedBoardJson);
+        when(playerService.getPlayerById(playerId)).thenReturn(new Player(playerId));
 
         doReturn(mockGameBoard).when(gameService).createGameboard(lobbyId);
 
