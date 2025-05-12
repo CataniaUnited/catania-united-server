@@ -785,7 +785,6 @@ public class GameWebSocketTest {
         when(mockGameBoard.getJson()).thenReturn(boardJson);
 
         reset(gameService);
-
         doReturn(mockGameBoard).when(gameService).createGameboard(lobbyId);
 
         ObjectNode mockPlayersJson = objectMapper.createObjectNode().put("playersData", "fakePlayers");
@@ -809,13 +808,11 @@ public class GameWebSocketTest {
                                 gameBoardMessageLatch.countDown();
                             }
                         } catch (JsonProcessingException ignored) {
-                            fail("A json Processing Exception occurred");
+                            fail("A JSON Processing Exception occurred");
                         }
                     }
                 })
                 .connectAndAwait();
-
-        Thread.sleep(100);
 
         MessageDTO createBoardMsg = new MessageDTO(MessageType.CREATE_GAME_BOARD, playerId, lobbyId);
         String sentMessage = objectMapper.writeValueAsString(createBoardMsg);
@@ -847,6 +844,7 @@ public class GameWebSocketTest {
         assertNotNull(responseMessage.getMessage(), "Message payload should not be null");
         assertEquals(expectedMergedJson, responseMessage.getMessage(), "Merged board data should match");
     }
+
 
     @Test
     void testPlayerColorIsIncludedInGameBoardJson() throws Exception {
@@ -1621,7 +1619,7 @@ public class GameWebSocketTest {
         String lobbyId = lobbyService.createLobby(player1);
         lobbyService.joinLobbyByCode(lobbyId, player2);
 
-        GameBoard gameBoard = gameService.createGameboard(lobbyId);
+        gameService.createGameboard(lobbyId);
 
         List<String> receivedMessages = new CopyOnWriteArrayList<>();
         CountDownLatch messageLatch = new CountDownLatch(1);

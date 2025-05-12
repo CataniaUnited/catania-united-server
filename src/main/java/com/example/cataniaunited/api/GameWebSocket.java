@@ -32,6 +32,8 @@ import java.util.List;
 public class GameWebSocket {
 
     private static final Logger logger = Logger.getLogger(GameWebSocket.class);
+    private static final String COLOR_FIELD = "color";
+
 
     @Inject
     LobbyService lobbyService;
@@ -128,7 +130,7 @@ public class GameWebSocket {
                 ObjectNode playerNode = player.toJson();
                 PlayerColor color = lobby.getPlayerColor(player.getUniqueId());
                 if (color != null) {
-                    playerNode.put("color", color.getHexCode());
+                    playerNode.put("COLOR_FIELD", color.getHexCode());
                 }
                 playersJson.set(player.getUniqueId(), playerNode);
             }
@@ -178,7 +180,7 @@ public class GameWebSocket {
         PlayerColor color = lobbyService.getPlayerColor(message.getLobbyId(), message.getPlayer());
         if (joined) {
             ObjectNode colorNode = JsonNodeFactory.instance.objectNode();
-            colorNode.put("color", color.getHexCode());
+            colorNode.put("COLOR_FIELD", color.getHexCode());
             MessageDTO update = new MessageDTO(MessageType.PLAYER_JOINED, message.getPlayer(), message.getLobbyId(), colorNode);
             return connection.broadcast().sendText(update).chain(i -> Uni.createFrom().item(update));
         }
@@ -189,7 +191,7 @@ public class GameWebSocket {
         String lobbyId = lobbyService.createLobby(message.getPlayer());
         PlayerColor color = lobbyService.getPlayerColor(lobbyId, message.getPlayer());
         ObjectNode colorNode = JsonNodeFactory.instance.objectNode();
-        colorNode.put("color", color.getHexCode());
+        colorNode.put("COLOR_FIELD", color.getHexCode());
         return Uni.createFrom().item(
                 new MessageDTO(MessageType.LOBBY_CREATED, message.getPlayer(), lobbyId, colorNode));
     }
@@ -223,7 +225,7 @@ public class GameWebSocket {
         GameBoard board = gameService.createGameboard(message.getLobbyId());
 
         ObjectNode gameData = createGameBoardWithPlayers(message.getLobbyId());
-        gameData.setAll((ObjectNode) board.getJson());
+        gameData.setAll(board.getJson());
 
         MessageDTO updateJson = new MessageDTO(
                 MessageType.GAME_BOARD_JSON,
