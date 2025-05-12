@@ -246,6 +246,7 @@ public class GameWebSocket {
                 createGameBoardObjectNode(message.getLobbyId())
         );
         return connection.sendText(updateJson).chain(i -> Uni.createFrom().item(updateJson));
+
     }
 
     private ObjectNode createGameBoardObjectNode(String lobbyId) throws GameException {

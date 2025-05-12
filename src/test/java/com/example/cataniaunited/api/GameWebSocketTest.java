@@ -33,7 +33,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.lang.reflect.Method;
 import java.net.URI;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
@@ -778,6 +777,7 @@ public class GameWebSocketTest {
     @Test
     void testCreateGameBoard() throws InterruptedException, JsonProcessingException, GameException {
         String playerId = "playerABC";
+
         String lobbyId = lobbyService.createLobby(playerId);
 
         GameBoard mockGameBoard = mock(GameBoard.class);
