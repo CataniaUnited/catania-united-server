@@ -32,6 +32,8 @@ import java.util.List;
 public class GameWebSocket {
 
     private static final Logger logger = Logger.getLogger(GameWebSocket.class);
+    private static final String COLOR_FIELD = "color";
+
 
     @Inject
     LobbyService lobbyService;
@@ -100,9 +102,41 @@ public class GameWebSocket {
         } catch (NumberFormatException e) {
             throw new GameException("Invalid road id: id = %s", roadId.toString());
         }
-        MessageDTO update = new MessageDTO(MessageType.PLACE_ROAD, message.getPlayer(), message.getLobbyId(), createGameBoardObjectNode(message.getLobbyId()));
+
+        ObjectNode root = createGameBoardWithPlayers(message.getLobbyId());
+
+        MessageDTO update = new MessageDTO(
+                MessageType.PLACE_ROAD,
+                message.getPlayer(),
+                message.getLobbyId(),
+                root
+        );
+
         return sendPlayerResources(playerService.getPlayerById(message.getPlayer()), message.getLobbyId(), connection)
                 .chain(() -> connection.broadcast().sendText(update).chain(i -> Uni.createFrom().item(update)));
+    }
+
+    ObjectNode createGameBoardWithPlayers(String lobbyId) throws GameException {
+        GameBoard gameboard = gameService.getGameboardByLobbyId(lobbyId);
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+
+        ObjectNode root = JsonNodeFactory.instance.objectNode();
+        root.set("gameboard", gameboard.getJson());
+
+        ObjectNode playersJson = root.putObject("players");
+        for (String playerId : lobby.getPlayers()) {
+            Player player = playerService.getPlayerById(playerId);
+            if (player != null) {
+                ObjectNode playerNode = player.toJson();
+                PlayerColor color = lobby.getPlayerColor(player.getUniqueId());
+                if (color != null) {
+                    playerNode.put(COLOR_FIELD, color.getHexCode());
+                }
+                playersJson.set(player.getUniqueId(), playerNode);
+            }
+        }
+
+        return root;
     }
 
     Uni<MessageDTO> placeSettlement(MessageDTO message, WebSocketConnection connection) throws GameException {
@@ -128,15 +162,7 @@ public class GameWebSocket {
             return gameService.broadcastWin(connection, message.getLobbyId(), message.getPlayer());
         }
 
-        ObjectNode payload = createGameBoardObjectNode(message.getLobbyId());
-        ObjectNode playersJson = payload.putObject("players");
-        lobbyService.getLobbyById(message.getLobbyId())
-                .getPlayers().forEach(playerId -> {
-                    Player player = playerService.getPlayerById(playerId);
-                    if (player != null) {
-                        playersJson.set(player.getUniqueId(), player.toJson());
-                    }
-                });
+        ObjectNode payload = createGameBoardWithPlayers(message.getLobbyId());
 
         MessageDTO update = new MessageDTO(
                 message.getType(),
@@ -146,7 +172,7 @@ public class GameWebSocket {
         );
 
         return sendPlayerResources(playerService.getPlayerById(message.getPlayer()), message.getLobbyId(), connection)
-                        .chain(() ->  connection.broadcast().sendText(update).chain(i -> Uni.createFrom().item(update)));
+                .chain(() ->  connection.broadcast().sendText(update).chain(i -> Uni.createFrom().item(update)));
     }
 
     Uni<MessageDTO> joinLobby(MessageDTO message, WebSocketConnection connection) throws GameException {
@@ -154,7 +180,7 @@ public class GameWebSocket {
         PlayerColor color = lobbyService.getPlayerColor(message.getLobbyId(), message.getPlayer());
         if (joined) {
             ObjectNode colorNode = JsonNodeFactory.instance.objectNode();
-            colorNode.put("color", color.getHexCode());
+            colorNode.put(COLOR_FIELD, color.getHexCode());
             MessageDTO update = new MessageDTO(MessageType.PLAYER_JOINED, message.getPlayer(), message.getLobbyId(), colorNode);
             return connection.broadcast().sendText(update).chain(i -> Uni.createFrom().item(update));
         }
@@ -165,7 +191,7 @@ public class GameWebSocket {
         String lobbyId = lobbyService.createLobby(message.getPlayer());
         PlayerColor color = lobbyService.getPlayerColor(lobbyId, message.getPlayer());
         ObjectNode colorNode = JsonNodeFactory.instance.objectNode();
-        colorNode.put("color", color.getHexCode());
+        colorNode.put(COLOR_FIELD, color.getHexCode());
         return Uni.createFrom().item(
                 new MessageDTO(MessageType.LOBBY_CREATED, message.getPlayer(), lobbyId, colorNode));
     }
@@ -197,18 +223,39 @@ public class GameWebSocket {
 
     Uni<MessageDTO> createGameBoard(MessageDTO message, WebSocketConnection connection) throws GameException {
         GameBoard board = gameService.createGameboard(message.getLobbyId());
-        ObjectNode payload = JsonNodeFactory.instance.objectNode();
-        payload.set("gameboard", board.getJson());
-        MessageDTO updateJson = new MessageDTO(MessageType.GAME_BOARD_JSON, null, message.getLobbyId(), payload);
-        return sendPlayerResources(playerService.getPlayerById(message.getPlayer()), message.getLobbyId(), connection)
-                .chain(() -> connection.broadcast().sendText(updateJson).chain(i -> Uni.createFrom().item(updateJson)));
+
+        ObjectNode gameData = createGameBoardWithPlayers(message.getLobbyId());
+        gameData.setAll(board.getJson());
+
+        MessageDTO updateJson = new MessageDTO(
+                MessageType.GAME_BOARD_JSON,
+                null,
+                message.getLobbyId(),
+                gameData
+        );
+
+        return connection.broadcast().sendText(updateJson)
+                .chain(i -> Uni.createFrom().item(updateJson));
     }
 
     private Uni<MessageDTO> getGameBoard(MessageDTO message, WebSocketConnection connection) throws GameException {
-        MessageDTO updateJson = new MessageDTO(MessageType.GAME_BOARD_JSON, null, message.getLobbyId(), createGameBoardObjectNode(message.getLobbyId()));
-        return sendPlayerResources(playerService.getPlayerById(message.getPlayer()), message.getLobbyId(), connection)
-                .chain(() -> connection.sendText(updateJson).chain(i -> Uni.createFrom().item(updateJson)));
+        MessageDTO updateJson = new MessageDTO(
+                MessageType.GAME_BOARD_JSON,
+                null,
+                message.getLobbyId(),
+                createGameBoardObjectNode(message.getLobbyId())
+        );
+        return connection.sendText(updateJson).chain(i -> Uni.createFrom().item(updateJson));
+
     }
+
+    private ObjectNode createGameBoardObjectNode(String lobbyId) throws GameException {
+        GameBoard gameboard = gameService.getGameboardByLobbyId(lobbyId);
+        ObjectNode payload = JsonNodeFactory.instance.objectNode();
+        payload.set("gameboard", gameboard.getJson());
+        return payload;
+    }
+
 
     Uni<MessageDTO> handleDiceRoll(MessageDTO message, WebSocketConnection connection) throws GameException {
         // Roll and broadcast dice
@@ -267,7 +314,8 @@ public class GameWebSocket {
         return Uni.createFrom().item(startPkt);
     }
 
-    private Uni<Void> sendPlayerResources(Player player, String lobbyId, WebSocketConnection connection){
+
+    Uni<Void> sendPlayerResources(Player player, String lobbyId, WebSocketConnection connection){
         ObjectNode resourcesPayload = player.getResourceJSON();
         MessageDTO resourceMsg = new MessageDTO(
                 MessageType.PLAYER_RESOURCES,
@@ -282,12 +330,6 @@ public class GameWebSocket {
                 .invoke(e -> logger.errorf("Failed to send PLAYER_RESOURCES to %s: %s", player.getUniqueId(), e.getMessage()));
     }
 
-    private ObjectNode createGameBoardObjectNode(String lobbyId) throws GameException {
-        GameBoard gameboard = gameService.getGameboardByLobbyId(lobbyId);
-        ObjectNode payload = JsonNodeFactory.instance.objectNode();
-        payload.set("gameboard", gameboard.getJson());
-        return payload;
-    }
 }
 
 @FunctionalInterface

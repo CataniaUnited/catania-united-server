@@ -26,6 +26,9 @@ public class Player {
     private int victoryPoints = 0;
     HashMap<TileType, Integer> resources = new HashMap<>();
 
+    private static final Logger logger = Logger.getLogger(Player.class);
+
+
     public Player() {
         this.uniqueId = UUID.randomUUID().toString();
         this.username = "RandomPlayer_" + new Random().nextInt(10000);
@@ -110,6 +113,7 @@ public class Player {
         ObjectNode playerNode = mapper.createObjectNode();
         playerNode.put("username", this.username);
         playerNode.put("victoryPoints", this.victoryPoints);
+        logger.infof("Serializing player %s with VP=%d", this.username, this.victoryPoints);
         return playerNode;
     }
 
