@@ -153,7 +153,6 @@ public class GameWebSocketTest {
     @Test
     void testWebSocketOnClose() throws InterruptedException, JsonProcessingException {
         List<String> receivedMessages = new CopyOnWriteArrayList<>();
-        // Expecting 2 messages
         CountDownLatch messageLatch = new CountDownLatch(2);
 
         var clientToClose = BasicWebSocketConnector.create().baseUri(serverUri).path("/game").connectAndAwait();
@@ -165,13 +164,11 @@ public class GameWebSocketTest {
 
         assertEquals(2, connections.listAll().size());
 
-        // Send message
         clientToClose.close().await().atMost(Duration.of(5, ChronoUnit.SECONDS));
 
         // Wait up to 5 seconds for both messages to arrive
         boolean allMessagesReceived = messageLatch.await(5, TimeUnit.SECONDS);
 
-        //Check if client disconnected
         assertEquals(1, connections.listAll().size());
         assertTrue(allMessagesReceived, "Not all messages were received in time!");
         assertEquals(2, receivedMessages.size());
@@ -339,15 +336,25 @@ public class GameWebSocketTest {
         assertTrue(latch.await(5, TimeUnit.SECONDS), "Did not receive PLAYER_JOINED message in time");
     }
 
+
     @Test
     void testPlayerJoinedLobbySuccess() throws JsonProcessingException, InterruptedException, GameException {
         String player = "TestPlayer";
         PlayerColor assignedColor = PlayerColor.BLUE;
         String lobbyId = "xyz123";
+
         Lobby mockLobby = mock(Lobby.class);
         doReturn(mockLobby).when(lobbyService).getLobbyById(lobbyId);
         doReturn(assignedColor).when(mockLobby).assignAvailableColor();
         doReturn(assignedColor).when(mockLobby).getPlayerColor(player);
+        doReturn(Set.of(player)).when(mockLobby).getPlayers(); // Required by createGameBoardWithPlayers
+
+        Player mockPlayer = mock(Player.class);
+        when(mockPlayer.getUniqueId()).thenReturn(player);
+        when(mockPlayer.getUsername()).thenReturn(player);
+        when(mockPlayer.getResourceJSON()).thenReturn(objectMapper.createObjectNode());
+        when(mockPlayer.toJson()).thenReturn(objectMapper.createObjectNode().put("username", player));
+        doReturn(mockPlayer).when(playerService).getPlayerById(player);
 
         MessageDTO joinLobbyMessage = new MessageDTO(MessageType.JOIN_LOBBY, player, lobbyId);
         List<String> receivedMessages = new CopyOnWriteArrayList<>();
@@ -368,13 +375,17 @@ public class GameWebSocketTest {
         assertTrue(messageLatch.await(5, TimeUnit.SECONDS), "Not all messages were received in time!");
         assertEquals(3, receivedMessages.size());
 
-        MessageDTO responseMessage = objectMapper.readValue(receivedMessages.get(receivedMessages.size() - 1), MessageDTO.class);
+        MessageDTO responseMessage = objectMapper.readValue(
+                receivedMessages.get(receivedMessages.size() - 1),
+                MessageDTO.class
+        );
 
         assertEquals(MessageType.PLAYER_JOINED, responseMessage.getType());
         assertEquals(player, responseMessage.getPlayer());
         assertEquals(lobbyId, responseMessage.getLobbyId());
-        assertNotNull(assignedColor.getHexCode(), responseMessage.getMessageNode("color").asText());
+        assertEquals(assignedColor.getHexCode(), responseMessage.getMessageNode("color").asText());
     }
+
 
     @Test
     void testJoinLobbyFailure() throws InterruptedException, JsonProcessingException, GameException {
@@ -775,75 +786,55 @@ public class GameWebSocketTest {
     }
 
     @Test
-    void testCreateGameBoard() throws InterruptedException, JsonProcessingException, GameException {
+    void testCreateGameBoard() throws Exception {
         String playerId = "playerABC";
-
         String lobbyId = lobbyService.createLobby(playerId);
 
-        GameBoard mockGameBoard = mock(GameBoard.class);
-        ObjectNode boardJson = objectMapper.createObjectNode().put("boardData", "testValue");
-        when(mockGameBoard.getJson()).thenReturn(boardJson);
+        GameBoard mockBoard = mock(GameBoard.class);
+        ObjectNode boardJson = objectMapper.createObjectNode().put("boardData", "abc");
+        when(mockBoard.getJson()).thenReturn(boardJson);
 
-        reset(gameService);
-        doReturn(mockGameBoard).when(gameService).createGameboard(lobbyId);
+        doReturn(mockBoard).when(gameService).createGameboard(lobbyId);
 
-        ObjectNode mockPlayersJson = objectMapper.createObjectNode().put("playersData", "fakePlayers");
-        doReturn(mockPlayersJson).when(gameWebSocket).createGameBoardWithPlayers(lobbyId);
+        Player mockPlayer = mock(Player.class);
+        when(mockPlayer.getUniqueId()).thenReturn(playerId);
+        when(mockPlayer.getResourceJSON()).thenReturn(objectMapper.createObjectNode());
+        when(playerService.getPlayerById(playerId)).thenReturn(mockPlayer);
 
-        ObjectNode expectedMergedJson = mockPlayersJson.deepCopy();
-        expectedMergedJson.setAll(boardJson);
+        ObjectNode gameWithPlayers = objectMapper.createObjectNode().put("merged", "data");
+        doReturn(gameWithPlayers).when(gameWebSocket).createGameBoardWithPlayers(lobbyId);
+
+        ObjectNode expected = gameWithPlayers.deepCopy();
+        expected.setAll(boardJson);
 
         List<String> receivedMessages = new CopyOnWriteArrayList<>();
-        CountDownLatch gameBoardMessageLatch = new CountDownLatch(1);
+        CountDownLatch latch = new CountDownLatch(1);
 
-        var client = BasicWebSocketConnector.create()
+        var connection = BasicWebSocketConnector.create()
                 .baseUri(serverUri)
                 .path("/game")
-                .onTextMessage((connection, message) -> {
-                    if (message.startsWith("{")) {
-                        try {
-                            MessageDTO receivedDto = objectMapper.readValue(message, MessageDTO.class);
-                            receivedMessages.add(message);
-                            if (receivedDto.getType() == MessageType.GAME_BOARD_JSON) {
-                                gameBoardMessageLatch.countDown();
-                            }
-                        } catch (JsonProcessingException ignored) {
-                            fail("A JSON Processing Exception occurred");
+                .onTextMessage((conn, msg) -> {
+                    try {
+                        MessageDTO dto = objectMapper.readValue(msg, MessageDTO.class);
+                        if (dto.getType() == MessageType.GAME_BOARD_JSON) {
+                            receivedMessages.add(msg);
+                            latch.countDown();
                         }
+                    } catch (JsonProcessingException ignored) {
                     }
                 })
                 .connectAndAwait();
 
-        MessageDTO createBoardMsg = new MessageDTO(MessageType.CREATE_GAME_BOARD, playerId, lobbyId);
-        String sentMessage = objectMapper.writeValueAsString(createBoardMsg);
-        client.sendTextAndAwait(sentMessage);
+        MessageDTO createMsg = new MessageDTO(MessageType.CREATE_GAME_BOARD, playerId, lobbyId);
+        connection.sendTextAndAwait(objectMapper.writeValueAsString(createMsg));
 
-        assertTrue(gameBoardMessageLatch.await(5, TimeUnit.SECONDS),
-                "Did not receive GAME_BOARD_JSON message in time. Received: " + receivedMessages);
-
-        verify(gameService).createGameboard(lobbyId);
-        verify(mockGameBoard).getJson();
-        verify(gameWebSocket).createGameBoardWithPlayers(lobbyId);
-
-        MessageDTO responseMessage = receivedMessages.stream()
-                .map(msgStr -> {
-                    try {
-                        return objectMapper.readValue(msgStr, MessageDTO.class);
-                    } catch (JsonProcessingException e) {
-                        return null;
-                    }
-                })
-                .filter(dto -> dto != null && dto.getType() == MessageType.GAME_BOARD_JSON)
-                .findFirst()
-                .orElse(null);
-
-        assertNotNull(responseMessage, "GAME_BOARD_JSON message should have been received");
-        assertEquals(MessageType.GAME_BOARD_JSON, responseMessage.getType());
-        assertNull(responseMessage.getPlayer(), "Player field should be null for GAME_BOARD_JSON");
-        assertEquals(lobbyId, responseMessage.getLobbyId(), "LobbyId field should match");
-        assertNotNull(responseMessage.getMessage(), "Message payload should not be null");
-        assertEquals(expectedMergedJson, responseMessage.getMessage(), "Merged board data should match");
+        assertTrue(latch.await(5, TimeUnit.SECONDS), "Did not receive GAME_BOARD_JSON message in time.");
+        MessageDTO response = objectMapper.readValue(receivedMessages.get(0), MessageDTO.class);
+        assertEquals(MessageType.GAME_BOARD_JSON, response.getType());
+        assertEquals(lobbyId, response.getLobbyId());
+        assertEquals(expected, response.getMessage());
     }
+
 
 
     @Test
@@ -1618,38 +1609,203 @@ public class GameWebSocketTest {
 
         String lobbyId = lobbyService.createLobby(player1);
         lobbyService.joinLobbyByCode(lobbyId, player2);
-
         gameService.createGameboard(lobbyId);
 
-        List<String> receivedMessages = new CopyOnWriteArrayList<>();
-        CountDownLatch messageLatch = new CountDownLatch(1);
+        Player mock1 = mock(Player.class);
+        when(mock1.getUniqueId()).thenReturn(player1);
+        when(mock1.getResourceJSON()).thenReturn(objectMapper.createObjectNode());
+        when(mock1.toJson()).thenReturn(objectMapper.createObjectNode().put("username", player1));
+        when(playerService.getPlayerById(player1)).thenReturn(mock1);
 
-        var client = BasicWebSocketConnector.create()
+        Player mock2 = mock(Player.class);
+        when(mock2.getUniqueId()).thenReturn(player2);
+        when(mock2.getResourceJSON()).thenReturn(objectMapper.createObjectNode());
+        when(mock2.toJson()).thenReturn(objectMapper.createObjectNode().put("username", player2));
+        when(playerService.getPlayerById(player2)).thenReturn(mock2);
+
+        List<String> received = new CopyOnWriteArrayList<>();
+        CountDownLatch latch = new CountDownLatch(1);
+
+        var connection = BasicWebSocketConnector.create()
                 .baseUri(serverUri)
                 .path("/game")
-                .onTextMessage((connection, message) -> {
+                .onTextMessage((conn, msg) -> {
                     try {
-                        MessageDTO dto = objectMapper.readValue(message, MessageDTO.class);
+                        MessageDTO dto = objectMapper.readValue(msg, MessageDTO.class);
                         if (dto.getType() == MessageType.GAME_BOARD_JSON) {
-                            receivedMessages.add(message);
-                            messageLatch.countDown();
+                            received.add(msg);
+                            latch.countDown();
                         }
                     } catch (JsonProcessingException e) {
-                        fail("Failed to parse message: " + message, e);
+                        fail("Parsing failed", e);
                     }
                 })
                 .connectAndAwait();
 
-        MessageDTO getGameBoardMsg = new MessageDTO(MessageType.GET_GAME_BOARD, player1, lobbyId);
-        client.sendTextAndAwait(objectMapper.writeValueAsString(getGameBoardMsg));
+        MessageDTO getBoard = new MessageDTO(MessageType.GET_GAME_BOARD, player1, lobbyId);
+        connection.sendTextAndAwait(objectMapper.writeValueAsString(getBoard));
 
-        assertTrue(messageLatch.await(5, TimeUnit.SECONDS), "Did not receive GAME_BOARD_JSON in time");
-        assertFalse(receivedMessages.isEmpty(), "No message received");
-
-        MessageDTO response = objectMapper.readValue(receivedMessages.get(0), MessageDTO.class);
+        assertTrue(latch.await(5, TimeUnit.SECONDS), "No GAME_BOARD_JSON received.");
+        MessageDTO response = objectMapper.readValue(received.get(0), MessageDTO.class);
         assertEquals(MessageType.GAME_BOARD_JSON, response.getType());
         assertEquals(lobbyId, response.getLobbyId());
-        assertTrue(response.getMessage().has("gameboard"), "gameboard field missing");
+        assertTrue(response.getMessage().has("gameboard"));
+    }
+
+    @Test
+    void testJoinLobby_Failure_ThrowsGameException() throws Exception {
+        String invalidLobbyId = "invalid123";
+        String playerId = "testPlayer";
+
+        // Mock to throw GameException when trying to join
+        doThrow(new GameException("Failed to join lobby: lobby session not found or full"))
+                .when(lobbyService).joinLobbyByCode(invalidLobbyId, playerId);
+
+        List<String> receivedMessages = new CopyOnWriteArrayList<>();
+        CountDownLatch errorLatch = new CountDownLatch(1);
+
+        var client = BasicWebSocketConnector.create()
+                .baseUri(serverUri)
+                .path("/game")
+                .onTextMessage((conn, msg) -> {
+                    if (msg.startsWith("{")) {
+                        try {
+                            MessageDTO dto = objectMapper.readValue(msg, MessageDTO.class);
+                            if (dto.getType() == MessageType.ERROR) {
+                                receivedMessages.add(msg);
+                                errorLatch.countDown();
+                            }
+                        } catch (JsonProcessingException e) {
+                            fail("Failed to parse message");
+                        }
+                    }
+                })
+                .connectAndAwait();
+
+        MessageDTO joinMessage = new MessageDTO(MessageType.JOIN_LOBBY, playerId, invalidLobbyId);
+        client.sendTextAndAwait(objectMapper.writeValueAsString(joinMessage));
+
+        assertTrue(errorLatch.await(5, TimeUnit.SECONDS), "Did not receive ERROR message");
+        assertEquals(1, receivedMessages.size());
+
+        MessageDTO errorMessage = objectMapper.readValue(receivedMessages.get(0), MessageDTO.class);
+        assertEquals(MessageType.ERROR, errorMessage.getType());
+        assertEquals("Failed to join lobby: lobby session not found or full",
+                errorMessage.getMessageNode("error").asText());
+
+        verify(lobbyService).joinLobbyByCode(invalidLobbyId, playerId);
+    }
+
+    @Test
+    void testJoinLobby_GameBoardUpdateFails_StillReturnsSuccess() throws Exception {
+        String playerId = "testPlayer";
+        String lobbyId = "testLobby";
+
+        Lobby mockLobby = mock(Lobby.class);
+        when(mockLobby.getLobbyId()).thenReturn(lobbyId);
+        when(mockLobby.getPlayerColor(playerId)).thenReturn(PlayerColor.BLUE);
+        doReturn(mockLobby).when(lobbyService).getLobbyById(lobbyId);
+
+        doReturn(true).when(lobbyService).joinLobbyByCode(lobbyId, playerId);
+
+        Player mockPlayer = mock(Player.class);
+        when(mockPlayer.getUniqueId()).thenReturn(playerId);
+        when(mockPlayer.getResourceJSON()).thenReturn(objectMapper.createObjectNode());
+        when(playerService.getPlayerById(playerId)).thenReturn(mockPlayer);
+
+        doThrow(new GameException("Test exception")).when(gameWebSocket).createGameBoardWithPlayers(lobbyId);
+
+        List<String> receivedMessages = new CopyOnWriteArrayList<>();
+        CountDownLatch successLatch = new CountDownLatch(1);
+
+        var client = BasicWebSocketConnector.create()
+                .baseUri(serverUri)
+                .path("/game")
+                .onTextMessage((conn, msg) -> {
+                    if (msg.startsWith("{")) {
+                        try {
+                            MessageDTO dto = objectMapper.readValue(msg, MessageDTO.class);
+                            if (dto.getType() == MessageType.PLAYER_JOINED) {
+                                receivedMessages.add(msg);
+                                successLatch.countDown();
+                            }
+                        } catch (JsonProcessingException e) {
+                            fail("Failed to parse message");
+                        }
+                    }
+                })
+                .connectAndAwait();
+
+        MessageDTO joinMessage = new MessageDTO(MessageType.JOIN_LOBBY, playerId, lobbyId);
+        client.sendTextAndAwait(objectMapper.writeValueAsString(joinMessage));
+
+        assertTrue(successLatch.await(5, TimeUnit.SECONDS), "Did not receive PLAYER_JOINED message");
+        assertEquals(1, receivedMessages.size());
+
+        MessageDTO successMessage = objectMapper.readValue(receivedMessages.get(0), MessageDTO.class);
+        assertEquals(MessageType.PLAYER_JOINED, successMessage.getType());
+
+        verify(lobbyService).joinLobbyByCode(lobbyId, playerId);
+        verify(gameWebSocket).createGameBoardWithPlayers(lobbyId);
+    }
+
+    @Test
+    void testJoinLobby_Success_WithGameBoardUpdate() throws Exception {
+        String hostId = "hostPlayer";
+        String joiningPlayerId = "joiningPlayer";
+        String lobbyId = "testLobby";
+
+        Player mockPlayer = mock(Player.class);
+        when(mockPlayer.getUniqueId()).thenReturn(joiningPlayerId);
+        when(mockPlayer.getUsername()).thenReturn(joiningPlayerId);
+        when(mockPlayer.getResourceJSON()).thenReturn(objectMapper.createObjectNode());
+        when(mockPlayer.toJson()).thenReturn(objectMapper.createObjectNode().put("username", joiningPlayerId));
+        when(playerService.getPlayerById(joiningPlayerId)).thenReturn(mockPlayer);
+
+        Lobby mockLobby = mock(Lobby.class);
+        when(mockLobby.getLobbyId()).thenReturn(lobbyId);
+        when(mockLobby.getPlayers()).thenReturn(Set.of(hostId, joiningPlayerId));
+        when(mockLobby.getPlayerColor(joiningPlayerId)).thenReturn(PlayerColor.BLUE);
+        doReturn(mockLobby).when(lobbyService).getLobbyById(lobbyId);
+
+        doReturn(true).when(lobbyService).joinLobbyByCode(lobbyId, joiningPlayerId);
+
+        ObjectNode mockGameBoard = objectMapper.createObjectNode();
+        mockGameBoard.put("gameboard", "mockData");
+        doReturn(mockGameBoard).when(gameWebSocket).createGameBoardWithPlayers(lobbyId);
+
+        List<String> receivedMessages = new CopyOnWriteArrayList<>();
+        CountDownLatch boardUpdateLatch = new CountDownLatch(1);
+
+        var client = BasicWebSocketConnector.create()
+                .baseUri(serverUri)
+                .path("/game")
+                .onTextMessage((conn, msg) -> {
+                    if (msg.startsWith("{")) {
+                        try {
+                            MessageDTO dto = objectMapper.readValue(msg, MessageDTO.class);
+                            if (dto.getType() == MessageType.GAME_BOARD_JSON) {
+                                receivedMessages.add(msg);
+                                boardUpdateLatch.countDown();
+                            }
+                        } catch (JsonProcessingException e) {
+                            fail("Failed to parse message");
+                        }
+                    }
+                })
+                .connectAndAwait();
+
+        MessageDTO joinMessage = new MessageDTO(MessageType.JOIN_LOBBY, joiningPlayerId, lobbyId);
+        client.sendTextAndAwait(objectMapper.writeValueAsString(joinMessage));
+
+        assertTrue(boardUpdateLatch.await(5, TimeUnit.SECONDS), "Did not receive GAME_BOARD_JSON message");
+        assertEquals(1, receivedMessages.size());
+
+        MessageDTO boardMessage = objectMapper.readValue(receivedMessages.get(0), MessageDTO.class);
+        assertEquals(MessageType.GAME_BOARD_JSON, boardMessage.getType());
+
+        verify(lobbyService).joinLobbyByCode(lobbyId, joiningPlayerId);
+        verify(gameWebSocket).createGameBoardWithPlayers(lobbyId);
     }
 
 
