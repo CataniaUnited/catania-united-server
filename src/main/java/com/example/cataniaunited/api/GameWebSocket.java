@@ -178,14 +178,31 @@ public class GameWebSocket {
     Uni<MessageDTO> joinLobby(MessageDTO message, WebSocketConnection connection) throws GameException {
         boolean joined = lobbyService.joinLobbyByCode(message.getLobbyId(), message.getPlayer());
         PlayerColor color = lobbyService.getPlayerColor(message.getLobbyId(), message.getPlayer());
-        if (joined) {
-            ObjectNode colorNode = JsonNodeFactory.instance.objectNode();
-            colorNode.put(COLOR_FIELD, color.getHexCode());
-            MessageDTO update = new MessageDTO(MessageType.PLAYER_JOINED, message.getPlayer(), message.getLobbyId(), colorNode);
-            return connection.broadcast().sendText(update).chain(i -> Uni.createFrom().item(update));
+
+        if (!joined) {
+            throw new GameException("Failed to join lobby: lobby session not found or full");
         }
-        throw new GameException("No lobby session");
+
+        ObjectNode colorNode = JsonNodeFactory.instance.objectNode();
+        colorNode.put(COLOR_FIELD, color.getHexCode());
+        MessageDTO playerJoinedMessage = new MessageDTO(MessageType.PLAYER_JOINED, message.getPlayer(), message.getLobbyId(), colorNode);
+
+        return sendPlayerResources(playerService.getPlayerById(message.getPlayer()), message.getLobbyId(), connection)
+                .chain(() -> connection.broadcast().sendText(playerJoinedMessage))
+                .chain(() -> {
+                    try {
+                        ObjectNode updatedGameState = createGameBoardWithPlayers(message.getLobbyId());
+                        MessageDTO boardUpdate = new MessageDTO(MessageType.GAME_BOARD_JSON, null, message.getLobbyId(), updatedGameState);
+                        return connection.broadcast().sendText(boardUpdate).replaceWith(playerJoinedMessage);
+                    } catch (GameException e) {
+                        logger.errorf("Failed to generate updated game board: %s", e.getMessage());
+                        return Uni.createFrom().item(playerJoinedMessage);  // fallback: still return success
+                    }
+                });
     }
+
+
+
 
     Uni<MessageDTO> createLobby(MessageDTO message) throws GameException {
         String lobbyId = lobbyService.createLobby(message.getPlayer());
@@ -234,9 +251,8 @@ public class GameWebSocket {
                 gameData
         );
 
-        return connection.broadcast().sendText(updateJson)
-                .chain(i -> Uni.createFrom().item(updateJson));
-    }
+        return sendPlayerResources(playerService.getPlayerById(message.getPlayer()), message.getLobbyId(), connection)
+                .chain(() -> connection.broadcast().sendText(updateJson).chain(i -> Uni.createFrom().item(updateJson)));}
 
     private Uni<MessageDTO> getGameBoard(MessageDTO message, WebSocketConnection connection) throws GameException {
         MessageDTO updateJson = new MessageDTO(
@@ -245,8 +261,8 @@ public class GameWebSocket {
                 message.getLobbyId(),
                 createGameBoardObjectNode(message.getLobbyId())
         );
-        return connection.sendText(updateJson).chain(i -> Uni.createFrom().item(updateJson));
-
+        return sendPlayerResources(playerService.getPlayerById(message.getPlayer()), message.getLobbyId(), connection)
+                .chain(() -> connection.sendText(updateJson).chain(i -> Uni.createFrom().item(updateJson)));
     }
 
     private ObjectNode createGameBoardObjectNode(String lobbyId) throws GameException {
@@ -323,6 +339,8 @@ public class GameWebSocket {
                 lobbyId,
                 resourcesPayload
         );
+
+
 
         logger.infof("Sending PLAYER_RESOURCES to %s: %s", player.getUniqueId(), resourcesPayload.toString());
         return connection.sendText(resourceMsg)
