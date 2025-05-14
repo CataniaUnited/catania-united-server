@@ -57,7 +57,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
 
 
 @QuarkusTest
@@ -820,8 +819,11 @@ public class GameWebSocketTest {
                             receivedMessages.add(msg);
                             latch.countDown();
                         }
-                    } catch (JsonProcessingException ignored) {
+                    } catch (JsonProcessingException e) {
+                        System.err.println("Failed to parse WebSocket message: " + e.getMessage());
                     }
+
+
                 })
                 .connectAndAwait();
 
@@ -1657,7 +1659,6 @@ public class GameWebSocketTest {
         String invalidLobbyId = "invalid123";
         String playerId = "testPlayer";
 
-        // Mock to throw GameException when trying to join
         doThrow(new GameException("Failed to join lobby: lobby session not found or full"))
                 .when(lobbyService).joinLobbyByCode(invalidLobbyId, playerId);
 
@@ -1808,6 +1809,45 @@ public class GameWebSocketTest {
         verify(gameWebSocket).createGameBoardWithPlayers(lobbyId);
     }
 
+    @Test
+    void testJoinLobbyFailsWithJoinReturnsFalse() throws Exception {
+        String playerId = "FailPlayer";
+        String lobbyId = "failLobby";
+
+        MessageDTO joinMessage = new MessageDTO(MessageType.JOIN_LOBBY, playerId, lobbyId);
+        doReturn(false).when(lobbyService).joinLobbyByCode(lobbyId, playerId);
+
+        List<MessageDTO> receivedMessages = new CopyOnWriteArrayList<>();
+        CountDownLatch errorLatch = new CountDownLatch(1);
+
+        var client = BasicWebSocketConnector.create()
+                .baseUri(serverUri)
+                .path("/game")
+                .onTextMessage((conn, msg) -> {
+                    try {
+                        MessageDTO dto = objectMapper.readValue(msg, MessageDTO.class);
+                        if (dto.getType() == MessageType.ERROR) {
+                            receivedMessages.add(dto);
+                            errorLatch.countDown();
+                        }
+                    } catch (JsonProcessingException e) {
+                        fail("Failed to parse message");
+                    }
+                })
+                .connectAndAwait();
+
+        client.sendTextAndAwait(objectMapper.writeValueAsString(joinMessage));
+
+        assertTrue(errorLatch.await(5, TimeUnit.SECONDS));
+        assertEquals(1, receivedMessages.size());
+
+        MessageDTO error = receivedMessages.get(0);
+        assertEquals(MessageType.ERROR, error.getType());
+        assertEquals("Failed to join lobby: lobby session not found or full",
+                error.getMessageNode("error").asText());
+
+        verify(lobbyService).joinLobbyByCode(lobbyId, playerId);
+    }
 
 
 

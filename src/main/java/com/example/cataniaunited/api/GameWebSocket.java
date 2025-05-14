@@ -177,11 +177,12 @@ public class GameWebSocket {
 
     Uni<MessageDTO> joinLobby(MessageDTO message, WebSocketConnection connection) throws GameException {
         boolean joined = lobbyService.joinLobbyByCode(message.getLobbyId(), message.getPlayer());
-        PlayerColor color = lobbyService.getPlayerColor(message.getLobbyId(), message.getPlayer());
 
         if (!joined) {
             throw new GameException("Failed to join lobby: lobby session not found or full");
         }
+
+        PlayerColor color = lobbyService.getPlayerColor(message.getLobbyId(), message.getPlayer());
 
         ObjectNode colorNode = JsonNodeFactory.instance.objectNode();
         colorNode.put(COLOR_FIELD, color.getHexCode());
@@ -200,7 +201,6 @@ public class GameWebSocket {
                     }
                 });
     }
-
 
 
 
