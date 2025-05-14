@@ -5,6 +5,12 @@ import com.example.cataniaunited.game.board.tile_list_builder.Tile;
 
 import java.util.*;
 
+/**
+ * Builds the graph structure of the Catan game board, consisting of
+ * {@link SettlementPosition} nodes and {@link Road} edges.
+ * It uses a list of pre-generated {@link Tile} objects to determine
+ * the layout and connections.
+ */
 public class GraphBuilder {
     final List<Tile> tileList;
     List<SettlementPosition> nodeList;
@@ -13,6 +19,14 @@ public class GraphBuilder {
 
     int nodeId=0;
 
+    /**
+     * Constructs a GraphBuilder with a list of tiles and the size of the board.
+     *
+     * @param tileList    The list of {@link Tile} objects to build the graph from.
+     * @param sizeOfBoard The size of the board (number of rings/layers).
+     * @throws IllegalArgumentException if tileList is null/empty, sizeOfBoard is too small,
+     *                                  or tileList size doesn't match expected count for the board size.
+     */
     public GraphBuilder(List<Tile> tileList, int sizeOfBoard) {
         if (tileList == null || tileList.isEmpty()) {
             throw new IllegalArgumentException("Tile list cannot be null or empty.");
@@ -38,8 +52,10 @@ public class GraphBuilder {
 
     /**
      * Generates the complete graph of SettlementPositions.
-     * Orchestrates the building process layer by layer and performs post-processing.
-     * @return The generated list of SettlementPosition nodes.
+     * Orchestrates the building process layer by layer, assigns tiles to nodes,
+     * and calculates coordinates for settlement positions and roads.
+     *
+     * @return The generated list of {@link SettlementPosition} nodes.
      */
     public List<SettlementPosition> generateGraph(){
         for (int level = 1; level <= sizeOfBoard; level++){ // for each level create the subgraph and snd continuously interconnect it with the inner layer
@@ -60,6 +76,13 @@ public class GraphBuilder {
         return nodeList;
     }
 
+    /**
+     * Retrieves the list of generated roads.
+     * This should be called after {@link #generateGraph()} has completed.
+     *
+     * @return The list of {@link Road} objects.
+     * @throws IllegalStateException if the graph has not been built yet.
+     */
     public List<Road> getRoadList() {
         if (roadList == null  || roadList.isEmpty()) {
             throw new IllegalStateException("Build graph before accessing road list.");
@@ -68,9 +91,10 @@ public class GraphBuilder {
     }
 
     /**
-     * Creates the structure (nodes and roads) for a specific layer and connects it
-     * to the previously built inner layer (if applicable).
-     * @param layer The current layer number (1-based).
+     * Creates the structure (nodes and roads) for a specific layer of the board
+     * and connects it to the previously built inner layer, if applicable.
+     *
+     * @param layer The current layer number (1-based, where 1 is the innermost layer around the center).
      */
     private void createLayerStructure(int layer) {
 
@@ -81,7 +105,11 @@ public class GraphBuilder {
         }
     }
 
-    /** Creates the first layer (ring of 6 nodes) around the conceptual center. */
+    /**
+     * Creates the first layer (innermost ring of 6 nodes) around the conceptual center tile.
+     * Each node in this layer is connected to the center tile and its adjacent nodes in the ring.
+     * @throws IllegalStateException if the tile list is empty.
+     */
     private void createFirstLayerRing() {
         int nodesInRing = calculateNodesInRing(1); // Should be 6
         if (tileList.isEmpty()) throw new IllegalStateException("Tile list is empty, cannot create layer 1.");
@@ -109,6 +137,13 @@ public class GraphBuilder {
         }
     }
 
+    /**
+     * Creates a subsequent layer (ring of nodes) on the game board.
+     * This method connects the new nodes to each other within the layer,
+     * to relevant tiles, and to nodes in the inner, previously constructed layer.
+     *
+     * @param currentLayer The current layer number being constructed (greater than 1).
+     */
     private void createSubsequentLayerRing(int currentLayer){
         int amountOfTilesOnBoardBefore = calculateTilesInBoardUpToLayer(currentLayer-1); // amount of tiles placed before
         int indexOfLastTileOfThisLayer =calculateTilesInBoardUpToLayer(currentLayer)-1; // amount of tiles that will be placed after this method is done -1 to get index
@@ -192,9 +227,11 @@ public class GraphBuilder {
     }
 
     /**
-     * Post-processing step: Finds nodes with only 2 tiles (typically inner nodes
-     * that border the next layer) and assigns the missing 3rd tile by looking
-     * at common tiles among neighbours.
+     * Post-processing step after initial layer creation.
+     * Finds {@link SettlementPosition} nodes that are associated with only two tiles
+     * (typically inner nodes bordering an outer layer) and assigns them a third tile.
+     * The third tile is determined by finding a common tile among the node's neighbors
+     * that the node itself is not yet associated with.
      */
     private void assignTilesToIncompleteNodes() {
         // Since we insert tiles of the outer layer into nodes of the inner layers, we don't need to check the last layer
@@ -239,6 +276,13 @@ public class GraphBuilder {
 
     }
 
+    /**
+     * Adds the tiles associated with an outer layer node to an adjacent inner layer node.
+     * This helps ensure inner nodes are correctly associated with all three surrounding tiles.
+     *
+     * @param innerNode The {@link SettlementPosition} in the inner layer.
+     * @param outerNode The {@link SettlementPosition} in the outer layer, connected to the innerNode.
+     */
     private void addTilesToNodeInTheInnerLayer(SettlementPosition innerNode, SettlementPosition outerNode){
         for (Tile tile: outerNode.getTiles()){
             innerNode.addTile(tile);
@@ -246,9 +290,11 @@ public class GraphBuilder {
     }
 
     /**
-     * Create a new Edge = Road in the Graph = GameBoard connection two settlement positions
-     * @param a Settlementposition a
-     * @param b Settlementposition b
+     * Creates a new {@link Road} (edge) in the graph, connecting two {@link SettlementPosition} nodes.
+     * Adds the road to both settlement positions and to the main road list.
+     *
+     * @param a The first {@link SettlementPosition}.
+     * @param b The second {@link SettlementPosition}.
      */
     private void createRoadBetweenTwoSettlements(SettlementPosition a, SettlementPosition b){
         Road roadToAdd = new Road(a, b, roadList.size()+1);
@@ -257,6 +303,10 @@ public class GraphBuilder {
         roadList.add(roadToAdd);
     }
 
+    /**
+     * Calculates and sets the coordinates and rotation angle for all roads in the road list.
+     * This is done after settlement positions have their coordinates calculated.
+     */
     private void calculateRoadCoordinates(){
         for (SettlementPosition currentNode : nodeList) {
             for (Road road : currentNode.getRoads()) {
@@ -265,11 +315,20 @@ public class GraphBuilder {
         }
     }
 
+    /**
+     * Calculates and sets the 2D coordinates for all {@link SettlementPosition} nodes.
+     * Distinguishes between inner nodes (surrounded by 3 tiles) and outer nodes.
+     */
     private void calculateSettlementCoordinates(){
         addCoordinatesToInnerNodes();
         addCoordinatesToOuterNodes();
     }
 
+    /**
+     * Calculates and sets coordinates for inner settlement positions.
+     * These nodes are at the intersection of three tiles, and their
+     * coordinates are the average of the coordinates of these three tiles.
+     */
     private void addCoordinatesToInnerNodes(){
         // All nodes beside the one on the outermost layer have 3 neighbors
         int lastNodeWith3Neighbors = (int) (6*Math.pow((sizeOfBoard-1), 2));
@@ -295,6 +354,11 @@ public class GraphBuilder {
         }
     }
 
+    /**
+     * Calculates and sets coordinates for outer settlement positions.
+     * The method of calculation depends on how many tiles the node is associated with
+     * and the available coordinate information from its neighbors or associated tiles.
+     */
     private void addCoordinatesToOuterNodes(){
         int startingIndex = (int) (6*Math.pow((sizeOfBoard-1), 2));
 
@@ -330,12 +394,16 @@ public class GraphBuilder {
         }
     }
 
+    /**
+     * Calculates coordinates for an outer node associated with two tiles and having one neighbor
+     * whose coordinates are already known. The node's position is determined by reflecting
+     * the known neighbor across the midpoint of the two associated tiles.
+     *
+     * @param node The {@link SettlementPosition} whose coordinates are to be calculated.
+     */
     private void addCoordinatesToNodeWith2TilesAnd1Neighbor(SettlementPosition node){
         List<Tile> tilesOfNodeList = node.getTiles();
         List<SettlementPosition> neighbors = node.getNeighbours();
-
-
-
 
         SettlementPosition minNode = Collections.min(neighbors, Comparator.comparingInt(SettlementPosition::getId));
 
@@ -344,11 +412,15 @@ public class GraphBuilder {
         node.setCoordinates(coordinates[0], coordinates[1]);
     }
 
+    /**
+     * Calculates coordinates for an outer node associated with one tile and having two neighbors
+     * whose coordinates are already known. The node's position is determined by reflecting
+     * the associated tile across the midpoint of the two known neighbors.
+     *
+     * @param node The {@link SettlementPosition} whose coordinates are to be calculated.
+     */
     private void addCoordinatesToNodeWith1TilesAnd2NeighborsWithCoordinates(SettlementPosition node){
         List<SettlementPosition> neighbours = node.getNeighbours();
-
-
-
 
         Tile tile = node.getTiles().get(0);
 
@@ -357,6 +429,14 @@ public class GraphBuilder {
         node.setCoordinates(coordinates[0], coordinates[1]);
     }
 
+    /**
+     * Calculates coordinates for an outer node that is associated with one tile and has one direct neighbor
+     * with known coordinates. It uses a "neighbor-of-a-neighbor" (distance 2 connection) as a third
+     * reference point for triangulation. The node's position is determined by reflecting the
+     * "neighbor-of-a-neighbor" across the midpoint of the direct neighbor and the associated tile.
+     *
+     * @param node The {@link SettlementPosition} whose coordinates are to be calculated.
+     */
     private void addCoordinatesToNodeWith1Tiles1NeighbourAnd1NodeAsNeighbourFromPreviousNode(SettlementPosition node){
         List<SettlementPosition> neighbours = node.getNeighbours();
 
@@ -375,13 +455,14 @@ public class GraphBuilder {
     }
 
     /**
-     * Calculates the coordinates of a point C by reflecting point P across the midpoint M of points A and B.
-     * Formula: C = M + (M - P) = 2*M - P = A + B - P
-     * Where A, B, P are treated as vectors from the origin.
-     * @param placableA Point A (provides coordinates)
-     * @param placableB Point B (provides coordinates)
-     * @param reflectedPlacable Point P (provides coordinates)
-     * @return The calculated coordinates [x, y] for point C.
+     * Calculates the coordinates of a point C by reflecting a point P (reflectedPlacable)
+     * across the midpoint M of two other points A (placableA) and B (placableB).
+     * The formula used is C = A + B - P, where A, B, and P are treated as vectors from the origin.
+     *
+     * @param placableA         A {@link Placable} object providing the coordinates for point A.
+     * @param placableB         A {@link Placable} object providing the coordinates for point B.
+     * @param reflectedPlacable A {@link Placable} object providing the coordinates for point P (the point to be reflected).
+     * @return A double array `[x, y]` representing the calculated coordinates for point C.
      */
     private double[] calculateCoordinatesThruReflectingAPointAcrossTheMidpointOfTwoOtherPoints(Placable placableA, Placable placableB, Placable reflectedPlacable){
         double[] coordinates = new double[2];
@@ -404,37 +485,62 @@ public class GraphBuilder {
         return coordinates;
     }
 
+    /**
+     * Calculates the total number of settlement positions on a board of a given size.
+     * The formula is 6 * (sizeOfBoard)^2.
+     *
+     * @param sizeOfBoard The size of the board (number of rings/layers).
+     * @return The total number of settlement positions.
+     */
     public static int calculateTotalSettlementPositions(int sizeOfBoard){
         return (int) (6*Math.pow(sizeOfBoard, 2));
     }
+
+    /**
+     * Creates a new {@link SettlementPosition} with a unique ID and adds it to the nodeList.
+     *
+     * @return The newly created {@link SettlementPosition}.
+     */
     private SettlementPosition createAndAddNode(){
         SettlementPosition currentNode = new SettlementPosition(++nodeId);
         nodeList.add(currentNode);
         return currentNode;
     }
 
-    /** Calculates total tiles up to and including layer k (1-based). */
+    /**
+     * Calculates the total number of tiles on the board up to and including a specified layer.
+     *
+     * @param layer The layer number (1-based, where 1 is the center tile only).
+     * @return The total number of tiles up to and including that layer. Returns 0 if layer is non-positive.
+     */
     private static int calculateTilesInBoardUpToLayer(int layer) {
         if (layer <= 0) return 0;
         int n = layer - 1; // n = number of rings around center (0-based)
         return 3 * n * (n + 1) + 1;
     }
 
-    /** Calculates number of *new* settlement positions *in* the ring of layer k (1-based layer).
-     *  Nodes(k) - Nodes(k-1) = 6*k^2 - 6*(k-1)^2 = 6k^2 - 6(k^2-2k+1) = 12k - 6 = 6 * (2k - 1)
-     **/
+    /**
+     * Calculates the number of new settlement positions *in* a specific ring (layer) of the board.
+     * The formula is 6 * (2 * layer - 1).
+     *
+     * @param layer The layer number (1-based).
+     * @return The number of settlement positions in that specific ring. Returns 0 if layer is non-positive.
+     */
     private static int calculateNodesInRing(int layer) {
         if (layer <= 0) return 0;
         return 6 * (2 * layer - 1);
     }
 
     /**
-     * O(1) Implementation of findDuplicate for lists of size 5 due to frequent usage in other Methods,
-     * avoiding using the O(n) Algorithm of repeatedly removing an element (internal O(n) implementation in ArrayList)
-     * until only the once duplicate is contaminated.
-     * Used to find the tile that is common among neighbours but missing from the current node.
-     * @param list List of size 5 that includes at least one duplicate
-     * @return returns the first Tile, that exists twice in the list
+     * Finds a duplicate {@link Tile} in a given list of tiles.
+     * This is an O(1) implementation specifically optimized for lists of size 5,
+     * assuming at least one duplicate exists.
+     * Used to find a common tile among neighbors that is missing from the current node.
+     *
+     * @param list A list of 5 {@link Tile} objects, expected to contain at least one duplicate.
+     * @return The first {@link Tile} found to be a duplicate. If the list structure assumption
+     *         is violated or no duplicate is found within the checked comparisons,
+     *         it may return an incorrect result or the last element checked.
      */
     public static Tile findDuplicateTile(List<Tile> list) {
 
@@ -456,8 +562,15 @@ public class GraphBuilder {
     }
 
     /**
-     * Deactivated since it drastically reduced branch coverage for working end product
+     * Checks a boolean condition and throws an {@link AssertionError} if the condition is false.
+     * This method is "Deprecated" since it drastically reduced branch coverage for the working end product.
+     * And is only used in two tests
+     *
+     * @param success      The boolean condition to check.
+     * @param errorMessage The message for the AssertionError if the condition is false.
+     * @throws AssertionError if success is false.
      */
+    @Deprecated
     static void checkAndThrowAssertionError(boolean success, String errorMessage){
         if (success)
             return;
@@ -466,4 +579,3 @@ public class GraphBuilder {
     }
 
 }
-

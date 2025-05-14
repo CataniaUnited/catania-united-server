@@ -6,7 +6,7 @@ public enum TileType {
     WOOD(4),
     CLAY(4),
     ORE(0),
-    WASTE(0); // WASTE NEEDS TO BE AT THE LAST INDEX!!!
+    WASTE(0); // WASTE NEEDS TO BE AT THE LAST INDEX (for StandardTileListBuilder logic)!!!
 
     private final int initialAmount;
 
@@ -14,6 +14,12 @@ public enum TileType {
         this.initialAmount = initialAmount;
     }
 
+    /**
+     * Returns the initial amount of Resources a Player gets when starting the game,
+     * to allow him to build two Settlements and two roads.
+     *
+     * @return The initial amount.
+     */
     public int getInitialAmount() {
         return initialAmount;
     }

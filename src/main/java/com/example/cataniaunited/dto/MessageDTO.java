@@ -7,13 +7,16 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Data Transfer Object for messages exchanged via WebSocket.
+ * Contains information about the message type, sender, lobby, and payload.
+ */
 public class MessageDTO {
 
     private MessageType type;
     private String player;
     private String lobbyId;
     private List<String> players;
-    //Generic JSON Object
     private ObjectNode message;
 
     public MessageDTO() {
@@ -77,6 +80,13 @@ public class MessageDTO {
     }
 
 
+    /**
+     * Retrieves a specific node from the message payload by its name.
+     * If the node does not exist, an empty ObjectNode is returned.
+     *
+     * @param nodeName The name of the JSON node to retrieve.
+     * @return The {@link JsonNode} if found, or an empty {@link ObjectNode} otherwise.
+     */
     public JsonNode getMessageNode(String nodeName) {
         return Optional.ofNullable(message.get(nodeName)).orElse(JsonNodeFactory.instance.objectNode());
     }
