@@ -109,10 +109,10 @@ class PlayerTest {
 
     @Test
     void testToJsonIncludesUsernameAndVictoryPoints() {
-        Player player = new Player("TestUser");
-        player.addVictoryPoints(3);
+        Player testUser = new Player("TestUser");
+        testUser.addVictoryPoints(3);
 
-        ObjectNode json = player.toJson();
+        ObjectNode json = testUser.toJson();
 
         assertNotNull(json);
         assertEquals("TestUser", json.get("username").asText());
