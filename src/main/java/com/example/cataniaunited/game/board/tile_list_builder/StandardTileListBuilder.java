@@ -6,6 +6,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.IntUnaryOperator;
 
+/**
+ * A standard implementation of {@link TileListBuilder} for creating a list of Catan tiles.
+ * This builder handles tile creation, value assignment, shuffling, ID assignment,
+ * and calculation of tile positions on a hexagonal grid.
+ */
 public class StandardTileListBuilder implements TileListBuilder{
 
     int sizeOfBoard;
@@ -24,10 +29,17 @@ public class StandardTileListBuilder implements TileListBuilder{
 
     List<Tile> tileList;
 
+    /**
+     * Constructs a new StandardTileListBuilder and initializes its state by calling {@link #reset()}.
+     */
     public StandardTileListBuilder(){
         this.reset(); // Initialize and Reset
     }
 
+    /**
+     * Resets the builder to its initial state, clearing any previously configured
+     * settings or generated tile list.
+     */
     @Override
     public void reset() {
         this.sizeOfBoard = 0;
@@ -40,6 +52,14 @@ public class StandardTileListBuilder implements TileListBuilder{
         this.southEastAddition = null;
     }
 
+    /**
+     * Sets the configuration parameters for the tile list generation.
+     *
+     * @param sizeOfBoard The size of the board (number of rings/layers).
+     * @param sizeOfHex   The size parameter of a single hexagon tile (e.g., side length or apothem), used for coordinate calculation.
+     * @param flipYAxis   Whether to flip the Y-axis for coordinate calculations (true for typical screen coordinates).
+     * @throws IllegalArgumentException if sizeOfBoard or sizeOfHex is not positive.
+     */
     @Override
     public void setConfiguration(int sizeOfBoard, int sizeOfHex, boolean flipYAxis) {
         if (sizeOfBoard <= 0 || sizeOfHex <= 0) {
@@ -49,7 +69,7 @@ public class StandardTileListBuilder implements TileListBuilder{
         this.sizeOfHex = sizeOfHex;
         this.flipYAxis = flipYAxis;
 
-        this.distanceBetweenTiles = StrictMath.sqrt(3)*this.sizeOfHex;
+        this.distanceBetweenTiles = StrictMath.sqrt(3)*this.sizeOfHex; // Distance between centers of adjacent hexes
         amountOfTilesOnBoard = calculateAmountOfTilesForLayerK(sizeOfBoard);
 
         // precomputing offset since working with bigDecimalObjects takes time
@@ -59,6 +79,14 @@ public class StandardTileListBuilder implements TileListBuilder{
         tileList = new ArrayList<>(amountOfTilesOnBoard);
     }
 
+    /**
+     * Builds the initial list of tiles with their types.
+     * One tile is designated as WASTE (desert), and the rest are populated with
+     * resource-producing tile types in a repeating sequence.
+     *
+     * @throws IllegalStateException if configuration has not been set, if no usable
+     * (non-WASTE) tile types are available or Only the Waste Tile is available.
+     */
     @Override
     public void buildTiles() {
         if (this.tileList == null || amountOfTilesOnBoard <= 0) {
@@ -78,6 +106,12 @@ public class StandardTileListBuilder implements TileListBuilder{
         }
     }
 
+    /**
+     * Assigns production numbers (dice roll values) to the non-WASTE tiles.
+     * Aims for a balanced distribution of numbers 2-6 and 8-12.
+     *
+     * @throws IllegalStateException if tiles have not been built yet.
+     */
     @Override
     public void addValues() {
         if (this.tileList == null || this.tileList.isEmpty()) {
@@ -121,6 +155,11 @@ public class StandardTileListBuilder implements TileListBuilder{
     }
 
 
+    /**
+     * Shuffles the order of the generated tiles in the list.
+     *
+     * @throws IllegalStateException if tiles have not been built yet.
+     */
     @Override
     public void shuffleTiles() {
         if (this.tileList == null || this.tileList.isEmpty()) {
@@ -131,6 +170,11 @@ public class StandardTileListBuilder implements TileListBuilder{
         Collections.shuffle(this.tileList);
     }
 
+    /**
+     * Assigns unique, sequential IDs to each tile in the list.
+     *
+     * @throws IllegalStateException if tiles have not been built or the list is empty.
+     */
     @Override
     public void assignTileIds() {
         if (this.tileList == null || this.tileList.isEmpty()) {
@@ -142,6 +186,11 @@ public class StandardTileListBuilder implements TileListBuilder{
         }
     }
 
+    /**
+     * Calculates and assigns 2D coordinates to each tile, arranging them in a hexagonal grid pattern.
+     *
+     * @throws IllegalStateException if configuration has not been set, or if tiles have not been built.
+     */
     @Override
     public void calculateTilePositions() {
         if (this.northWestAddition == null || this.southEastAddition == null) {
@@ -191,6 +240,12 @@ public class StandardTileListBuilder implements TileListBuilder{
 
     }
 
+    /**
+     * Retrieves the list of generated and configured tiles.
+     *
+     * @return The list of {@link Tile} objects.
+     * @throws IllegalStateException if tiles have not been built or the list is empty.
+     */
     @Override
     public List<Tile> getTileList() {
         if (this.tileList == null || this.tileList.isEmpty()) {
@@ -201,8 +256,17 @@ public class StandardTileListBuilder implements TileListBuilder{
     }
 
     // --- coordinate calculation ---
+
+    /**
+     * Adds coordinates to tiles forming rows radiating from diagonal anchor points.
+     * This is part of the hexagonal grid coordinate calculation.
+     *
+     * @param layerIndex  The current layer index (0-based for calculation logic within this method).
+     * @param southRowStartingTileIndex Index of the tile starting the "south" radiating row.
+     * @param northRowStartingTileIndex Index of the tile starting the "north" radiating row.
+     */
     private void addCoordinatesToRows(int layerIndex, int southRowStartingTileIndex, int northRowStartingTileIndex){
-        int layer = layerIndex+1;
+        int layer = layerIndex+1; // Convert to 1-based layer for offset calculations
         int offset;
 
         // Add East Part Of South Row
@@ -224,6 +288,16 @@ public class StandardTileListBuilder implements TileListBuilder{
 
     }
 
+    /**
+     * Helper method to calculate coordinates for a row of tiles where each step (tile)
+     * moves into a conceptually new layer or ring further out from the center.
+     * Used for specific diagonal/axial lines of tiles in the hexagonal grid.
+     *
+     * @param startingLayer     The layer number from which this row calculation starts.
+     * @param startingTileIndex The index in {@code tileList} of the first tile in this row.
+     * @param startingOffset    The initial offset to find the next tile in the sequence. This offset changes for subsequent tiles.
+     * @param xIsGettingLarger  Boolean indicating if the x-coordinate should increase (true) or decrease (false) for subsequent tiles.
+     */
     private void addCoordinatesForRowWhereEveryStepIsIntoANewLayer(int startingLayer, int startingTileIndex, int startingOffset, boolean xIsGettingLarger){
         Tile lastTile = tileList.get(startingTileIndex);
         int lastTileIndex = startingTileIndex;
@@ -245,10 +319,20 @@ public class StandardTileListBuilder implements TileListBuilder{
 
             lastTileIndex = currentTileIndex;
             lastTile = currentTile;
-            offset += 6;
+            offset += 6; // Standard offset increase for hexagonal grid layers
         }
     }
 
+    /**
+     * Helper method to calculate coordinates for a sequence of neighboring tiles along a specific axis,
+     * and then continue with {@link #addCoordinatesForRowWhereEveryStepIsIntoANewLayer} for tiles further out.
+     *
+     * @param startingLayer  The layer number for the subsequent call to {@code addCoordinatesForRowWhereEveryStepIsIntoANewLayer}.
+     * @param startingTileIndex  The index in {@code tileList} of the anchor tile for this sequence.
+     * @param startingOffsetForSubRoutine The offset for the subsequent call to {@code addCoordinatesForRowWhereEveryStepIsIntoANewLayer}.
+     * @param counter The number of immediately adjacent tiles to calculate before calling the subroutine.
+     * @param xIsGettingLarger Boolean indicating if the x-coordinate should increase (true) or decrease (false).
+     */
     private void addNeighboringTile(int startingLayer, int startingTileIndex, int startingOffsetForSubRoutine, int counter, boolean xIsGettingLarger){
         Tile lastTile = tileList.get(startingTileIndex);
         int lastTileIndex = startingTileIndex;
@@ -256,7 +340,7 @@ public class StandardTileListBuilder implements TileListBuilder{
         Tile currentTile;
         double[] coordinates;
         for(; counter > 0; counter--){
-            currentTileIndex = lastTileIndex - 1;
+            currentTileIndex = lastTileIndex - 1; // Assumes tiles are ordered such that -1 moves in the desired direction
             currentTile = tileList.get(currentTileIndex);
 
             coordinates = lastTile.getCoordinates();
@@ -272,6 +356,20 @@ public class StandardTileListBuilder implements TileListBuilder{
 
         addCoordinatesForRowWhereEveryStepIsIntoANewLayer(startingLayer, lastTileIndex, startingOffsetForSubRoutine, xIsGettingLarger);
     }
+
+    /**
+     * Helper method to set coordinates for an "irregular" starting tile in a row (often a corner or edge case)
+     * and then proceed to calculate coordinates for the rest of the row using {@link #addNeighboringTile}.
+     * This is used for specific parts of the hexagonal grid generation, particularly for rows that might
+     * not start from a main diagonal.
+     *
+     * @param startingLayerForSubRoutine The layer for the subsequent call to {@code addNeighboringTile}.
+     * @param startingTileIndex          The index of a reference tile (often already positioned).
+     * @param irregularTileIndex         The index of the tile whose position is being set relative to {@code startingTileIndex}.
+     * @param startingOffsetForSubRoutine The offset for the call to {@code addNeighboringTile}.
+     * @param counterForSubRoutine       The counter for the call to {@code addNeighboringTile}.
+     * @param xIsGettingLarger           Boolean indicating if the x-coordinate should increase (true) or decrease (false).
+     */
     private void changeStartingPositionForSouthWestHalfAndMiddleRow(int startingLayerForSubRoutine, int startingTileIndex, int irregularTileIndex, int startingOffsetForSubRoutine, int counterForSubRoutine, boolean xIsGettingLarger){
         Tile lastTile = tileList.get(startingTileIndex);
         Tile currentTile = tileList.get(irregularTileIndex);
@@ -286,6 +384,17 @@ public class StandardTileListBuilder implements TileListBuilder{
         addNeighboringTile(startingLayerForSubRoutine, irregularTileIndex, startingOffsetForSubRoutine, counterForSubRoutine, xIsGettingLarger);
     }
 
+    /**
+     * Adds coordinates to two key tiles that form a "main diagonal" in a layer of the hexagonal grid.
+     * These tiles are the first tile of a new layer (e.g., southeast direction) and a tile
+     * towards the middle/northwest of that layer. Their positions are calculated relative to
+     * corresponding tiles in the previous layer.
+     *
+     * @param indexOfFirstTileOfThisLayer     Index of the first tile in the current layer (e.g., SE direction).
+     * @param indexOfFirstTileOfPreviousLayer Index of the corresponding tile in the previous layer (SE direction).
+     * @param indexOfMiddleTileOfThisLayer    Index of a middle/NW tile in the current layer.
+     * @param indexOfMiddleTileOfPreviousLayer Index of the corresponding middle/NW tile in the previous layer.
+     */
     private void addCoordinatesToMainDiagonal(int indexOfFirstTileOfThisLayer,
                                              int indexOfFirstTileOfPreviousLayer,
                                              int indexOfMiddleTileOfThisLayer,
@@ -326,12 +435,32 @@ public class StandardTileListBuilder implements TileListBuilder{
 
 
     // --- Static Helper Methods  ---
+
+    /**
+     * Calculates the total number of tiles on a Catan board with a given number of layers/rings.
+     * The formula is 3*n*(n+1) + 1, where n = layers - 1.
+     *
+     * @param layers The number of layers/rings (sizeOfBoard). A board with 1 layer has 1 tile (center).
+     *               A board with 2 layers has 1 (center) + 6 (first ring) = 7 tiles.
+     *               A board with 3 layers has 1 + 6 + 12 = 19 tiles.
+     * @return The total number of tiles. Returns 0 if layers is non-positive.
+     */
     public static int calculateAmountOfTilesForLayerK(int layers) {
         if (layers <= 0) return 0;
-        int n = layers - 1;
+        int n = layers - 1; // n represents the number of rings around the central tile
         return 3 * n * (n + 1) + 1;
     }
 
+    /**
+     * Converts polar coordinates (radius, angle) to Cartesian coordinates (x, y).
+     * Uses {@link BigDecimal} for intermediate multiplication to potentially improve precision
+     * before converting back to double.
+     *
+     * @param r         The radius.
+     * @param theta     The angle in radians.
+     * @param flipYAxis If true, the calculated y-coordinate is negated (common for screen coordinates).
+     * @return A double array `[x, y]` representing the Cartesian coordinates.
+     */
     static double[] polarToCartesian(double r, double theta, boolean flipYAxis){
         double[] coordinates = new double[2];
         double trigResult;

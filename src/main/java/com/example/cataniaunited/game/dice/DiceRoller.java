@@ -8,12 +8,23 @@ import org.jboss.logging.Logger;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Manages the rolling of two dice for the Catan game.
+ * It acts as a {@link Publisher} to notify subscribed {@link Tile}s
+ * about the total result of the dice roll.
+ */
 public class DiceRoller implements Publisher<Tile, Integer> {
     private static final Logger logger = Logger.getLogger(DiceRoller.class);
     private final List<Tile> subscribers = new ArrayList<>();
     private final Dice dice1 = new Dice();
     private final Dice dice2 = new Dice();
 
+    /**
+     * Rolls both dice, calculates the total, and notifies all subscribed tiles.
+     *
+     * @return An {@link ObjectNode} containing the individual dice values and their total.
+     *         Example: {"dice1": 3, "dice2": 4, "total": 7}
+     */
     public ObjectNode rollDice() {
         int dice1Value = dice1.roll();
         int dice2Value = dice2.roll();
@@ -30,16 +41,33 @@ public class DiceRoller implements Publisher<Tile, Integer> {
         notifySubscribers(total);
         return result;
     }
+
+    /**
+     * Adds a {@link Tile} as a subscriber to this DiceRoller.
+     * Subscribed tiles will be notified of dice roll results.
+     *
+     * @param subscriber The {@link Tile} to add.
+     */
     @Override
     public void addSubscriber(Tile subscriber) {
         subscribers.add(subscriber);
     }
 
+    /**
+     * Removes a {@link Tile} from this DiceRoller's list of subscribers.
+     *
+     * @param subscriber The {@link Tile} to remove.
+     */
     @Override
     public void removeSubscriber(Tile subscriber) {
         subscribers.remove(subscriber);
     }
 
+    /**
+     * Notifies all subscribed {@link Tile}s about the total dice roll.
+     *
+     * @param total The total value of the two dice rolled.
+     */
     @Override
     public void notifySubscribers(Integer total) {
         subscribers.forEach(s -> s.update(total));

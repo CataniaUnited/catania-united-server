@@ -15,8 +15,8 @@ public interface Publisher<T extends Subscriber<N>, N> {
      * Registers (adds) a new subscriber to the publisher's list.
      *
      * @param subscriber The subscriber instance to add. must be compatible with both the Publisher's
-     * Subscriber type T and notification type N (i.e., Subscriber<T, N>).
-     * The added subscriber will receive future notifications of type N.
+     *                   Subscriber type T and notification type N (i.e., Subscriber<T, N>).
+     *                   The added subscriber will receive future notifications of type N.
      *                   Must implement Subscriber<T, N>.
      */
     void addSubscriber(T subscriber);
