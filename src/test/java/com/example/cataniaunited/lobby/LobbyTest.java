@@ -123,6 +123,7 @@ class LobbyTest {
         assertNotEquals(before, after, "Order should be shuffled");
     }
 
+
     @Test
     void canStartGame_requiresTwoPlayersAndGameNotYetStarted() {
         // host can start when ≥2 players
