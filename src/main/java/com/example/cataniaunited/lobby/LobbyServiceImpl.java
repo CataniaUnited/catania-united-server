@@ -15,6 +15,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Implementation of the {@link LobbyService} interface.
+ * Manages game lobbies using a concurrent map for storage.
+ * <br>
+ * Important: This Service is Application Scoped which means it is a Singleton that handles
+ * all existing Lobbies, there should be no lengthy calculations in this Class to ensure that
+ * different Clients don't experience long waits.
+ * */
 @ApplicationScoped
 public class LobbyServiceImpl implements LobbyService {
 
@@ -22,10 +30,13 @@ public class LobbyServiceImpl implements LobbyService {
     private final Map<String, Lobby> lobbies = new ConcurrentHashMap<>();
     private static final SecureRandom secureRandom = new SecureRandom();
 
-    // Inject the service that holds all connected Player objects
     @Inject
     PlayerService playerService;
 
+    /**
+     * {@inheritDoc}
+     * Creates a new lobby, assigns a color to the host, and stores the lobby.
+     */
     @Override
     public String createLobby(String hostPlayer) {
         String lobbyId;
@@ -33,12 +44,16 @@ public class LobbyServiceImpl implements LobbyService {
             lobbyId = generateLobbyId();
         } while (lobbies.containsKey(lobbyId));
         Lobby lobby = new Lobby(lobbyId, hostPlayer);
-        setPlayerColor(lobby, hostPlayer);
+        setPlayerColor(lobby, hostPlayer); // Assign a color to the host
         lobbies.put(lobbyId, lobby);
         logger.infof("Lobby created: ID=%s, Host=%s", lobbyId, hostPlayer);
         return lobbyId;
     }
 
+    /**
+     * {@inheritDoc}
+     * Generates a 6-character ID consisting of 3 random letters and 3 random numbers, in a random order.
+     */
     @Override
     public String generateLobbyId() {
         String letters = getRandomCharacters("abcdefghijklmnopqrstuvwxyz", 3);
@@ -46,6 +61,13 @@ public class LobbyServiceImpl implements LobbyService {
         return secureRandom.nextBoolean() ? letters + numbers : numbers + letters;
     }
 
+    /**
+     * Generates a random string of a specified length from a given set of characters.
+     *
+     * @param characters The string of characters to choose from.
+     * @param length     The desired length of the random string.
+     * @return A randomly generated string.
+     */
     private String getRandomCharacters(String characters, int length) {
         StringBuilder stringBuilder = new StringBuilder();
         for (int i = 0; i < length; i++) {
@@ -55,6 +77,9 @@ public class LobbyServiceImpl implements LobbyService {
         return stringBuilder.toString();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public List<String> getOpenLobbies() {
         List<String> openLobbies = new ArrayList<>(lobbies.keySet());
@@ -62,6 +87,11 @@ public class LobbyServiceImpl implements LobbyService {
         return openLobbies;
     }
 
+    /**
+     * {@inheritDoc}
+     * If joining is successful, a color is assigned to the player.
+     * @throws GameException if the lobby is not found.
+     */
     @Override
     public boolean joinLobbyByCode(String lobbyId, String player) throws GameException {
         Lobby lobby = getLobbyById(lobbyId);
@@ -78,6 +108,13 @@ public class LobbyServiceImpl implements LobbyService {
         return false;
     }
 
+    /**
+     * Assigns an available color to a player within a specific lobby.
+     *
+     * @param lobby  The {@link Lobby} where the player is.
+     * @param player The ID of the player to assign a color to.
+     * @return The assigned {@link PlayerColor}, or null if no colors are available.
+     */
     protected PlayerColor setPlayerColor(Lobby lobby, String player) {
         PlayerColor assignedColor = lobby.assignAvailableColor();
         if (assignedColor == null) {
@@ -88,6 +125,10 @@ public class LobbyServiceImpl implements LobbyService {
         return assignedColor;
     }
 
+    /**
+     * {@inheritDoc}
+     * Restores the player's color to the available pool if they had one.
+     */
     @Override
     public void removePlayerFromLobby(String lobbyId, String player) {
         Lobby lobby = lobbies.get(lobbyId);
@@ -105,6 +146,9 @@ public class LobbyServiceImpl implements LobbyService {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Lobby getLobbyById(String lobbyId) throws GameException {
         Lobby lobby = lobbies.get(lobbyId);
@@ -115,12 +159,20 @@ public class LobbyServiceImpl implements LobbyService {
         return lobby;
     }
 
+    /**
+     * {@inheritDoc}
+     * @throws GameException if the lobby is not found.
+     */
     @Override
     public boolean isPlayerTurn(String lobbyId, String playerId) throws GameException {
         Lobby lobby = getLobbyById(lobbyId);
         return lobby.isPlayerTurn(playerId);
     }
 
+    /**
+     * {@inheritDoc}
+     * @throws GameException if the lobby is not found or the player has no assigned color.
+     */
     @Override
     public PlayerColor getPlayerColor(String lobbyId, String playerId) throws GameException {
         Lobby lobby = getLobbyById(lobbyId);
@@ -132,6 +184,11 @@ public class LobbyServiceImpl implements LobbyService {
     }
 
 
+    /**
+     * {@inheritDoc}
+     * Uses {@link PlayerService} to get actual Player objects to send messages.
+     * @throws GameException if the lobby is not found.
+     */
     @Override
     public void notifyPlayers(String lobbyId, MessageDTO dto) throws GameException {
         Lobby lob = getLobbyById(lobbyId);
@@ -142,6 +199,9 @@ public class LobbyServiceImpl implements LobbyService {
     }
 
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void clearLobbies() {
         lobbies.clear();

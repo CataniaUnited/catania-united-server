@@ -1,5 +1,8 @@
 package com.example.cataniaunited.player;
 
+/**
+ * Enum representing the available colors for players in the Catan game.
+ */
 public enum PlayerColor {
     RED("#BD2828"),
     LIGHT_RED("#FF9999"),
