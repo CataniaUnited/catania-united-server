@@ -293,7 +293,7 @@ class PlayerTest {
     @Test
     void sendMessage_successfulSend_invokesConnection() {
         WebSocketConnection conn = mock(WebSocketConnection.class);
-        when(conn.sendText(anyString()))
+        when(conn.sendText(any(MessageDTO.class)))
                 .thenReturn(Uni.createFrom().voidItem());
 
         Player player = new Player(conn);
@@ -302,13 +302,13 @@ class PlayerTest {
         dto.setType(MessageType.CREATE_LOBBY);
         player.sendMessage(dto);
 
-        verify(conn).sendText(anyString());
+        verify(conn).sendText(dto);
     }
 
     @Test
     void sendMessage_failureDoesNotThrow_stillInvokesConnection() {
         WebSocketConnection conn = mock(WebSocketConnection.class);
-        when(conn.sendText(anyString()))
+        when(conn.sendText(any(MessageDTO.class)))
                 .thenReturn(Uni.createFrom().failure(new RuntimeException("boom")));
 
         Player player = new Player(conn);
@@ -317,7 +317,7 @@ class PlayerTest {
         dto.setType(MessageType.CREATE_LOBBY);
 
         assertDoesNotThrow(() -> player.sendMessage(dto));
-        verify(conn).sendText(anyString());
+        verify(conn).sendText(eq(dto));
     }
     @Test
     void sendMessage_withNoConnection_doesNothing() {
@@ -331,7 +331,7 @@ class PlayerTest {
     @Test
     void sendMessage_successfulSend_invokesSendText() {
         WebSocketConnection conn = mock(WebSocketConnection.class);
-        when(conn.sendText(anyString()))
+        when(conn.sendText(any(MessageDTO.class)))
                 .thenReturn(Uni.createFrom().voidItem());
 
         Player p = new Player(conn);
@@ -340,13 +340,13 @@ class PlayerTest {
 
         p.sendMessage(dto);
 
-        verify(conn, times(1)).sendText(anyString());
+        verify(conn, times(1)).sendText(dto);
     }
 
     @Test
     void sendMessage_whenSendFails_stillInvokesSendText_andSwallowsException() {
         WebSocketConnection conn = mock(WebSocketConnection.class);
-        when(conn.sendText(anyString()))
+        when(conn.sendText(any(MessageDTO.class)))
                 .thenReturn(Uni.createFrom().failure(new RuntimeException("kaboom")));
 
         Player p = new Player(conn);
@@ -355,7 +355,7 @@ class PlayerTest {
 
         assertDoesNotThrow(() -> p.sendMessage(dto));
 
-        verify(conn, times(1)).sendText(anyString());
+        verify(conn, times(1)).sendText(dto);
     }
 }
 
