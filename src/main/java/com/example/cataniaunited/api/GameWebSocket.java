@@ -158,8 +158,10 @@ public class GameWebSocket {
                 root
         );
 
-        return sendPlayerResources(playerService.getPlayerById(message.getPlayer()), message.getLobbyId(), connection)
-                .chain(() -> connection.broadcast().sendText(update).chain(i -> Uni.createFrom().item(update)));
+
+        return lobbyService.notifyPlayers(message.getLobbyId(), update)
+                .chain(() -> sendPlayerResources(playerService.getPlayerById(message.getPlayer()), message.getLobbyId()))
+                .chain(() -> Uni.createFrom().item(update));
     }
 
     /**
@@ -257,8 +259,9 @@ public class GameWebSocket {
                 payload
         );
 
-        return sendPlayerResources(playerService.getPlayerById(message.getPlayer()), message.getLobbyId(), connection)
-                .chain(() ->  connection.broadcast().sendText(update).chain(i -> Uni.createFrom().item(update)));
+        return lobbyService.notifyPlayers(message.getLobbyId(), update)
+                .chain(() -> sendPlayerResources(playerService.getPlayerById(message.getPlayer()), message.getLobbyId()))
+                .chain(() -> Uni.createFrom().item(update));
     }
 
     /**
@@ -282,14 +285,13 @@ public class GameWebSocket {
         ObjectNode colorNode = JsonNodeFactory.instance.objectNode();
         colorNode.put(COLOR_FIELD, color.getHexCode());
         MessageDTO playerJoinedMessage = new MessageDTO(MessageType.PLAYER_JOINED, message.getPlayer(), message.getLobbyId(), colorNode);
-
-        return sendPlayerResources(playerService.getPlayerById(message.getPlayer()), message.getLobbyId(), connection)
-                .chain(() -> connection.broadcast().sendText(playerJoinedMessage))
+        return lobbyService.notifyPlayers(message.getLobbyId(), playerJoinedMessage)
+                .chain(() -> sendPlayerResources(playerService.getPlayerById(message.getPlayer()), message.getLobbyId()))
                 .chain(() -> {
                     try {
                         ObjectNode updatedGameState = createGameBoardWithPlayers(message.getLobbyId());
                         MessageDTO boardUpdate = new MessageDTO(MessageType.GAME_BOARD_JSON, null, message.getLobbyId(), updatedGameState);
-                        return connection.broadcast().sendText(boardUpdate).replaceWith(playerJoinedMessage);
+                        return lobbyService.notifyPlayers(message.getLobbyId(), boardUpdate);
                     } catch (GameException e) {
                         logger.errorf("Failed to generate updated game board: %s", e.getMessage());
                         return Uni.createFrom().item(playerJoinedMessage);  // fallback: still return success
@@ -338,7 +340,7 @@ public class GameWebSocket {
     //TODO: Remove after implementation of player order
     Uni<MessageDTO> setActivePlayer(MessageDTO message, WebSocketConnection connection) throws GameException {
         lobbyService.getLobbyById(message.getLobbyId()).setActivePlayer(message.getPlayer());
-        return sendPlayerResources(playerService.getPlayerById(message.getPlayer()), message.getLobbyId(), connection)
+        return sendPlayerResources(playerService.getPlayerById(message.getPlayer()), message.getLobbyId())
                 .chain(() -> Uni.createFrom().item(new MessageDTO(MessageType.SET_ACTIVE_PLAYER, message.getPlayer(), message.getLobbyId())));
     }
 
@@ -376,8 +378,11 @@ public class GameWebSocket {
                 gameData
         );
 
-        return sendPlayerResources(playerService.getPlayerById(message.getPlayer()), message.getLobbyId(), connection)
-                .chain(() -> connection.broadcast().sendText(updateJson).chain(i -> Uni.createFrom().item(updateJson)));}
+        return lobbyService.notifyPlayers(message.getLobbyId(), updateJson)
+                .chain(() -> sendPlayerResources(playerService.getPlayerById(message.getPlayer()), message.getLobbyId()))
+                .replaceWith(Uni.createFrom().item(updateJson));
+
+    }
 
     /**
      * Handles a request to get the current game board for a lobby.
@@ -394,8 +399,8 @@ public class GameWebSocket {
                 message.getLobbyId(),
                 createGameBoardObjectNode(message.getLobbyId())
         );
-        return sendPlayerResources(playerService.getPlayerById(message.getPlayer()), message.getLobbyId(), connection)
-                .chain(() -> connection.sendText(updateJson).chain(i -> Uni.createFrom().item(updateJson)));
+        return sendPlayerResources(playerService.getPlayerById(message.getPlayer()), message.getLobbyId())
+                .chain(() -> Uni.createFrom().item(updateJson));
     }
 
     /**
@@ -433,8 +438,6 @@ public class GameWebSocket {
                 message.getLobbyId(),
                 diceResult
         );
-        Uni<MessageDTO> broadcastDiceUni = connection.broadcast().sendText(diceResultMessage).chain(() -> Uni.createFrom().item(diceResultMessage));
-
 
         // send updated resources
         Lobby currentLobby = lobbyService.getLobbyById(message.getLobbyId());
@@ -446,25 +449,12 @@ public class GameWebSocket {
                 logger.warnf("Player object not found for ID %s in lobby %s during resource update.", playerIdInLobby, currentLobby.getLobbyId());
                 continue;
             }
-
-            WebSocketConnection playerConnection = playerService.getConnectionByPlayerId(playerIdInLobby);
-            if (playerConnection != null && playerConnection.isOpen()) {
-                individualResourceSendUnis.add(
-                        sendPlayerResources(player, message.getLobbyId(), playerConnection)
-                );
-            } else {
-                logger.warnf("No open connection for player %s to send PLAYER_RESOURCES.", playerIdInLobby);
-            }
+            individualResourceSendUnis.add(sendPlayerResources(player, message.getLobbyId()));
         }
 
-        Uni<Void> resourceUpdatesUni = Uni.createFrom().voidItem();
-        if (!individualResourceSendUnis.isEmpty()) {
-            resourceUpdatesUni = Uni.join().all(individualResourceSendUnis).andCollectFailures().replaceWithVoid();
-        }
-
-        Uni<Void> finalresourceUpdatesUni = resourceUpdatesUni;
-        return broadcastDiceUni
-                .chain(() -> finalresourceUpdatesUni)
+        Uni<Void> resourceUpdatesUni = Uni.join().all(individualResourceSendUnis).andCollectFailures().replaceWithVoid();
+        return lobbyService.notifyPlayers(message.getLobbyId(), diceResultMessage)
+                .chain(() -> resourceUpdatesUni)
                 .chain(() -> Uni.createFrom().item(diceResultMessage));
     }
 
@@ -479,14 +469,14 @@ public class GameWebSocket {
     private Uni<MessageDTO> handleStartGame(MessageDTO message) throws GameException {
         MessageDTO startPkt = gameService.startGame(message.getLobbyId());
 
-        /* 2) broadcast START_GAME */
-        lobbyService.notifyPlayers(message.getLobbyId(), startPkt);
-
         GameBoard board = gameService.getGameboardByLobbyId(message.getLobbyId());
         MessageDTO boardPkt = new MessageDTO(MessageType.GAME_BOARD_JSON,
                 null, message.getLobbyId(), board.getJson());
         lobbyService.notifyPlayers(message.getLobbyId(), boardPkt);
-        return Uni.createFrom().item(startPkt);
+        return lobbyService.notifyPlayers(message.getLobbyId(), startPkt)
+                .chain(() -> lobbyService.notifyPlayers(message.getLobbyId(), boardPkt))
+                .onFailure(GameException.class)
+                .recoverWithItem(boardPkt);
     }
 
     /**
@@ -494,11 +484,10 @@ public class GameWebSocket {
      *
      * @param player     The {@link Player} whose resources are to be sent.
      * @param lobbyId    The ID of the lobby the player is in (used for constructing the {@link MessageDTO}).
-     * @param connection The {@link WebSocketConnection} of the player to send the message to.
      * @return A {@link Uni<Void>} that completes when the send operation is initiated, or fails if the send fails.
      *         Logs an error on failure to send.
      */
-    Uni<Void> sendPlayerResources(Player player, String lobbyId, WebSocketConnection connection){
+    Uni<Void> sendPlayerResources(Player player, String lobbyId){
         ObjectNode resourcesPayload = player.getResourceJSON();
         MessageDTO resourceMsg = new MessageDTO(
                 MessageType.PLAYER_RESOURCES,
@@ -507,12 +496,8 @@ public class GameWebSocket {
                 resourcesPayload
         );
 
-
-
         logger.infof("Sending PLAYER_RESOURCES to %s: %s", player.getUniqueId(), resourcesPayload.toString());
-        return connection.sendText(resourceMsg)
-                .onFailure()
-                .invoke(e -> logger.errorf("Failed to send PLAYER_RESOURCES to %s: %s", player.getUniqueId(), e.getMessage()));
+        return player.sendMessage(resourceMsg);
     }
 
 }

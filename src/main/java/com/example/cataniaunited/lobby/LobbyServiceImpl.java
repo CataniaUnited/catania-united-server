@@ -5,6 +5,7 @@ import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerColor;
 import com.example.cataniaunited.player.PlayerService;
+import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
@@ -22,7 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Important: This Service is Application Scoped which means it is a Singleton that handles
  * all existing Lobbies, there should be no lengthy calculations in this Class to ensure that
  * different Clients don't experience long waits.
- * */
+ */
 @ApplicationScoped
 public class LobbyServiceImpl implements LobbyService {
 
@@ -90,6 +91,7 @@ public class LobbyServiceImpl implements LobbyService {
     /**
      * {@inheritDoc}
      * If joining is successful, a color is assigned to the player.
+     *
      * @throws GameException if the lobby is not found.
      */
     @Override
@@ -161,6 +163,7 @@ public class LobbyServiceImpl implements LobbyService {
 
     /**
      * {@inheritDoc}
+     *
      * @throws GameException if the lobby is not found.
      */
     @Override
@@ -171,6 +174,7 @@ public class LobbyServiceImpl implements LobbyService {
 
     /**
      * {@inheritDoc}
+     *
      * @throws GameException if the lobby is not found or the player has no assigned color.
      */
     @Override
@@ -187,14 +191,28 @@ public class LobbyServiceImpl implements LobbyService {
     /**
      * {@inheritDoc}
      * Uses {@link PlayerService} to get actual Player objects to send messages.
-     * @throws GameException if the lobby is not found.
      */
     @Override
-    public void notifyPlayers(String lobbyId, MessageDTO dto) throws GameException {
-        Lobby lob = getLobbyById(lobbyId);
-        for (String pid : lob.getPlayers()) {
-            Player p = playerService.getPlayerById(pid);
-            if (p != null) p.sendMessage(dto);
+    public Uni<MessageDTO> notifyPlayers(String lobbyId, MessageDTO dto) {
+        try {
+            logger.debugf("Notifying players in lobby: lobbyId=%s, message=%s", lobbyId, dto);
+            Lobby lobby = getLobbyById(lobbyId);
+            List<Uni<Void>> sendUnis = new ArrayList<>();
+            for (String pid : lobby.getPlayers()) {
+                Player player = playerService.getPlayerById(pid);
+                if (player != null) {
+                    sendUnis.add(player.sendMessage(dto));
+                }
+            }
+
+            return Uni.join().all(sendUnis)
+                    .andFailFast()
+                    .onFailure()
+                    .invoke(err -> logger.errorf(err, "One or more messages failed to send in lobby: lobbyId = %s, error = %s", lobbyId, err.getMessage()))
+                    .replaceWith(dto);
+        } catch (GameException ge) {
+            logger.errorf(ge, "Error notifying players: %s", ge.getMessage());
+            return Uni.createFrom().failure(ge);
         }
     }
 

@@ -1,8 +1,9 @@
 package com.example.cataniaunited.lobby;
 
+import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.player.PlayerColor;
-import com.example.cataniaunited.dto.MessageDTO;
+import io.smallrye.mutiny.Uni;
 
 import java.util.List;
 
@@ -90,8 +91,8 @@ public interface LobbyService {
      *
      * @param lobbyId The ID of the lobby whose players should be notified.
      * @param dto     The {@link MessageDTO} to send.
-     * @throws GameException if the lobby is not found or an error occurs while sending messages.
+     * @return The {@link Uni} containing the sent message
      */
-    void notifyPlayers(String lobbyId, MessageDTO dto) throws GameException;
+    Uni<MessageDTO> notifyPlayers(String lobbyId, MessageDTO dto);
 
 }
