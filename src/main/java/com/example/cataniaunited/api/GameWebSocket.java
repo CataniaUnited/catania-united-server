@@ -99,8 +99,8 @@ public class GameWebSocket {
                 case SET_USERNAME -> setUsername(message, connection);
                 case CREATE_GAME_BOARD ->
                         createGameBoard(message, connection); // TODO: Remove after regular game start is implemented
-                case GET_GAME_BOARD -> getGameBoard(message, connection); // TODO: Remove after regular game start is implemented
-                case SET_ACTIVE_PLAYER -> setActivePlayer(message, connection);
+                case GET_GAME_BOARD -> getGameBoard(message); // TODO: Remove after regular game start is implemented
+                case SET_ACTIVE_PLAYER -> setActivePlayer(message);
                 case PLACE_SETTLEMENT -> placeSettlement(message, connection);
                 case UPGRADE_SETTLEMENT -> upgradeSettlement(message, connection);
                 case PLACE_ROAD -> placeRoad(message, connection);
@@ -338,7 +338,7 @@ public class GameWebSocket {
     }
 
     //TODO: Remove after implementation of player order
-    Uni<MessageDTO> setActivePlayer(MessageDTO message, WebSocketConnection connection) throws GameException {
+    Uni<MessageDTO> setActivePlayer(MessageDTO message) throws GameException {
         lobbyService.getLobbyById(message.getLobbyId()).setActivePlayer(message.getPlayer());
         return sendPlayerResources(playerService.getPlayerById(message.getPlayer()), message.getLobbyId())
                 .chain(() -> Uni.createFrom().item(new MessageDTO(MessageType.SET_ACTIVE_PLAYER, message.getPlayer(), message.getLobbyId())));
@@ -388,11 +388,10 @@ public class GameWebSocket {
      * Handles a request to get the current game board for a lobby.
      *
      * @param message    The {@link MessageDTO} containing the lobby ID.
-     * @param connection The WebSocket connection of the player requesting the game board.
      * @return A Uni emitting a {@link MessageDTO} with the game board JSON, sent only to the requesting client.
      * @throws GameException if the game board cannot be retrieved.
      */
-    private Uni<MessageDTO> getGameBoard(MessageDTO message, WebSocketConnection connection) throws GameException {
+    private Uni<MessageDTO> getGameBoard(MessageDTO message) throws GameException {
         MessageDTO updateJson = new MessageDTO(
                 MessageType.GAME_BOARD_JSON,
                 null,

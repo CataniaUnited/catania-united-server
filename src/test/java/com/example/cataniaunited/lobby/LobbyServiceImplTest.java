@@ -136,7 +136,7 @@ class LobbyServiceImplTest {
     }
 
     @Test
-    void testJoinLobbyFailsWhenNoColorsAvailable() throws GameException {
+    void testJoinLobbyFailsWhenNoColorsAvailable() {
         String lobbyId = lobbyService.createLobby("HostPlayer");
 
         for (int i = 0; i < PlayerColor.values().length; i++) {
@@ -160,7 +160,7 @@ class LobbyServiceImplTest {
     }
 
     @Test
-    void testRemovePlayerRestoresColor() throws GameException {
+    void testRemovePlayerRestoresColor() {
         String lobbyId = lobbyService.createLobby("HostPlayer");
         lobbyService.joinLobbyByCode(lobbyId, "Player1");
 
@@ -192,7 +192,7 @@ class LobbyServiceImplTest {
     }
 
     @Test
-    void isPlayerTurnShouldThrowExceptionForNonExistingLobby() throws GameException {
+    void isPlayerTurnShouldThrowExceptionForNonExistingLobby() {
         String lobbyId = "NonExistingLobby";
         GameException ge = assertThrows(GameException.class, () -> {
             lobbyService.isPlayerTurn(lobbyId, "NonExistingPlayer");
@@ -221,7 +221,7 @@ class LobbyServiceImplTest {
     }
 
     @Test
-    void notifyPlayers_sendsMessageToEveryPlayerInTheLobby() throws GameException {
+    void notifyPlayers_sendsMessageToEveryPlayerInTheLobby() {
         String hostId = "host";
         String lobbyId = lobbyService.createLobby(hostId);
         lobbyService.joinLobbyByCode(lobbyId, "p2");
@@ -255,7 +255,7 @@ class LobbyServiceImplTest {
     }
 
     @Test
-    void notifyPlayersShouldReturnFailedUniOnFailedMessageSend() throws GameException {
+    void notifyPlayersShouldReturnFailedUniOnFailedMessageSend() {
         var exception = new RuntimeException("Test exception");
         String lobbyId = lobbyService.createLobby("HostPlayer");
         Player player = spy(new Player(("Player1")));

@@ -328,7 +328,7 @@ class PlayerTest {
         dto.setType(MessageType.CREATE_LOBBY);
 
         assertDoesNotThrow(() -> player.sendMessage(dto));
-        verify(conn).sendText(eq(dto));
+        verify(conn).sendText(dto);
     }
 
     @Test
@@ -379,8 +379,8 @@ class PlayerTest {
         when(mockConnection.sendText(any(MessageDTO.class)))
                 .thenReturn(Uni.createFrom().failure(simulatedException));
 
-        Player player = new Player(mockConnection);
-        Uni<Void> sendUni = player.sendMessage(testMessage);
+        Player newPlayer = new Player(mockConnection);
+        Uni<Void> sendUni = newPlayer.sendMessage(testMessage);
         sendUni.subscribe().withSubscriber(UniAssertSubscriber.create())
                 .assertFailedWith(RuntimeException.class, "Simulated network error during send")
                 .assertSubscribed()

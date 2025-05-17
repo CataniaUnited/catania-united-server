@@ -44,7 +44,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -83,7 +82,6 @@ public class GameWebSocketTest {
 
     @InjectSpy
     GameService gameService;
-
 
 
     ObjectMapper objectMapper;
@@ -240,7 +238,7 @@ public class GameWebSocketTest {
     }
 
     @Test
-    void testSetUsernameCode() throws InterruptedException, JsonProcessingException, GameException {
+    void testSetUsernameCode() throws InterruptedException, JsonProcessingException {
         //Receiving two messages, since change is broadcast as well as returned directly
         CountDownLatch latch = new CountDownLatch(2);
         List<String> receivedMessages = new CopyOnWriteArrayList<>();
@@ -330,7 +328,7 @@ public class GameWebSocketTest {
     }
 
     @Test
-    void testJoinLobbySuccess() throws InterruptedException, JsonProcessingException, GameException {
+    void testJoinLobbySuccess() throws InterruptedException, JsonProcessingException {
         MessageDTO joinLobbyMessage = new MessageDTO(MessageType.JOIN_LOBBY, "Player 1", "abc123");
 
         doReturn(true).when(lobbyService).joinLobbyByCode("abc123", "Player 1");
@@ -403,7 +401,7 @@ public class GameWebSocketTest {
 
 
     @Test
-    void testJoinLobbyFailure() throws InterruptedException, JsonProcessingException, GameException {
+    void testJoinLobbyFailure() throws InterruptedException, JsonProcessingException {
         MessageDTO joinLobbyMessage = new MessageDTO(MessageType.JOIN_LOBBY, "Player 1", "invalidLobbyId");
 
         doReturn(false).when(lobbyService).joinLobbyByCode("invalidLobbyId", "Player 1");
@@ -663,11 +661,11 @@ public class GameWebSocketTest {
                     if (message.startsWith("{")) {
                         try {
                             MessageDTO dto = objectMapper.readValue(message, MessageDTO.class);
-                            if(dto.getType() == MessageType.CONNECTION_SUCCESSFUL) {
+                            if (dto.getType() == MessageType.CONNECTION_SUCCESSFUL) {
                                 actualPlayerIds.add(dto.getMessageNode("playerId").asText());
                                 connectionLatch.countDown();
                                 messageLatch.countDown();
-                            }else{
+                            } else {
                                 receivedMessages.add(message);
                                 messageLatch.countDown();
                             }
@@ -738,11 +736,11 @@ public class GameWebSocketTest {
                     if (message.startsWith("{")) {
                         try {
                             MessageDTO dto = objectMapper.readValue(message, MessageDTO.class);
-                            if(dto.getType() == MessageType.CONNECTION_SUCCESSFUL) {
+                            if (dto.getType() == MessageType.CONNECTION_SUCCESSFUL) {
                                 actualPlayerIds.add(dto.getMessageNode("playerId").asText());
                                 connectionLatch.countDown();
                                 latch.countDown();
-                            }else{
+                            } else {
                                 receivedMessages.add(message);
                                 latch.countDown();
                             }
@@ -784,8 +782,6 @@ public class GameWebSocketTest {
         verify(gameWebSocket).createGameBoardWithPlayers(lobbyId);
         verify(gameService, times(2)).getGameboardByLobbyId(lobbyId);
     }
-
-
 
 
     @ParameterizedTest
@@ -882,7 +878,6 @@ public class GameWebSocketTest {
         assertEquals(lobbyId, response.getLobbyId());
         assertEquals(expected, response.getMessage());
     }
-
 
 
     @Test
@@ -998,7 +993,7 @@ public class GameWebSocketTest {
                             if (dto.getType() == MessageType.DICE_RESULT) {
                                 receivedMessages.add(message);
                                 messageLatch.countDown();
-                            }else if(dto.getType() == MessageType.CONNECTION_SUCCESSFUL) {
+                            } else if (dto.getType() == MessageType.CONNECTION_SUCCESSFUL) {
                                 actualPlayerIds.add(dto.getMessageNode("playerId").asText());
                                 connectionLatch.countDown();
                             }
@@ -1075,7 +1070,7 @@ public class GameWebSocketTest {
                         if (dto.getType() == MessageType.PLACE_SETTLEMENT) {
                             receivedMessages.add(msg);
                             responseLatch.countDown();
-                        }else if(dto.getType() == MessageType.CONNECTION_SUCCESSFUL) {
+                        } else if (dto.getType() == MessageType.CONNECTION_SUCCESSFUL) {
                             actualPlayerIds.add(dto.getMessageNode("playerId").asText());
                             connectionLatch.countDown();
                         }
@@ -1558,7 +1553,7 @@ public class GameWebSocketTest {
                 .onTextMessage((conn, text) -> {
                     try {
                         MessageDTO dto = objectMapper.readValue(text, MessageDTO.class);
-                        if(dto.getType() == MessageType.CONNECTION_SUCCESSFUL) {
+                        if (dto.getType() == MessageType.CONNECTION_SUCCESSFUL) {
                             connectionLatch.countDown();
                             playerIds.add(dto.getMessageNode("playerId").asText());
                         } else if (dto.getType() == MessageType.GAME_STARTED) {
@@ -1829,7 +1824,6 @@ public class GameWebSocketTest {
 
         verify(lobbyService).joinLobbyByCode(lobbyId, playerId);
     }
-
 
 
 }
