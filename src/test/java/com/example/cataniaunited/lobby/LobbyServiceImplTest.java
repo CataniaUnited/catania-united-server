@@ -1,27 +1,24 @@
 package com.example.cataniaunited.lobby;
 
 import com.example.cataniaunited.dto.MessageDTO;
+import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerColor;
+import com.example.cataniaunited.player.PlayerService;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.mockito.InjectSpy;
+import io.smallrye.mutiny.Uni;
+import io.smallrye.mutiny.helpers.test.UniAssertSubscriber;
 import org.jboss.logging.Logger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import com.example.cataniaunited.dto.MessageType;
-
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import com.example.cataniaunited.player.PlayerService;
-import com.example.cataniaunited.player.Player;
-
-import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -29,9 +26,13 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
 
 @QuarkusTest
@@ -218,6 +219,7 @@ class LobbyServiceImplTest {
 
         assertFalse(lobbyService.isPlayerTurn(lobbyId, playerId));
     }
+
     @Test
     void notifyPlayers_sendsMessageToEveryPlayerInTheLobby() throws GameException {
         String hostId = "host";
@@ -226,7 +228,7 @@ class LobbyServiceImplTest {
 
         // mock the Player objects returned by PlayerService
         Player host = mock(Player.class);
-        Player p2   = mock(Player.class);
+        Player p2 = mock(Player.class);
 
         when(playerService.getPlayerById(hostId)).thenReturn(host);
         when(playerService.getPlayerById("p2")).thenReturn(p2);
@@ -238,8 +240,33 @@ class LobbyServiceImplTest {
 
 
         verify(host).sendMessage(dto);
-        verify(p2  ).sendMessage(dto);
+        verify(p2).sendMessage(dto);
         verifyNoMoreInteractions(host, p2);
     }
 
+    @Test
+    void notifyPlayersShouldReturnFailedUniOnException() {
+        String invalidLobbyId = "invalidLobbyId";
+        Uni<MessageDTO> failedUni = assertDoesNotThrow(() -> lobbyService.notifyPlayers(invalidLobbyId, new MessageDTO(MessageType.JOIN_LOBBY, (ObjectNode) null)));
+        failedUni.subscribe().withSubscriber(UniAssertSubscriber.create())
+                .assertFailedWith(GameException.class, "Lobby with id %s not found".formatted(invalidLobbyId))
+                .assertSubscribed()
+                .assertTerminated();
     }
+
+    @Test
+    void notifyPlayersShouldReturnFailedUniOnFailedMessageSend() throws GameException {
+        var exception = new RuntimeException("Test exception");
+        String lobbyId = lobbyService.createLobby("HostPlayer");
+        Player player = spy(new Player(("Player1")));
+        when(player.sendMessage(any(MessageDTO.class))).thenReturn(Uni.createFrom().failure(exception));
+        when(playerService.getPlayerById(player.getUniqueId())).thenReturn(player);
+        lobbyService.joinLobbyByCode(lobbyId, player.getUniqueId());
+
+        Uni<MessageDTO> failedUni = assertDoesNotThrow(() -> lobbyService.notifyPlayers(lobbyId, new MessageDTO(MessageType.JOIN_LOBBY, null)));
+        failedUni.subscribe().withSubscriber(UniAssertSubscriber.create())
+                .assertFailedWith(RuntimeException.class, exception.getMessage())
+                .assertSubscribed()
+                .assertTerminated();
+    }
+}

@@ -211,7 +211,7 @@ public class LobbyServiceImpl implements LobbyService {
                     .invoke(err -> logger.errorf(err, "One or more messages failed to send in lobby: lobbyId = %s, error = %s", lobbyId, err.getMessage()))
                     .replaceWith(dto);
         } catch (GameException ge) {
-            logger.errorf(ge, "Error notifying players: %s", ge.getMessage());
+            logger.errorf(ge, "Error notifying players: lobbyId = %s, error = %s", lobbyId, ge.getMessage());
             return Uni.createFrom().failure(ge);
         }
     }
