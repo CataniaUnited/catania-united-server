@@ -328,11 +328,11 @@ public class GameWebSocket {
     Uni<MessageDTO> setUsername(MessageDTO message, WebSocketConnection connection) throws GameException {
         Player player = playerService.getPlayerByConnection(connection);
         if (player != null) {
-            player.setUsername(message.getPlayer());
+            player.setUsername(message.getMessage().get("username").asText());
             List<String> allPlayers = playerService.getAllPlayers().stream()
                     .map(Player::getUsername).toList();
             MessageDTO update = new MessageDTO(MessageType.LOBBY_UPDATED, player.getUsername(), null, allPlayers);
-            return connection.broadcast().sendText(update).chain(i -> Uni.createFrom().item(update));
+            return lobbyService.notifyPlayers(message.getLobbyId(), update);
         }
         throw new GameException("No player session");
     }
