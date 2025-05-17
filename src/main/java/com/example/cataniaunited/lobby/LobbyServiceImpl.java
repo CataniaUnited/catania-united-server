@@ -95,18 +95,21 @@ public class LobbyServiceImpl implements LobbyService {
      * @throws GameException if the lobby is not found.
      */
     @Override
-    public boolean joinLobbyByCode(String lobbyId, String player) throws GameException {
-        Lobby lobby = getLobbyById(lobbyId);
-        if (lobby != null) {
-            PlayerColor assignedColor = setPlayerColor(lobby, player);
-            if (assignedColor == null) {
-                return false;
+    public boolean joinLobbyByCode(String lobbyId, String player) {
+        try{
+            Lobby lobby = getLobbyById(lobbyId);
+            if (lobby != null) {
+                PlayerColor assignedColor = setPlayerColor(lobby, player);
+                if (assignedColor == null) {
+                    return false;
+                }
+                lobby.addPlayer(player);
+                logger.infof("Player %s joined lobby %s with color %s", player, lobbyId, assignedColor);
+                return true;
             }
-            lobby.addPlayer(player);
-            logger.infof("Player %s joined lobby %s with color %s", player, lobbyId, assignedColor);
-            return true;
+        } catch (GameException ge){
+            logger.errorf(ge, "Invalid or expired lobby ID: %s", lobbyId);
         }
-        logger.warnf("Invalid or expired lobby ID: %s", lobbyId);
         return false;
     }
 

@@ -1646,7 +1646,7 @@ public class GameWebSocketTest {
         String playerId = "testPlayer";
 
         doThrow(new GameException("Failed to join lobby: lobby session not found or full"))
-                .when(lobbyService).joinLobbyByCode(invalidLobbyId, playerId);
+                .when(lobbyService).getLobbyById(invalidLobbyId);
 
         List<String> receivedMessages = new CopyOnWriteArrayList<>();
         CountDownLatch errorLatch = new CountDownLatch(1);

@@ -40,9 +40,8 @@ public interface LobbyService {
      * @param lobbyId The ID of the lobby to join.
      * @param player  The ID of the player wishing to join.
      * @return true if the player successfully joined the lobby, false otherwise.
-     * @throws GameException if the lobby is not found or an error occurs during joining.
      */
-    boolean joinLobbyByCode(String lobbyId, String player) throws GameException;
+    boolean joinLobbyByCode(String lobbyId, String player);
 
     /**
      * Removes a player from a specified lobby.
