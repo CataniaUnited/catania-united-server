@@ -1554,8 +1554,8 @@ public class GameWebSocketTest {
                     try {
                         MessageDTO dto = objectMapper.readValue(text, MessageDTO.class);
                         if (dto.getType() == MessageType.CONNECTION_SUCCESSFUL) {
-                            connectionLatch.countDown();
                             playerIds.add(dto.getMessageNode("playerId").asText());
+                            connectionLatch.countDown();
                         } else if (dto.getType() == MessageType.GAME_STARTED) {
                             seen.add(dto);
                             latch.countDown();
