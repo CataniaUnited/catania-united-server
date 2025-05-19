@@ -6,13 +6,33 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-
+/**
+ * Represents a general trading port, allowing a 3:1 exchange of any resource type
+ * for any other resource type.
+ * For example, a player can trade 3 Wood for 1 Sheep, or 3 Clay for 1 Ore.
+ */
 public class GeneralPort extends Port {
 
+    /**
+     * Constructs a new GeneralPort with a 3:1 trade ratio.
+     */
     public GeneralPort() {
         super(3); // A general Port is 3:1
     }
 
+    /**
+     * Determines if a proposed trade is valid for this general port.
+     * Validates:
+     * <ol>
+     *     <li>Basic trade ratios (total amounts offered vs. desired).</li>
+     *     <li>Correct bundling of each offered resource type (e.g., must offer 3 of Wood, not 2 Wood and 1 Sheep for a bundle).</li>
+     *     <li>That the player is not trying to trade for resources they are also offering.</li>
+     * </ol>
+     *
+     * @param offeredResources A list of {@link TileType} representing the resources the player is offering.
+     * @param desiredResources A list of {@link TileType} representing the resources the player wishes to receive.
+     * @return {@code true} if the trade is valid, {@code false} otherwise.
+     */
     @Override
     public boolean canTrade(List<TileType> offeredResources, List<TileType> desiredResources) {
         // trade ratio must be valid
@@ -26,10 +46,19 @@ public class GeneralPort extends Port {
         }
 
         // Check if player is trying to trade for resources they are offering
-        return !isTradingForOfferedResources(offeredResources, desiredResources);
+        return isNotTradingForOfferedResources(offeredResources, desiredResources);
     }
 
-    private boolean offeredResourcesComeInValidBundles(List<TileType> offeredResources, int expectedOutputBundleCount) {
+    /**
+     * Checks if each type of offered resource is provided in quantities that are
+     * multiples of this port's {@link #inputResourceAmount}, and if the total number
+     * of bundles formed matches the {@code expectedResourceCount}.
+     *
+     * @param offeredResources The list of resources being offered.
+     * @param expectedResourceCount The total number of single desired resources expected.
+     * @return {@code true} if all offered resource types are correctly bundled and the total bundles match, {@code false} otherwise.
+     */
+    private boolean offeredResourcesComeInValidBundles(List<TileType> offeredResources, int expectedResourceCount) {
         Map<TileType, Long> offeredResourceMap = offeredResources.stream().collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
 
         int calculatedOutputBundles = 0;
@@ -42,6 +71,6 @@ public class GeneralPort extends Port {
         }
         
         // Sum of trade bundles equals the total expected bundles.
-        return calculatedOutputBundles == expectedOutputBundleCount;
+        return calculatedOutputBundles == expectedResourceCount;
     }
 }
