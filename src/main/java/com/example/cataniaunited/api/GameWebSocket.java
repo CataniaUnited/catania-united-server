@@ -441,7 +441,7 @@ public class GameWebSocket {
         // send updated resources
         Lobby currentLobby = lobbyService.getLobbyById(message.getLobbyId());
         List<Uni<Void>> individualResourceSendUnis = currentLobby.getPlayers()
-                .stream().map(pid -> sendPlayerResources(pid, message.getLobbyId())).collect(Collectors.toList());
+                .stream().map(pid -> sendPlayerResources(pid, message.getLobbyId())).toList();
 
         Uni<Void> resourceUpdatesUni = Uni.join().all(individualResourceSendUnis).andCollectFailures().replaceWithVoid();
         return lobbyService.notifyPlayers(message.getLobbyId(), diceResultMessage)
