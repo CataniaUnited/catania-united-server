@@ -205,6 +205,8 @@ public class LobbyServiceImpl implements LobbyService {
                 Player player = playerService.getPlayerById(pid);
                 if (player != null) {
                     sendUnis.add(player.sendMessage(dto));
+                } else {
+                    logger.warnf("Player not found in lobby for notify: playerId = %s, lobbyId = %s", pid, lobbyId);
                 }
             }
 
