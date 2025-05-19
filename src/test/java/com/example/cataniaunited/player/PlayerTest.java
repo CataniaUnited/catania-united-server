@@ -1,24 +1,34 @@
 package com.example.cataniaunited.player;
 
 import com.example.cataniaunited.dto.MessageDTO;
+import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.exception.InsufficientResourcesException;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.websockets.next.WebSocketConnection;
 import io.smallrye.mutiny.Uni;
+import io.smallrye.mutiny.helpers.test.UniAssertSubscriber;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Objects;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.*;
-import com.example.cataniaunited.dto.MessageType;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 
 class PlayerTest {
@@ -293,7 +303,7 @@ class PlayerTest {
     @Test
     void sendMessage_successfulSend_invokesConnection() {
         WebSocketConnection conn = mock(WebSocketConnection.class);
-        when(conn.sendText(anyString()))
+        when(conn.sendText(any(MessageDTO.class)))
                 .thenReturn(Uni.createFrom().voidItem());
 
         Player player = new Player(conn);
@@ -302,13 +312,13 @@ class PlayerTest {
         dto.setType(MessageType.CREATE_LOBBY);
         player.sendMessage(dto);
 
-        verify(conn).sendText(anyString());
+        verify(conn).sendText(dto);
     }
 
     @Test
     void sendMessage_failureDoesNotThrow_stillInvokesConnection() {
         WebSocketConnection conn = mock(WebSocketConnection.class);
-        when(conn.sendText(anyString()))
+        when(conn.sendText(any(MessageDTO.class)))
                 .thenReturn(Uni.createFrom().failure(new RuntimeException("boom")));
 
         Player player = new Player(conn);
@@ -317,8 +327,9 @@ class PlayerTest {
         dto.setType(MessageType.CREATE_LOBBY);
 
         assertDoesNotThrow(() -> player.sendMessage(dto));
-        verify(conn).sendText(anyString());
+        verify(conn).sendText(dto);
     }
+
     @Test
     void sendMessage_withNoConnection_doesNothing() {
         Player p = new Player("someUser");
@@ -331,7 +342,7 @@ class PlayerTest {
     @Test
     void sendMessage_successfulSend_invokesSendText() {
         WebSocketConnection conn = mock(WebSocketConnection.class);
-        when(conn.sendText(anyString()))
+        when(conn.sendText(any(MessageDTO.class)))
                 .thenReturn(Uni.createFrom().voidItem());
 
         Player p = new Player(conn);
@@ -340,13 +351,13 @@ class PlayerTest {
 
         p.sendMessage(dto);
 
-        verify(conn, times(1)).sendText(anyString());
+        verify(conn, times(1)).sendText(dto);
     }
 
     @Test
     void sendMessage_whenSendFails_stillInvokesSendText_andSwallowsException() {
         WebSocketConnection conn = mock(WebSocketConnection.class);
-        when(conn.sendText(anyString()))
+        when(conn.sendText(any(MessageDTO.class)))
                 .thenReturn(Uni.createFrom().failure(new RuntimeException("kaboom")));
 
         Player p = new Player(conn);
@@ -355,7 +366,26 @@ class PlayerTest {
 
         assertDoesNotThrow(() -> p.sendMessage(dto));
 
-        verify(conn, times(1)).sendText(anyString());
+        verify(conn, times(1)).sendText(dto);
+    }
+
+    @Test
+    void sendMessageShouldNotThrowExceptionIfSendTextFails() {
+        WebSocketConnection mockConnection = mock(WebSocketConnection.class);
+        RuntimeException simulatedException = new RuntimeException("Simulated network error during send");
+        MessageDTO testMessage = new MessageDTO(MessageType.DICE_RESULT, JsonNodeFactory.instance.objectNode());
+
+        when(mockConnection.sendText(any(MessageDTO.class)))
+                .thenReturn(Uni.createFrom().failure(simulatedException));
+
+        Player newPlayer = new Player(mockConnection);
+        Uni<Void> sendUni = newPlayer.sendMessage(testMessage);
+        sendUni.subscribe().withSubscriber(UniAssertSubscriber.create())
+                .assertFailedWith(RuntimeException.class, "Simulated network error during send")
+                .assertSubscribed()
+                .assertTerminated();
+
+        verify(mockConnection).sendText(testMessage);
     }
 }
 

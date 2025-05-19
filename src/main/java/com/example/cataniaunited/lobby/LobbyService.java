@@ -1,8 +1,9 @@
 package com.example.cataniaunited.lobby;
 
+import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.player.PlayerColor;
-import com.example.cataniaunited.dto.MessageDTO;
+import io.smallrye.mutiny.Uni;
 
 import java.util.List;
 
@@ -39,9 +40,8 @@ public interface LobbyService {
      * @param lobbyId The ID of the lobby to join.
      * @param player  The ID of the player wishing to join.
      * @return true if the player successfully joined the lobby, false otherwise.
-     * @throws GameException if the lobby is not found or an error occurs during joining.
      */
-    boolean joinLobbyByCode(String lobbyId, String player) throws GameException;
+    boolean joinLobbyByCode(String lobbyId, String player);
 
     /**
      * Removes a player from a specified lobby.
@@ -90,8 +90,8 @@ public interface LobbyService {
      *
      * @param lobbyId The ID of the lobby whose players should be notified.
      * @param dto     The {@link MessageDTO} to send.
-     * @throws GameException if the lobby is not found or an error occurs while sending messages.
+     * @return The {@link Uni} containing the sent message
      */
-    void notifyPlayers(String lobbyId, MessageDTO dto) throws GameException;
+    Uni<MessageDTO> notifyPlayers(String lobbyId, MessageDTO dto);
 
 }

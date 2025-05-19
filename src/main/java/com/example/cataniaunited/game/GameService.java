@@ -234,7 +234,7 @@ public class GameService {
         try {
             lobbyService.getLobbyById(lobbyId).getPlayers().stream()
                     .map(playerService::getPlayerById)
-                    .filter(p -> p != null)
+                    .filter(Objects::nonNull)
                     .sorted(Comparator.comparingInt(Player::getVictoryPoints).reversed())
                     .forEach(p -> {
                         ObjectNode entry = leaderboard.addObject();

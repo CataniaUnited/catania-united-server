@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.websockets.next.WebSocketConnection;
+import io.smallrye.mutiny.Uni;
 import org.jboss.logging.Logger;
 
 import java.util.HashMap;
@@ -134,21 +135,16 @@ public class Player {
      *
      * @param dto The {@link MessageDTO} to send.
      */
-    public void sendMessage(MessageDTO dto) {
-        if (connection == null) { // check if connection is open
-            LOG.warnf("No WS connection for player %s – message dropped!", uniqueId);
-            return;
+    public synchronized Uni<Void> sendMessage(MessageDTO dto) {
+        if (connection == null || connection.isClosed()) {
+            LOG.warnf("No web socket connection for player %s – message dropped!", uniqueId);
+            return Uni.createFrom().voidItem();
         }
-        try {
-            String json = new ObjectMapper().writeValueAsString(dto);
-            connection.sendText(json)          // non-blocking
-                    .subscribe().with(
-                            v -> LOG.debugf("Sent to %s : %s", uniqueId, dto.getType()),
-                            err -> LOG.errorf(err, "Failed to send to %s", uniqueId)
-                    );
-        } catch (Exception e) {
-            LOG.errorf(e, "Failed to serialise DTO for player %s (ID: %s)", username, uniqueId);
-        }
+
+        logger.debugf("Sending message to player: playerId=%s, message=%s", uniqueId, dto);
+        return connection.sendText(dto)
+                .onItem().invoke(v -> LOG.debugf("Message sent: player=%s message=%s", uniqueId, dto))
+                .onFailure().invoke(err -> LOG.errorf(err, "Failed to send message: player=%s", uniqueId));
     }
 
     /**
@@ -205,7 +201,7 @@ public class Player {
      *
      * @param resource The {@link TileType} of the resource to remove.
      * @param amount   The amount of the resource to remove.
-     * @throws GameException if the resource type is invalid.
+     * @throws GameException                  if the resource type is invalid.
      * @throws InsufficientResourcesException if the player does not have enough of the resource.
      */
     public void removeResource(TileType resource, int amount) throws GameException {
