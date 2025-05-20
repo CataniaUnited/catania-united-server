@@ -13,7 +13,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.mockito.InjectSpy;
-import io.quarkus.websockets.next.WebSocketConnection;
 import io.smallrye.mutiny.Uni;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,21 +20,21 @@ import org.junit.jupiter.api.Test;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.*;
-import static org.junit.jupiter.api.Assertions.*;
 
 
 @QuarkusTest
@@ -57,7 +56,7 @@ class GameServiceTest {
     @BeforeEach
     void init() {
         gameboardMock = mock(GameBoard.class);
-        lobbyMock     = mock(Lobby.class);
+        lobbyMock = mock(Lobby.class);
 
         when(lobbyMock.getLobbyId()).thenReturn("12345");
         when(lobbyMock.getPlayers()).thenReturn(Set.of("host", "p2"));
@@ -65,7 +64,7 @@ class GameServiceTest {
 
     @Test
     void startGame_setsFlagsBroadcastsAndReturnsDto() throws GameException {
-        String hostId  = "host";
+        String hostId = "host";
         String lobbyId = lobbyService.createLobby(hostId);
 
 
@@ -79,7 +78,7 @@ class GameServiceTest {
         when(gameboardMock.getJson()).thenReturn(dummyBoardJson);
 
         Player host = mock(Player.class);
-        Player p2   = mock(Player.class);
+        Player p2 = mock(Player.class);
         when(playerService.getPlayerById(hostId)).thenReturn(host);
         when(playerService.getPlayerById("p2")).thenReturn(p2);
 
@@ -92,7 +91,7 @@ class GameServiceTest {
         assertTrue(dto.getMessageNode("board").isObject());
 
         verify(host).sendMessage(dto);
-        verify(p2  ).sendMessage(dto);
+        verify(p2).sendMessage(dto);
         verifyNoMoreInteractions(host, p2);
     }
 
@@ -244,7 +243,7 @@ class GameServiceTest {
     }
 
     @Test
-    void broadcastWinShouldSendCorrectGameWonMessage() {
+    void broadcastWinShouldSendCorrectGameWonMessage() throws GameException {
         String lobbyId = "lobby123";
         String winnerPlayerId = "playerABC";
         String winnerUsername = "ChickenNugget";
@@ -252,12 +251,9 @@ class GameServiceTest {
         Player mockPlayer = mock(Player.class);
         when(mockPlayer.getUsername()).thenReturn(winnerUsername);
         doReturn(mockPlayer).when(playerService).getPlayerById(winnerPlayerId);
+        doReturn(new Lobby(lobbyId, winnerPlayerId)).when(lobbyService).getLobbyById(lobbyId);
 
-        WebSocketConnection mockConnection = mock(WebSocketConnection.class, RETURNS_DEEP_STUBS);
-        when(mockConnection.broadcast().sendText(any(MessageDTO.class)))
-                .thenReturn(Uni.createFrom().voidItem());
-
-        Uni<MessageDTO> resultUni = gameService.broadcastWin(mockConnection, lobbyId, winnerPlayerId);
+        Uni<MessageDTO> resultUni = gameService.broadcastWin(lobbyId, winnerPlayerId);
         MessageDTO result = resultUni.await().indefinitely();
 
         assertNotNull(result);
@@ -266,7 +262,7 @@ class GameServiceTest {
         assertEquals(winnerPlayerId, result.getPlayer());
         assertEquals(winnerUsername, result.getMessageNode("winner").asText());
 
-        verify(mockConnection.broadcast()).sendText(any(MessageDTO.class));
+        verify(lobbyService).notifyPlayers(lobbyId, result);
     }
 
 

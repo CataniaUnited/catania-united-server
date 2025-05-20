@@ -13,7 +13,6 @@ import com.example.cataniaunited.player.PlayerService;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.quarkus.websockets.next.WebSocketConnection;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -21,9 +20,9 @@ import org.jboss.logging.Logger;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
-import java.util.Comparator;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -224,12 +223,11 @@ public class GameService {
      * Broadcasts a game win message to all players in the lobby.
      * The message includes the winner's username and a leaderboard.
      *
-     * @param connection     The WebSocket connection (used for broadcasting).
      * @param lobbyId        The ID of the lobby where the game was won.
      * @param winnerPlayerId The ID of the player who won the game.
      * @return A Uni emitting a {@link MessageDTO} of type GAME_WON.
      */
-    public Uni<MessageDTO> broadcastWin(WebSocketConnection connection, String lobbyId, String winnerPlayerId) {
+    public Uni<MessageDTO> broadcastWin(String lobbyId, String winnerPlayerId) {
         ObjectNode message = JsonNodeFactory.instance.objectNode();
         Player winner = playerService.getPlayerById(winnerPlayerId);
         message.put("winner", winner.getUsername());
@@ -252,7 +250,7 @@ public class GameService {
 
         MessageDTO messageDTO = new MessageDTO(MessageType.GAME_WON, winnerPlayerId, lobbyId, message);
         logger.infof("Player %s has won the game in lobby %s", winnerPlayerId, lobbyId);
-        return connection.broadcast().sendText(messageDTO).chain(i -> Uni.createFrom().item(messageDTO));
+        return lobbyService.notifyPlayers(lobbyId, messageDTO);
 
     }
 

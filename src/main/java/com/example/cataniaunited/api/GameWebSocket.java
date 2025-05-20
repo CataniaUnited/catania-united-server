@@ -253,7 +253,7 @@ public class GameWebSocket {
         }
 
         if (playerService.checkForWin(message.getPlayer())) {
-            return gameService.broadcastWin(connection, message.getLobbyId(), message.getPlayer());
+            return gameService.broadcastWin(message.getLobbyId(), message.getPlayer());
         }
 
         ObjectNode payload = createGameBoardWithPlayers(message.getLobbyId());
