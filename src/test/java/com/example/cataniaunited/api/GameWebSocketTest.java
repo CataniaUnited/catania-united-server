@@ -549,7 +549,7 @@ public class GameWebSocketTest {
 
         assertEquals(playerMock.getUsername(), response.getMessageNode("winner").asText());
 
-        verify(gameService).broadcastWin(eq(lobbyId), eq(player1Id));
+        verify(gameService).broadcastWin(lobbyId, player1Id);
     }
 
     @Test
