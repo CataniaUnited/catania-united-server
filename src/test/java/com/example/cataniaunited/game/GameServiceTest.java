@@ -244,7 +244,7 @@ class GameServiceTest {
     }
 
     @Test
-    void broadcastWinShouldSendCorrectGameWonMessage() {
+    void broadcastWinShouldSendCorrectGameWonMessage() throws GameException {
         String lobbyId = "lobby123";
         String winnerPlayerId = "playerABC";
         String winnerUsername = "ChickenNugget";
@@ -252,12 +252,9 @@ class GameServiceTest {
         Player mockPlayer = mock(Player.class);
         when(mockPlayer.getUsername()).thenReturn(winnerUsername);
         doReturn(mockPlayer).when(playerService).getPlayerById(winnerPlayerId);
+        doReturn(new Lobby(lobbyId, winnerPlayerId)).when(lobbyService).getLobbyById(lobbyId);
 
-        WebSocketConnection mockConnection = mock(WebSocketConnection.class, RETURNS_DEEP_STUBS);
-        when(mockConnection.broadcast().sendText(any(MessageDTO.class)))
-                .thenReturn(Uni.createFrom().voidItem());
-
-        Uni<MessageDTO> resultUni = gameService.broadcastWin(mockConnection, lobbyId, winnerPlayerId);
+        Uni<MessageDTO> resultUni = gameService.broadcastWin(lobbyId, winnerPlayerId);
         MessageDTO result = resultUni.await().indefinitely();
 
         assertNotNull(result);
@@ -266,7 +263,7 @@ class GameServiceTest {
         assertEquals(winnerPlayerId, result.getPlayer());
         assertEquals(winnerUsername, result.getMessageNode("winner").asText());
 
-        verify(mockConnection.broadcast()).sendText(any(MessageDTO.class));
+        verify(lobbyService).notifyPlayers(lobbyId, result);
     }
 
 
