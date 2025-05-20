@@ -248,7 +248,7 @@ public class GameService {
 
         MessageDTO messageDTO = new MessageDTO(MessageType.GAME_WON, winnerPlayerId, lobbyId, message);
         logger.infof("Player %s has won the game in lobby %s", winnerPlayerId, lobbyId);
-        return connection.broadcast().sendText(messageDTO).chain(i -> Uni.createFrom().item(messageDTO));
+        return lobbyService.notifyPlayers(lobbyId, messageDTO);
 
     }
 
