@@ -9,7 +9,7 @@ class UtilTest {
 
     @Test
     void testIsEmptyWithNullString() {
-        assertTrue(Util.isEmpty(null), "isEmpty should return true for null string.");
+        assertTrue(Util.isEmpty((String) null), "isEmpty should return true for null string.");
     }
 
     @Test

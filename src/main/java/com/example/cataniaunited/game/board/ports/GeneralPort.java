@@ -41,7 +41,7 @@ public class GeneralPort extends Port {
         }
 
         // For generic ports, each offered resource type must be bundled correctly.
-        if (!offeredResourcesComeInValidBundles(offeredResources, desiredResources.size())) {
+        if (!offeredResourcesComeInValidBundles(offeredResources)) {
             return false;
         }
 
@@ -51,26 +51,21 @@ public class GeneralPort extends Port {
 
     /**
      * Checks if each type of offered resource is provided in quantities that are
-     * multiples of this port's {@link #inputResourceAmount}, and if the total number
-     * of bundles formed matches the {@code expectedResourceCount}.
+     * multiples of this port's {@link #inputResourceAmount}.
      *
      * @param offeredResources The list of resources being offered.
-     * @param expectedResourceCount The total number of single desired resources expected.
-     * @return {@code true} if all offered resource types are correctly bundled and the total bundles match, {@code false} otherwise.
+     * @return {@code true} if all offered resource types are offered in a correct distribution.
      */
-    private boolean offeredResourcesComeInValidBundles(List<TileType> offeredResources, int expectedResourceCount) {
+    private boolean offeredResourcesComeInValidBundles(List<TileType> offeredResources) {
         Map<TileType, Long> offeredResourceMap = offeredResources.stream().collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
 
-        int calculatedOutputBundles = 0;
         for (Map.Entry<TileType, Long> entry : offeredResourceMap.entrySet()) {
             long countOfEntryType = entry.getValue();
             if (countOfEntryType % this.inputResourceAmount != 0) {
                 return false; // This specific resource type is not bundled correctly (i.e. can't trade 1 sheep + 2 wheat for one Ore)
             }
-            calculatedOutputBundles += (int) (countOfEntryType / this.inputResourceAmount);
         }
-        
-        // Sum of trade bundles equals the total expected bundles.
-        return calculatedOutputBundles == expectedResourceCount;
+
+        return true;
     }
 }
