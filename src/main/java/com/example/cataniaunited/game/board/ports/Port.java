@@ -1,8 +1,10 @@
 package com.example.cataniaunited.game.board.ports;
 
 import com.example.cataniaunited.game.board.Placable;
+import com.example.cataniaunited.game.board.SettlementPosition;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.example.cataniaunited.util.Util;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.util.List;
@@ -17,6 +19,21 @@ public abstract class Port implements Placable {
      * The number of identical input resources required to receive one desired resource (N in an N:1 trade).
      */
     protected final int inputResourceAmount;
+    protected SettlementPosition settlementPosition1;
+    protected SettlementPosition settlementPosition2;
+    private final double PORT_DISTANCE = 10.0;
+
+    protected double portCenterX;
+    protected double portCenterY;
+    protected double portRotation;
+
+    protected double bridge1X;
+    protected double bridge1Y;
+    protected double bridge1Rotation;
+
+    protected double bridge2X;
+    protected double bridge2Y;
+    protected double bridge2Rotation;
 
     /**
      * Constructs a Port with a specified trade-in ratio.
@@ -85,23 +102,111 @@ public abstract class Port implements Placable {
         return true; // No trying to get a resource that's also offered
     }
 
+    public void setAssociatedSettlements(SettlementPosition s1, SettlementPosition s2) {
+        this.settlementPosition1 = s1;
+        this.settlementPosition2 = s2;
+    }
+
+    public void calculatePosition() {
+        if (settlementPosition1 == null || settlementPosition2 == null) {
+            return;
+        }
+
+        double[] sp1Coords = settlementPosition1.getCoordinates();
+        double[] settlementPosition2Coords = settlementPosition2.getCoordinates();
+        double x1 = sp1Coords[0];
+        double y1 = sp1Coords[1];
+        double x2 = settlementPosition2Coords[0];
+        double y2 = settlementPosition2Coords[1];
+
+        // Step 1: Midpoint
+        double midX = (x1 + x2) / 2;
+        double midY = (y1 + y2) / 2;
+
+        // Step 2: Coastline Vector
+        double coastVecX = x2 - x1;
+        double coastVecY = y2 - y1;
+
+        // Step 3: Port Rotation
+        this.portRotation = Math.atan2(coastVecY, coastVecX);
+
+        // Step 4 & 5: Outward Normal Vector
+        double normalX = -coastVecY; // Initial perpendicular
+        double normalY = coastVecX;
+
+        if ((normalX * midX + normalY * midY) < 0) { // Dot product
+            normalX = -normalX; // Flip if pointing inward
+            normalY = -normalY;
+        }
+
+        double lengthNormal = Math.sqrt(normalX * normalX + normalY * normalY);
+        double unitNormalX = 0, unitNormalY = 0;
+        if (lengthNormal > 0.0001) {
+            unitNormalX = normalX / lengthNormal;
+            unitNormalY = normalY / lengthNormal;
+        }
+
+        // Step 6: Port Structure Position
+        this.portCenterX = midX + unitNormalX * PORT_DISTANCE;
+        this.portCenterY = midY + unitNormalY * PORT_DISTANCE;
+
+        // Step 7: Bridge 1 (from settlementPosition1 to portCenter)
+        double vec_sp1_to_portX = this.portCenterX - x1;
+        double vec_sp1_to_portY = this.portCenterY - y1;
+        this.bridge1Rotation = Math.atan2(vec_sp1_to_portY, vec_sp1_to_portX);
+        this.bridge1X = (x1 + this.portCenterX) / 2;
+        this.bridge1Y = (y1 + this.portCenterY) / 2;
+
+        // Step 7: Bridge 2 (from settlementPosition2 to portCenter)
+        double vec_settlementPosition2_to_portX = this.portCenterX - x2;
+        double vec_settlementPosition2_to_portY = this.portCenterY - y2;
+        this.bridge2Rotation = Math.atan2(vec_settlementPosition2_to_portY, vec_settlementPosition2_to_portX);
+        this.bridge2X = (x2 + this.portCenterX) / 2;
+        this.bridge2Y = (y2 + this.portCenterY) / 2;
+    }
+
     /**
      * Gets the 2D coordinates of this port on the game board.
-
+     *
      * @return A double array `[x, y]`;
      */
     @Override
     public double[] getCoordinates() {
-        return new double[2];
+        return new double[]{portCenterX, portCenterY};
     }
 
     /**
      * Converts this port's state to a JSON representation.
+     * Needs to be called by subClasses to add specific Information
      *
      * @return An {@link ObjectNode} representing the port.
      */
     @Override
     public ObjectNode toJson() {
-        return null;
+        ObjectNode node = JsonNodeFactory.instance.objectNode();
+        node.put("inputResourceAmount", this.inputResourceAmount); // e.g. 3 for 3:1
+
+
+        ObjectNode portNode = node.putObject("portStructure");
+        portNode.putObject("port")
+                .put("x", this.portCenterX)
+                .put("y", this.portCenterY)
+                .put("rotation", this.portRotation);
+        portNode.putObject("bridge1")
+                .put("x", this.bridge1X)
+                .put("y", this.bridge1Y)
+                .put("rotation", this.bridge1Rotation);
+        portNode.putObject("bridge2")
+                .put("x", this.bridge2X)
+                .put("y", this.bridge2Y)
+                .put("rotation", this.bridge2Rotation);
+
+        
+        if (settlementPosition1 != null && settlementPosition2 != null) {
+            portNode.put("settlementPosition1Id", settlementPosition1.getId());
+            portNode.put("settlementPosition2Id", settlementPosition2.getId());
+        }
+        
+        return node;
     }
 }

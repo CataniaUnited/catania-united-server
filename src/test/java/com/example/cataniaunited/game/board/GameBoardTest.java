@@ -153,9 +153,9 @@ class GameBoardTest {
     @Disabled("BenchmarkTest Tests how many Players theoretically can play a game, doesn't test functionality, therefore disabled")
     @ParameterizedTest
     @MethodSource("benchMarkTestProvider")
-    void benchMarkTest(int sizeOfBoard) {
+    void benchMarkTest(int playerCount) {
         try {
-            new GameBoard(sizeOfBoard);
+            new GameBoard(playerCount);
         } catch (OutOfMemoryError e) {
             fail("Out of Memory");
         }
@@ -338,6 +338,10 @@ class GameBoardTest {
         }
     }
 
+    /**
+     * Test for debugging Purposes, generates a GameBoard and Passes Automatically. Used to get information of a generated board
+     * For example an example JSON ...
+     */
     @Test
     void debuggingTest() {
         GameBoard board = new GameBoard(4);

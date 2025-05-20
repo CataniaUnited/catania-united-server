@@ -1,6 +1,7 @@
 package com.example.cataniaunited.game.board.ports;
 
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.util.List;
 
@@ -68,5 +69,20 @@ public class SpecificResourcePort extends Port {
      */
     public TileType getTradeAbleResource() {
         return tradeAbleResource;
+    }
+
+    /**
+     * Converts this SpecificResourcePort's state to a JSON representation.
+     * Includes abstract port visual data and specific type information.
+     *
+     * @return An {@link ObjectNode} representing the SpecificResourcePort.
+     */
+    @Override
+    public ObjectNode toJson() {
+        ObjectNode node = super.toJson();
+        node.put("portType", "SpecificResourcePort");
+        node.put("resource", this.tradeAbleResource.name());
+        node.put("ratio", this.inputResourceAmount + ":1 " + this.tradeAbleResource.name());
+        return node;
     }
 }

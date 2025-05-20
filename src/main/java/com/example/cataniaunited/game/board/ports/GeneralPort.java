@@ -1,6 +1,8 @@
 package com.example.cataniaunited.game.board.ports;
 
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -67,5 +69,19 @@ public class GeneralPort extends Port {
         }
 
         return true;
+    }
+
+    /**
+     * Converts this GeneralPort's state to a JSON representation.
+     * Includes abstract port visual data and specific type information.
+     *
+     * @return An {@link ObjectNode} representing the GeneralPort.
+     */
+    @Override
+    public ObjectNode toJson() {
+        ObjectNode node = super.toJson();
+        node.put("portType", "GeneralPort");
+        node.put("ratio", this.inputResourceAmount + ":1 Any");
+        return node;
     }
 }

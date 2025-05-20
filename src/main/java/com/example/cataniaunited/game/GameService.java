@@ -4,6 +4,7 @@ import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.board.GameBoard;
+import com.example.cataniaunited.game.board.ports.Port;
 import com.example.cataniaunited.lobby.Lobby;
 import com.example.cataniaunited.lobby.LobbyService;
 import com.example.cataniaunited.player.Player;
@@ -76,6 +77,12 @@ public class GameService {
         GameBoard gameboard = getGameboardByLobbyId(lobbyId);
         PlayerColor color = lobbyService.getPlayerColor(lobbyId, playerId);
         gameboard.placeSettlement(playerService.getPlayerById(playerId), color, settlementPositionId);
+        Player player = playerService.getPlayerById(playerId);
+
+        Port port = gameboard.getPortOfSettlement(settlementPositionId);
+        if (port != null) {
+            player.addPort(port);
+        }
         playerService.addVictoryPoints(playerId, 1);
     }
 

@@ -3,6 +3,7 @@ package com.example.cataniaunited.game.board;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.exception.InsufficientResourcesException;
 import com.example.cataniaunited.game.Buildable;
+import com.example.cataniaunited.game.board.ports.Port;
 import com.example.cataniaunited.game.board.tile_list_builder.StandardTileListBuilder;
 import com.example.cataniaunited.game.board.tile_list_builder.Tile;
 import com.example.cataniaunited.game.board.tile_list_builder.TileListBuilder;
@@ -36,6 +37,7 @@ public class GameBoard {
     List<SettlementPosition> settlementPositionGraph;
     List<Tile> tileList;
     List<Road> roadList;
+    List<Port> portList;
 
     /**
      * Constructs a new GameBoard based on the number of players.
@@ -110,6 +112,7 @@ public class GameBoard {
         GraphBuilder graphBuilder = new GraphBuilder(tileList, sizeOfBoard);
         settlementPositionGraph = graphBuilder.generateGraph();
         roadList = graphBuilder.getRoadList();
+        portList = graphBuilder.getPortList();
     }
 
     /**
@@ -248,9 +251,14 @@ public class GameBoard {
         return roadList;
     }
 
+    public Port getPortOfSettlement(int settlementPositionId){
+        return settlementPositionGraph.get(settlementPositionId).getPort();
+    }
+
     /**
      * Generates a JSON representation of the current game board state.
-     * Includes information about tiles, settlement positions, roads, board size, and hex size.
+     * Includes information about tiles, settlement positions, roads, ports,
+     * board size, and hex size.
      *
      * @return An {@link ObjectNode} containing the game board's JSON structure.
      */
@@ -262,6 +270,7 @@ public class GameBoard {
         ArrayNode tilesNode = mapper.createArrayNode();
         ArrayNode positionsNode = mapper.createArrayNode();
         ArrayNode roadsNode = mapper.createArrayNode();
+        ArrayNode portsNode = mapper.createArrayNode();
 
         // Add tiles
         for (Tile tile : this.tileList) {
@@ -278,10 +287,16 @@ public class GameBoard {
             roadsNode.add(road.toJson());
         }
 
+        // Add Ports
+        for (Port port : this.portList){
+            portsNode.add(port.toJson());
+        }
+
         // Add the arrays to the main board node
         boardNode.set("tiles", tilesNode);
         boardNode.set("settlementPositions", positionsNode);
         boardNode.set("roads", roadsNode);
+        boardNode.set("ports", portsNode);
 
         boardNode.put("ringsOfBoard", this.sizeOfBoard);
         boardNode.put("sizeOfHex", DEFAULT_TILES_PER_PLAYER_GOAL);// This seems wrong TODO: check
