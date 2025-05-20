@@ -460,7 +460,7 @@ public class GameWebSocketTest {
 
         CountDownLatch connectionLatch1 = new CountDownLatch(1);
         CountDownLatch connectionLatch2 = new CountDownLatch(1);
-        CountDownLatch gameLatch = new CountDownLatch(3);
+        CountDownLatch gameLatch = new CountDownLatch(2);
 
         final String[] player1IdHolder = new String[1];
         var client1 = BasicWebSocketConnector.create()
@@ -549,7 +549,7 @@ public class GameWebSocketTest {
 
         assertEquals(playerMock.getUsername(), response.getMessageNode("winner").asText());
 
-        verify(gameService).broadcastWin(any(), eq(lobbyId), eq(player1Id));
+        verify(gameService).broadcastWin(lobbyId, player1Id);
     }
 
     @Test
@@ -1400,7 +1400,7 @@ public class GameWebSocketTest {
         when(playerService.getPlayerById(playerId)).thenReturn(mockPlayer); // <-- Ensure this is how it's resolved
 
         List<String> receivedMessages = new CopyOnWriteArrayList<>();
-        CountDownLatch gameWonLatch = new CountDownLatch(2);
+        CountDownLatch gameWonLatch = new CountDownLatch(1);
 
         var clientConnection = BasicWebSocketConnector.create()
                 .baseUri(serverUri)
@@ -1424,8 +1424,8 @@ public class GameWebSocketTest {
         clientConnection.sendTextAndAwait(objectMapper.writeValueAsString(placeSettlementMsg));
 
         assertTrue(gameWonLatch.await(5, TimeUnit.SECONDS),
-                "Did not receive 2 GAME_WON responses in time. Received: " + receivedMessages.size());
-        assertEquals(2, receivedMessages.size());
+                "Did not receive GAME_WON response in time. Received: " + receivedMessages.size());
+        assertEquals(1, receivedMessages.size());
 
         for (String msg : receivedMessages) {
             MessageDTO dto = objectMapper.readValue(msg, MessageDTO.class);
@@ -1437,7 +1437,7 @@ public class GameWebSocketTest {
 
         verify(gameService).placeSettlement(actualLobbyId, playerId, settlementPositionId);
         verify(playerService, atLeastOnce()).checkForWin(playerId);
-        verify(gameService, times(1)).broadcastWin(any(WebSocketConnection.class), eq(actualLobbyId), eq(playerId));
+        verify(gameService, times(1)).broadcastWin(eq(actualLobbyId), eq(playerId));
         verify(gameService, never()).getGameboardByLobbyId(anyString());
     }
 
@@ -1535,7 +1535,7 @@ public class GameWebSocketTest {
         verify(gameService).placeSettlement(actualLobbyId, playerId, settlementPositionId);
         verify(playerService, never()).checkForWin(anyString());
         verify(gameService, never()).getGameboardByLobbyId(anyString());
-        verify(gameService, never()).broadcastWin(any(WebSocketConnection.class), anyString(), anyString());
+        verify(gameService, never()).broadcastWin(anyString(), anyString());
     }
 
     @Test
