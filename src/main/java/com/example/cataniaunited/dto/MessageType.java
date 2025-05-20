@@ -17,17 +17,18 @@ public enum MessageType {
 
     DICE_RESULT,
     PLAYER_RESOURCES,
+    NEXT_TURN,
 
 
     //Client Messages
     CREATE_LOBBY,
     JOIN_LOBBY,
     SET_USERNAME,
-    SET_ACTIVE_PLAYER, //-> TODO: Remove after implementation of player order
     PLACE_SETTLEMENT,
     UPGRADE_SETTLEMENT,
     PLACE_ROAD,
     CREATE_GAME_BOARD,
     GET_GAME_BOARD,
-    ROLL_DICE
+    ROLL_DICE,
+    END_TURN
 }

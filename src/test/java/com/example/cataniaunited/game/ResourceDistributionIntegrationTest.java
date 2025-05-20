@@ -140,7 +140,7 @@ class ResourceDistributionIntegrationTest {
         System.out.printf("Test: Player %s has settlement at %d. Initial %s: %d%n",
                 testPlayer.getUniqueId(), targetSettlementPosition.getId(), TileType.WHEAT, initialWheatAmount);
 
-        gameService.rollDice(lobbyId);
+        gameService.rollDice(lobbyId, testPlayer.getUniqueId());
 
         // 7. Assert that the player received the resource
         int finalWheatAmount = testPlayer.getResourceCount(TileType.WHEAT);
@@ -157,7 +157,7 @@ class ResourceDistributionIntegrationTest {
             when(mockDice2.roll()).thenReturn(2);
         }
 
-        gameService.rollDice(lobbyId);
+        gameService.rollDice(lobbyId, testPlayer.getUniqueId());
         int wheatAmountAfterWrongRoll = testPlayer.getResourceCount(TileType.WHEAT);
         assertEquals(finalWheatAmount, wheatAmountAfterWrongRoll,
                 "Player should not receive additional resources on a non-matching roll.");

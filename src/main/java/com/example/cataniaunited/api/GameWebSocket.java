@@ -99,21 +99,28 @@ public class GameWebSocket {
                 case CREATE_GAME_BOARD ->
                         createGameBoard(message, connection); // TODO: Remove after regular game start is implemented
                 case GET_GAME_BOARD -> getGameBoard(message); // TODO: Remove after regular game start is implemented
-                case SET_ACTIVE_PLAYER -> setActivePlayer(message);
                 case PLACE_SETTLEMENT -> placeSettlement(message, connection);
                 case UPGRADE_SETTLEMENT -> upgradeSettlement(message, connection);
                 case PLACE_ROAD -> placeRoad(message, connection);
-                case ROLL_DICE -> handleDiceRoll(message, connection);
+                case ROLL_DICE -> handleDiceRoll(message);
                 case START_GAME -> handleStartGame(message);
                 case GAME_STARTED -> null;
                 case ERROR, CONNECTION_SUCCESSFUL, CLIENT_DISCONNECTED, LOBBY_CREATED, LOBBY_UPDATED, PLAYER_JOINED,
-                     GAME_BOARD_JSON, GAME_WON, DICE_RESULT, PLAYER_RESOURCES ->
+                     GAME_BOARD_JSON, GAME_WON, DICE_RESULT, PLAYER_RESOURCES, NEXT_TURN ->
                         throw new GameException("Invalid client command");
+                case END_TURN -> endTurn(message);
             };
         } catch (GameException ge) {
             logger.errorf("Unexpected Error occurred: message = %s, error = %s", message, ge.getMessage());
             return Uni.createFrom().item(createErrorMessage(ge.getMessage()));
         }
+    }
+
+    Uni<MessageDTO> endTurn(MessageDTO message) throws GameException {
+        String activePlayer = lobbyService.nextTurn(message.getLobbyId(), message.getPlayer());
+        ObjectNode payload = JsonNodeFactory.instance.objectNode().put("activePlayer", activePlayer);
+        var response = new MessageDTO(MessageType.NEXT_TURN, payload);
+        return lobbyService.notifyPlayers(message.getLobbyId(), response);
     }
 
     /**
@@ -336,13 +343,6 @@ public class GameWebSocket {
         throw new GameException("No player session");
     }
 
-    //TODO: Remove after implementation of player order
-    Uni<MessageDTO> setActivePlayer(MessageDTO message) throws GameException {
-        lobbyService.getLobbyById(message.getLobbyId()).setActivePlayer(message.getPlayer());
-        return sendPlayerResources(message.getPlayer(), message.getLobbyId())
-                .chain(() -> Uni.createFrom().item(new MessageDTO(MessageType.SET_ACTIVE_PLAYER, message.getPlayer(), message.getLobbyId())));
-    }
-
     /**
      * Creates a {@link MessageDTO} for sending an error message to a client.
      *
@@ -421,15 +421,13 @@ public class GameWebSocket {
      * and then sends updated resource information individually to each player in that lobby.
      *
      * @param message    The {@link MessageDTO} containing the player ID and lobby ID.
-     * @param connection The WebSocket connection of the player who initiated the dice roll.
-     *                   This connection is used as the source for broadcasting.
      * @return A Uni emitting the {@link MessageDTO} containing the dice roll result. This DTO is the one
      * that was broadcast. The primary purpose of the returned Uni is to chain asynchronous operations.
      * @throws GameException if an error occurs during dice rolling or retrieving lobby/player information.
      */
-    Uni<MessageDTO> handleDiceRoll(MessageDTO message, WebSocketConnection connection) throws GameException {
+    Uni<MessageDTO> handleDiceRoll(MessageDTO message) throws GameException {
         // Roll and broadcast dice
-        ObjectNode diceResult = gameService.rollDice(message.getLobbyId());
+        ObjectNode diceResult = gameService.rollDice(message.getLobbyId(), message.getPlayer());
         MessageDTO diceResultMessage = new MessageDTO(
                 MessageType.DICE_RESULT,
                 message.getPlayer(),

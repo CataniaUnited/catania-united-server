@@ -1,5 +1,6 @@
 package com.example.cataniaunited.lobby;
 
+import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.player.PlayerColor;
 import java.util.*;
 import java.util.concurrent.*;
@@ -224,8 +225,10 @@ public class Lobby {
      * If the lobby has no players or no active player is set, this method returns early.
      * The turn wraps around to the first player after the last player in the sequence.
      */
-    public void nextPlayerTurn() {
-        if (players.isEmpty() || activePlayer == null) return;
+    public void nextPlayerTurn() throws GameException {
+        if (players.isEmpty() || activePlayer == null){
+            throw new GameException("Next turn failed, players empty or activePlayer is null: lobbyId=%s", lobbyId);
+        };
         List<String> order = new ArrayList<>(players);
         int idx = order.indexOf(activePlayer);
         activePlayer = order.get((idx + 1) % order.size());

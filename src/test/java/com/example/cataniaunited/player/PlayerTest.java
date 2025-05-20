@@ -3,7 +3,7 @@ package com.example.cataniaunited.player;
 import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.exception.GameException;
-import com.example.cataniaunited.exception.InsufficientResourcesException;
+import com.example.cataniaunited.exception.ui.InsufficientResourcesException;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;

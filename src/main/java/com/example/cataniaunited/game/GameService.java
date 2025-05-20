@@ -3,6 +3,7 @@ package com.example.cataniaunited.game;
 import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.exception.ui.InvalidTurnException;
 import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.lobby.Lobby;
 import com.example.cataniaunited.lobby.LobbyService;
@@ -189,7 +190,8 @@ public class GameService {
      */
     private void checkPlayerTurn(String lobbyId, String playerId) throws GameException {
         if (!lobbyService.isPlayerTurn(lobbyId, playerId)) {
-            throw new GameException("It is not the players turn: playerId=%s, lobbyId=%s", playerId, lobbyId);
+            logger.errorf("It is not the players turn: playerId=%s, lobbyId=%s", playerId, lobbyId);
+            throw new InvalidTurnException();
         }
     }
 
@@ -212,8 +214,10 @@ public class GameService {
      * @return An {@link ObjectNode} containing the results of the two dice and their total.
      * @throws GameException if the game board for the lobby is not found.
      */
-    public ObjectNode rollDice(String lobbyId) throws GameException {
-        return getGameboardByLobbyId(lobbyId).rollDice();
+    public ObjectNode rollDice(String lobbyId, String playerId) throws GameException {
+        checkPlayerTurn(lobbyId, playerId);
+        GameBoard gameboard = getGameboardByLobbyId(lobbyId);
+        return gameboard.rollDice();
     }
 
     /**

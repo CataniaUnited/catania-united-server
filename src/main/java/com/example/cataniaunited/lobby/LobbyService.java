@@ -94,4 +94,6 @@ public interface LobbyService {
      */
     Uni<MessageDTO> notifyPlayers(String lobbyId, MessageDTO dto);
 
+    String nextTurn(String lobbyId, String playerId) throws GameException;
+
 }

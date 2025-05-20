@@ -1025,7 +1025,7 @@ public class GameWebSocketTest {
         assertTrue(dice2 >= 1 && dice2 <= 6, "Dice 2 value out of range");
         assertEquals(dice1 + dice2, diceResult.get("total").asInt());
 
-        verify(gameService).rollDice(lobbyId);
+        verify(gameService).rollDice(lobbyId, player1);
     }
 
 
@@ -1196,7 +1196,7 @@ public class GameWebSocketTest {
         assertNotNull(p2ResMsg.getMessage());
         assertTrue(p2ResMsg.getMessage().has("CLAY"), "Player 2 resource missing in payload");
 
-        verify(gameService).rollDice(actualLobbyId);
+        verify(gameService).rollDice(actualLobbyId, player1ActualId);
         verify(playerService, atLeastOnce()).getPlayerById(player1ActualId);
         verify(playerService, atLeastOnce()).getPlayerById(player2ActualId);
 
@@ -1282,12 +1282,13 @@ public class GameWebSocketTest {
         System.out.println("Test: Created lobby with ID: " + actualLobbyId + " for host " + player1ActualId);
         lobbyService.joinLobbyByCode(actualLobbyId, player2ActualId);
         System.out.println("Test: Player " + player2ActualId + " joined lobby " + actualLobbyId);
+
+        gameService.startGame(actualLobbyId);
+        System.out.println("Test: Gameboard created for lobby " + actualLobbyId);
+
         Lobby lobby = lobbyService.getLobbyById(actualLobbyId);
         lobby.setActivePlayer(player1ActualId);
         System.out.println("Test: Active player set to " + player1ActualId);
-
-        gameService.startGame(lobby.getLobbyId());
-        System.out.println("Test: Gameboard created for lobby " + actualLobbyId);
 
         client2WebSocketClientConnection.closeAndAwait();
 
@@ -1301,7 +1302,7 @@ public class GameWebSocketTest {
         assertTrue(player1ResourceLatch.await(3, TimeUnit.SECONDS), "Player 1 did not receive PLAYER_RESOURCES. Latch: " + player1ResourceLatch.getCount() + ". Received messages for P1: " + player1ReceivedMessages.size());
 
         assertEquals(1, player1ReceivedMessages.stream().filter(m -> m.getType() == MessageType.PLAYER_RESOURCES).count());
-        verify(gameService).rollDice(actualLobbyId);
+        verify(gameService).rollDice(actualLobbyId, player1ActualId);
         verify(playerService, atLeastOnce()).getPlayerById(player1ActualId);
         verify(playerService, atLeastOnce()).getPlayerById(player2ActualId);
 
@@ -1375,7 +1376,7 @@ public class GameWebSocketTest {
         assertTrue(player1ResourceLatch.await(5, TimeUnit.SECONDS), "Player 1 did not receive PLAYER_RESOURCES.");
         assertEquals(1, player1ReceivedMessages.stream().filter(m -> m.getType() == MessageType.PLAYER_RESOURCES).count());
 
-        verify(gameService).rollDice(actualLobbyId);
+        verify(gameService).rollDice(actualLobbyId, player1ActualId);
         verify(lobbyService).notifyPlayers(eq(lobby.getLobbyId()), any(MessageDTO.class));
 
         client1WebSocketClientConnection.closeAndAwait();

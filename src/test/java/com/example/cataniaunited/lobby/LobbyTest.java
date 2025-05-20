@@ -1,5 +1,6 @@
 package com.example.cataniaunited.lobby;
 
+import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.player.PlayerColor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -98,7 +99,7 @@ class LobbyTest {
     }
 
     @Test
-    void nextPlayerTurn_wrapsAroundToFirstPlayer() {
+    void nextPlayerTurn_wrapsAroundToFirstPlayer() throws GameException {
         sut.setActivePlayer("host");
 
         sut.nextPlayerTurn();

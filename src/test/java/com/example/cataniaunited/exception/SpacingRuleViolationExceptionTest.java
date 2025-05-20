@@ -1,5 +1,6 @@
 package com.example.cataniaunited.exception;
 
+import com.example.cataniaunited.exception.ui.SpacingRuleViolationException;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;

@@ -221,6 +221,13 @@ public class LobbyServiceImpl implements LobbyService {
         }
     }
 
+    @Override
+    public String nextTurn(String lobbyId, String playerId) throws GameException {
+        Lobby lobby = getLobbyById(lobbyId);
+        lobby.nextPlayerTurn();
+        return lobby.getActivePlayer();
+    }
+
 
     /**
      * {@inheritDoc}
