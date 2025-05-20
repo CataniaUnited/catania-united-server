@@ -72,7 +72,7 @@ public class GameService {
      *                       or other game rules are violated.
      */
     public void placeSettlement(String lobbyId, String playerId, int settlementPositionId) throws GameException {
-        checkPlayerTurn(lobbyId, playerId);
+        lobbyService.checkPlayerTurn(lobbyId, playerId);
         GameBoard gameboard = getGameboardByLobbyId(lobbyId);
         PlayerColor color = lobbyService.getPlayerColor(lobbyId, playerId);
         gameboard.placeSettlement(playerService.getPlayerById(playerId), color, settlementPositionId);
@@ -89,7 +89,7 @@ public class GameService {
      *                       no settlement exists, or other game rules are violated.
      */
     public void upgradeSettlement(String lobbyId, String playerId, int settlementPositionId) throws GameException {
-        checkPlayerTurn(lobbyId, playerId);
+        lobbyService.checkPlayerTurn(lobbyId, playerId);
         GameBoard gameboard = getGameboardByLobbyId(lobbyId);
         PlayerColor color = lobbyService.getPlayerColor(lobbyId, playerId);
         gameboard.placeCity(playerService.getPlayerById(playerId), color, settlementPositionId);
@@ -106,7 +106,7 @@ public class GameService {
      *                       or other game rules are violated.
      */
     public void placeRoad(String lobbyId, String playerId, int roadId) throws GameException {
-        checkPlayerTurn(lobbyId, playerId);
+        lobbyService.checkPlayerTurn(lobbyId, playerId);
         GameBoard gameboard = getGameboardByLobbyId(lobbyId);
         PlayerColor color = lobbyService.getPlayerColor(lobbyId, playerId);
         gameboard.placeRoad(playerService.getPlayerById(playerId), color, roadId);
@@ -181,20 +181,6 @@ public class GameService {
     }
 
     /**
-     * Checks if it is currently the specified player's turn in the given lobby.
-     *
-     * @param lobbyId  The ID of the lobby.
-     * @param playerId The ID of the player.
-     * @throws GameException if it is not the player's turn or if the lobby/player is not found.
-     */
-    private void checkPlayerTurn(String lobbyId, String playerId) throws GameException {
-        if (!lobbyService.isPlayerTurn(lobbyId, playerId)) {
-            logger.errorf("It is not the players turn: playerId=%s, lobbyId=%s", playerId, lobbyId);
-            throw new InvalidTurnException();
-        }
-    }
-
-    /**
      * Adds a game board to the internal map, associating it with a lobby ID.
      *
      * @param lobbyId   The ID of the lobby.
@@ -214,7 +200,7 @@ public class GameService {
      * @throws GameException if the game board for the lobby is not found.
      */
     public ObjectNode rollDice(String lobbyId, String playerId) throws GameException {
-        checkPlayerTurn(lobbyId, playerId);
+        lobbyService.checkPlayerTurn(lobbyId, playerId);
         GameBoard gameboard = getGameboardByLobbyId(lobbyId);
         return gameboard.rollDice();
     }

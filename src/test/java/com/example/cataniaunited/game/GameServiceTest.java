@@ -3,6 +3,7 @@ package com.example.cataniaunited.game;
 import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.exception.ui.InvalidTurnException;
 import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.lobby.Lobby;
 import com.example.cataniaunited.lobby.LobbyService;
@@ -152,8 +153,8 @@ class GameServiceTest {
         String lobbyId = lobbyMock.getLobbyId();
         doReturn(lobbyMock).when(lobbyService).getLobbyById(lobbyId);
         doReturn(false).when(lobbyMock).isPlayerTurn(playerId);
-        GameException ge = assertThrows(GameException.class, () -> gameService.placeSettlement(lobbyId, playerId, 1));
-        assertEquals("It is not the players turn: playerId=%s, lobbyId=%s".formatted(playerId, lobbyId), ge.getMessage());
+        InvalidTurnException ite = assertThrows(InvalidTurnException.class, () -> gameService.placeSettlement(lobbyId, playerId, 1));
+        assertEquals("It is not your turn!", ite.getMessage());
         verify(gameService, never()).getGameboardByLobbyId(lobbyId);
     }
 
@@ -163,8 +164,8 @@ class GameServiceTest {
         String lobbyId = lobbyMock.getLobbyId();
         doReturn(lobbyMock).when(lobbyService).getLobbyById(lobbyId);
         doReturn(false).when(lobbyMock).isPlayerTurn(playerId);
-        GameException ge = assertThrows(GameException.class, () -> gameService.placeRoad(lobbyId, playerId, 1));
-        assertEquals("It is not the players turn: playerId=%s, lobbyId=%s".formatted(playerId, lobbyId), ge.getMessage());
+        InvalidTurnException ite = assertThrows(InvalidTurnException.class, () -> gameService.placeRoad(lobbyId, playerId, 1));
+        assertEquals("It is not your turn!", ite.getMessage());
         verify(gameService, never()).getGameboardByLobbyId(lobbyId);
     }
 

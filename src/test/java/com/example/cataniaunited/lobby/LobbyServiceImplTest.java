@@ -3,6 +3,7 @@ package com.example.cataniaunited.lobby;
 import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.exception.ui.InvalidTurnException;
 import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerColor;
 import com.example.cataniaunited.player.PlayerService;
@@ -192,32 +193,33 @@ class LobbyServiceImplTest {
     }
 
     @Test
-    void isPlayerTurnShouldThrowExceptionForNonExistingLobby() {
+    void checkPlayerTurnShouldThrowExceptionForNonExistingLobby() {
         String lobbyId = "NonExistingLobby";
         GameException ge = assertThrows(GameException.class, () -> {
-            lobbyService.isPlayerTurn(lobbyId, "NonExistingPlayer");
+            lobbyService.checkPlayerTurn(lobbyId, "NonExistingPlayer");
         });
         assertEquals("Lobby with id %s not found".formatted(lobbyId), ge.getMessage());
     }
 
     @Test
-    void isPlayerTurnShouldReturnTrueForPlayerTurn() throws GameException {
+    void checkPlayerTurnShouldNotThrowExceptionForPlayerTurn() throws GameException {
         String playerId = "player1";
         String lobbyId = lobbyService.createLobby(playerId);
         Lobby lobby = lobbyService.getLobbyById(lobbyId);
         lobby.setActivePlayer(playerId);
 
-        assertTrue(lobbyService.isPlayerTurn(lobbyId, playerId));
+        assertDoesNotThrow(() -> lobbyService.checkPlayerTurn(lobbyId, playerId));
     }
 
     @Test
-    void isPlayerTurnShouldReturnFalseForNotPlayerTurn() throws GameException {
+    void checkPlayerTurnShouldThrowExceptionForNotPlayerTurn() throws GameException {
         String playerId = "player1";
         String lobbyId = lobbyService.createLobby(playerId);
         Lobby lobby = spy(lobbyService.getLobbyById(lobbyId));
         lobby.setActivePlayer("anotherPlayer");
 
-        assertFalse(lobbyService.isPlayerTurn(lobbyId, playerId));
+        InvalidTurnException ite = assertThrows(InvalidTurnException.class, () -> {lobbyService.checkPlayerTurn(lobbyId, playerId);});
+        assertEquals("It is not your turn!", ite.getMessage());
     }
 
     @Test

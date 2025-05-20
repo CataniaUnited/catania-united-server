@@ -1168,9 +1168,9 @@ public class GameWebSocketTest {
         lobbyService.joinLobbyByCode(actualLobbyId, player2ActualId);
         Lobby lobby = lobbyService.getLobbyById(actualLobbyId);
         assertNotNull(lobby, "Lobby should not be null after retrieval");
-        lobby.setActivePlayer(player1ActualId);
 
         gameService.startGame(actualLobbyId);
+        lobby.setActivePlayer(player1ActualId);
 
         MessageDTO rollDiceMsg = new MessageDTO(MessageType.ROLL_DICE, player1ActualId, actualLobbyId);
         client1Connection.sendTextAndAwait(objectMapper.writeValueAsString(rollDiceMsg));

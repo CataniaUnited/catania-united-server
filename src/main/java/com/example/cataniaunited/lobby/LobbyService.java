@@ -70,10 +70,9 @@ public interface LobbyService {
      *
      * @param lobbyId  The ID of the lobby.
      * @param playerId The ID of the player.
-     * @return true if it is the player's turn, false otherwise.
-     * @throws GameException if the lobby or player is not found.
+     * @throws GameException if it is not the player's turn or if the lobby/player is not found.
      */
-    boolean isPlayerTurn(String lobbyId, String playerId) throws GameException;
+    void checkPlayerTurn(String lobbyId, String playerId) throws GameException;
 
     /**
      * Gets the color assigned to a specific player in a given lobby.

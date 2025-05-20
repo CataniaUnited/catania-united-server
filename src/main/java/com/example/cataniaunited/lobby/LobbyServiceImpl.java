@@ -2,6 +2,7 @@ package com.example.cataniaunited.lobby;
 
 import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.exception.ui.InvalidTurnException;
 import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerColor;
 import com.example.cataniaunited.player.PlayerService;
@@ -167,12 +168,15 @@ public class LobbyServiceImpl implements LobbyService {
     /**
      * {@inheritDoc}
      *
-     * @throws GameException if the lobby is not found.
+     * @throws GameException if the lobby is not found or it is not the players turn.
      */
     @Override
-    public boolean isPlayerTurn(String lobbyId, String playerId) throws GameException {
+    public void checkPlayerTurn(String lobbyId, String playerId) throws GameException {
         Lobby lobby = getLobbyById(lobbyId);
-        return lobby.isPlayerTurn(playerId);
+        if (!lobby.isPlayerTurn(playerId)) {
+            logger.errorf("It is not the players turn: playerId=%s, lobbyId=%s", playerId, lobbyId);
+            throw new InvalidTurnException();
+        }
     }
 
     /**
