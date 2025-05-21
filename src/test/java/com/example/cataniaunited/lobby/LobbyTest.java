@@ -13,6 +13,15 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class LobbyTest {
 
+    Lobby lobby;
+
+    @BeforeEach
+    void setUpExtraLobby() {
+        lobby = new Lobby("L-extra", "host");
+        lobby.addPlayer("p2");
+        lobby.addPlayer("p3");
+    }
+
     @Test
     void getLobbyId_shouldReturnCorrectId() {
         String expectedLobbyId = "1";
@@ -88,78 +97,94 @@ class LobbyTest {
         assertEquals(playerId, lobby.getActivePlayer());
     }
 
-
-    private Lobby sut;
-
-    @BeforeEach
-    void setUpExtraLobby() {
-        sut = new Lobby("L-extra", "host");
-        sut.addPlayer("p2");
-        sut.addPlayer("p3");
+    @Test
+    void nextPlayerShouldThrowExceptionIfPlayerOrderIsEmpty() {
+        lobby.setPlayerOrder(List.of());
+        GameException ge = assertThrows(GameException.class, () -> lobby.nextPlayerTurn());
+        assertEquals("Executing next turn failed", ge.getMessage());
     }
 
     @Test
-    void nextPlayerTurn_wrapsAroundToFirstPlayer() throws GameException {
-        sut.setActivePlayer("host");
+    void nextPlayerShouldThrowExceptionIfActivePlayerIsNull() {
+        lobby.setActivePlayer(null);
+        GameException ge = assertThrows(GameException.class, () -> lobby.nextPlayerTurn());
+        assertEquals("Executing next turn failed", ge.getMessage());
+    }
 
-        sut.nextPlayerTurn();
-        assertEquals("p2", sut.getActivePlayer());
+    @Test
+    void testNextPlayerTurn() throws GameException {
+        List<String> playerOrder = List.of("p2", "host", "p3");
+        lobby.setPlayerOrder(playerOrder);
+        lobby.setActivePlayer("p2");
 
-        sut.nextPlayerTurn();
-        assertEquals("p3", sut.getActivePlayer());
+        //First round in order
+        lobby.nextPlayerTurn();
+        assertEquals("host", lobby.getActivePlayer());
+        lobby.nextPlayerTurn();
+        assertEquals("p3", lobby.getActivePlayer());
 
-        sut.nextPlayerTurn();
-        assertEquals("host", sut.getActivePlayer());
+        //Second round in reverse order
+        lobby.nextPlayerTurn();
+        assertEquals("p3", lobby.getActivePlayer());
+        assertEquals(1, lobby.getRoundsPlayed());
+        lobby.nextPlayerTurn();
+        assertEquals("host", lobby.getActivePlayer());
+        lobby.nextPlayerTurn();
+        assertEquals("p2", lobby.getActivePlayer());
+        assertEquals(2, lobby.getRoundsPlayed());
+
+        //Third and subsequent rounds in order again
+        lobby.nextPlayerTurn();
+        assertEquals("host", lobby.getActivePlayer());
+        lobby.nextPlayerTurn();
+        assertEquals("p3", lobby.getActivePlayer());
+        lobby.nextPlayerTurn();
+        assertEquals("p2", lobby.getActivePlayer());
+        assertEquals(3, lobby.getRoundsPlayed());
+
+        lobby.nextPlayerTurn();
+        assertEquals("host", lobby.getActivePlayer());
+        lobby.nextPlayerTurn();
+        assertEquals("p3", lobby.getActivePlayer());
+        lobby.nextPlayerTurn();
+        assertEquals("p2", lobby.getActivePlayer());
+        assertEquals(4, lobby.getRoundsPlayed());
     }
 
     @Test
     void randomizePlayerOrder_changesOrderButKeepsSameElements() {
-        List<String> before = new ArrayList<>(sut.getPlayers());
-
-        sut.randomizePlayerOrder();
-
-        List<String> after = new ArrayList<>(sut.getPlayers());
-        assertEquals(before.size(), after.size());
-        assertTrue(after.containsAll(before));
-        assertNotEquals(before, after, "Order should be shuffled");
+        assertTrue(lobby.getPlayerOrder().isEmpty());
+        assertEquals(3, lobby.getPlayers().size());
+        lobby.randomizePlayerOrder();
+        assertEquals(lobby.getPlayers().size(), lobby.getPlayerOrder().size());
+        assertTrue(lobby.getPlayerOrder().containsAll(lobby.getPlayers()));
     }
-
 
     @Test
     void canStartGame_requiresTwoPlayersAndGameNotYetStarted() {
         // host can start when ≥2 players
-        assertTrue(sut.canStartGame("host"));
+        assertTrue(lobby.canStartGame("host"));
 
         // once started, cannot start again
-        sut.setGameStarted(true);
-        assertFalse(sut.canStartGame("host"));
+        lobby.setGameStarted(true);
+        assertFalse(lobby.canStartGame("host"));
     }
 
     @Test
     void canStartGame_returnsFalseForNonHostEvenWithEnoughPlayers() {
-        assertFalse(sut.canStartGame("p2"), "only the host may start the game");
-        assertFalse(sut.canStartGame("p3"), "only the host may start the game");
+        assertFalse(lobby.canStartGame("p2"), "only the host may start the game");
+        assertFalse(lobby.canStartGame("p3"), "only the host may start the game");
     }
 
     @Test
     void testResetForNewGame_resetsActivePlayerAndStartedFlag() {
-        sut.setActivePlayer("p2");
-        sut.setGameStarted(true);
+        lobby.setActivePlayer("p2");
+        lobby.setGameStarted(true);
 
-        sut.resetForNewGame();
+        lobby.resetForNewGame();
 
-        assertFalse(sut.isGameStarted(), "gameStarted should be reset to false");
-        assertNull(sut.getActivePlayer(), "activePlayer should be reset to null");
-    }
-
-    @Test
-    void testSetPlayerOrder_overwritesExistingOrder() {
-        List<String> customOrder = List.of("alice", "bob", "carol");
-
-        sut.setPlayerOrder(customOrder);
-
-        List<String> playersList = new ArrayList<>(sut.getPlayers());
-        assertEquals(customOrder, playersList, "setPlayerOrder should replace the entire players list");
+        assertFalse(lobby.isGameStarted(), "gameStarted should be reset to false");
+        assertNull(lobby.getActivePlayer(), "activePlayer should be reset to null");
     }
 
     @Test

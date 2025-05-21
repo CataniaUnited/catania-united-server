@@ -2,8 +2,15 @@ package com.example.cataniaunited.lobby;
 
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.player.PlayerColor;
-import java.util.*;
-import java.util.concurrent.*;
+import org.jboss.logging.Logger;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 
 /**
@@ -13,13 +20,18 @@ import java.util.concurrent.*;
  * It uses concurrent collections for thread-safe operations.
  */
 public class Lobby {
+
+    private static final Logger logger = Logger.getLogger(Lobby.class);
+
     private final String lobbyId;
     private final String hostPlayer; // ID of the player who created the lobby
     private final Set<String> players = new CopyOnWriteArraySet<>(); // Set of player IDs in the lobby
+    private final List<String> playerOrder = new CopyOnWriteArrayList<>();
     private final Map<String, PlayerColor> playerColors = new ConcurrentHashMap<>(); // Maps player ID to their assigned color
     private final List<PlayerColor> availableColors = new CopyOnWriteArrayList<>(); // List of colors not yet assigned
     private volatile String activePlayer; // ID of the player whose turn it is
     private volatile boolean gameStarted = false; // Flag indicating if the game has started
+    private int roundsPlayed = 0;
 
     /**
      * Constructs a new Lobby instance.
@@ -42,7 +54,9 @@ public class Lobby {
      *
      * @return The lobby ID string.
      */
-    public String getLobbyId() { return lobbyId; }
+    public String getLobbyId() {
+        return lobbyId;
+    }
 
     /**
      * Gets the set of player IDs currently in this lobby.
@@ -50,7 +64,9 @@ public class Lobby {
      *
      * @return A {@link Set} of player ID strings.
      */
-    public Set<String> getPlayers() { return players; }
+    public Set<String> getPlayers() {
+        return players;
+    }
 
     /**
      * Adds a player to this lobby by their ID.
@@ -68,7 +84,7 @@ public class Lobby {
      *
      * @param player The ID of the player to remove.
      * @return {@code true} if the player was successfully found and removed from the player set, {@code false} otherwise.
-     *         Note: {@code playerColors.remove(player)} does not return a boolean indicating removal success directly in this context.
+     * Note: {@code playerColors.remove(player)} does not return a boolean indicating removal success directly in this context.
      */
     public boolean removePlayer(String player) {
         playerColors.remove(player);
@@ -80,21 +96,25 @@ public class Lobby {
      *
      * @return The ID of the active player, or {@code null} if no player is active or the game has not started.
      */
-    public String getActivePlayer() { return activePlayer; }
+    public String getActivePlayer() {
+        return activePlayer;
+    }
 
     /**
      * Sets the active player for the current turn.
      *
      * @param activePlayer The ID of the player to be set as active.
      */
-    public void setActivePlayer(String activePlayer) { this.activePlayer = activePlayer; }
+    public void setActivePlayer(String activePlayer) {
+        this.activePlayer = activePlayer;
+    }
 
     /**
      * Checks if it is currently the specified player's turn.
      *
      * @param player The ID of the player to check.
      * @return {@code true} if the specified player's ID matches the active player's ID and the player ID is not null,
-     *         {@code false} otherwise.
+     * {@code false} otherwise.
      */
     public boolean isPlayerTurn(String player) {
         return player != null && player.equals(activePlayer);
@@ -150,7 +170,7 @@ public class Lobby {
     public PlayerColor assignAvailableColor() {
         if (availableColors.isEmpty()) return null;
         Collections.shuffle(availableColors);
-        return availableColors.remove(0);
+        return availableColors.removeFirst();
     }
 
     /**
@@ -171,14 +191,18 @@ public class Lobby {
      *
      * @return {@code true} if the game has started, {@code false} otherwise.
      */
-    public boolean isGameStarted() { return gameStarted; }
+    public boolean isGameStarted() {
+        return gameStarted;
+    }
 
     /**
      * Sets the game started status of this lobby.
      *
      * @param started {@code true} to mark the game as started, {@code false} otherwise.
      */
-    public void setGameStarted(boolean started) { this.gameStarted = started; }
+    public void setGameStarted(boolean started) {
+        this.gameStarted = started;
+    }
 
 
     /**
@@ -208,12 +232,11 @@ public class Lobby {
      * The first player in the shuffled order is set as the {@code activePlayer}.
      * Finally, the game is marked as {@code gameStarted = true}.
      */
-    public void randomizePlayerOrder() {
-        List<String> order = new ArrayList<>(players);
-        Collections.shuffle(order);
-        players.clear();
-        players.addAll(order);
-        activePlayer = order.get(0);
+    public synchronized void randomizePlayerOrder() {
+        playerOrder.clear();
+        playerOrder.addAll(players);
+        Collections.shuffle(playerOrder);
+        activePlayer = playerOrder.getFirst();
         gameStarted = true;
     }
 
@@ -225,13 +248,26 @@ public class Lobby {
      * If the lobby has no players or no active player is set, this method returns early.
      * The turn wraps around to the first player after the last player in the sequence.
      */
-    public void nextPlayerTurn() throws GameException {
-        if (players.isEmpty() || activePlayer == null){
-            throw new GameException("Next turn failed, players empty or activePlayer is null: lobbyId=%s", lobbyId);
-        };
-        List<String> order = new ArrayList<>(players);
-        int idx = order.indexOf(activePlayer);
-        activePlayer = order.get((idx + 1) % order.size());
+    public synchronized void nextPlayerTurn() throws GameException {
+        if (playerOrder.isEmpty() || activePlayer == null) {
+            logger.errorf("Next turn failed, players empty or activePlayer is null: lobbyId=%s", lobbyId);
+            throw new GameException("Executing next turn failed");
+        }
+        int currentIdx = playerOrder.indexOf(activePlayer);
+        int nextIdx;
+        if ((currentIdx == playerOrder.size() - 1 && roundsPlayed == 0)) {
+            //After the first round, the next round is played in reverse and
+            //it is again the turn of the last player
+            nextIdx = currentIdx;
+            roundsPlayed++;
+        } else {
+            nextIdx = roundsPlayed == 1 ? Math.max(0, currentIdx - 1) : (currentIdx + 1) % playerOrder.size();
+            if (nextIdx == 0) {
+                roundsPlayed++;
+            }
+        }
+
+        activePlayer = playerOrder.get(nextIdx);
     }
 
     /**
@@ -243,8 +279,17 @@ public class Lobby {
     public void resetForNewGame() {
         this.gameStarted = false;
         this.activePlayer = null;
+        this.playerOrder.clear();
+        this.roundsPlayed = 0;
     }
 
+    public int getRoundsPlayed() {
+        return roundsPlayed;
+    }
+
+    public List<String> getPlayerOrder() {
+        return List.copyOf(playerOrder);
+    }
 
     /**
      * Sets a specific player order for the game.
@@ -256,7 +301,6 @@ public class Lobby {
      *              The order of players in this list will determine the sequence of turns.
      */
     public void setPlayerOrder(List<String> order) {
-        players.clear();
-        players.addAll(order);
+        playerOrder.addAll(order);
     }
 }

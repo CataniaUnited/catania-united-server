@@ -49,7 +49,7 @@ public interface LobbyService {
      * @param lobbyId The ID of the lobby.
      * @param player  The ID of the player to remove.
      */
-    void removePlayerFromLobby(String lobbyId, String player);
+    void removePlayerFromLobby(String lobbyId, String player) throws GameException;
 
     /**
      * Retrieves a lobby by its unique ID.
