@@ -21,7 +21,7 @@ public abstract class Port implements Placable {
     protected final int inputResourceAmount;
     protected SettlementPosition settlementPosition1;
     protected SettlementPosition settlementPosition2;
-    private final double PORT_DISTANCE = 10.0;
+    private final static double PORT_DISTANCE = 10.0;
 
     protected double portCenterX;
     protected double portCenterY;
@@ -140,7 +140,8 @@ public abstract class Port implements Placable {
         }
 
         double lengthNormal = Math.sqrt(normalX * normalX + normalY * normalY);
-        double unitNormalX = 0, unitNormalY = 0;
+        double unitNormalX = 0;
+        double unitNormalY = 0;
         if (lengthNormal > 0.0001) {
             unitNormalX = normalX / lengthNormal;
             unitNormalY = normalY / lengthNormal;
@@ -151,16 +152,16 @@ public abstract class Port implements Placable {
         this.portCenterY = midY + unitNormalY * PORT_DISTANCE;
 
         // Step 7: Bridge 1 (from settlementPosition1 to portCenter)
-        double vec_sp1_to_portX = this.portCenterX - x1;
-        double vec_sp1_to_portY = this.portCenterY - y1;
-        this.bridge1Rotation = Math.atan2(vec_sp1_to_portY, vec_sp1_to_portX);
+        double vecSp1ToPortX = this.portCenterX - x1;
+        double vecSp1ToPortY = this.portCenterY - y1;
+        this.bridge1Rotation = Math.atan2(vecSp1ToPortY, vecSp1ToPortX);
         this.bridgeX1 = (x1 + this.portCenterX) / 2;
         this.bridgeY1 = (y1 + this.portCenterY) / 2;
 
         // Step 7: Bridge 2 (from settlementPosition2 to portCenter)
-        double vec_settlementPosition2_to_portX = this.portCenterX - x2;
-        double vec_settlementPosition2_to_portY = this.portCenterY - y2;
-        this.bridge2Rotation = Math.atan2(vec_settlementPosition2_to_portY, vec_settlementPosition2_to_portX);
+        double vecSettlementPosition2ToPortX = this.portCenterX - x2;
+        double vecSettlementPosition2ToPortY = this.portCenterY - y2;
+        this.bridge2Rotation = Math.atan2(vecSettlementPosition2ToPortY, vecSettlementPosition2ToPortX);
         this.bridgeX2 = (x2 + this.portCenterX) / 2;
         this.bridgeY2 = (y2 + this.portCenterY) / 2;
     }
