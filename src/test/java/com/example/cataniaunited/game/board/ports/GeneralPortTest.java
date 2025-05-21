@@ -1,6 +1,8 @@
 package com.example.cataniaunited.game.board.ports;
 
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -194,5 +196,36 @@ class GeneralPortTest {
                         "2W, 2C, 2S for 2 resources - fails specific bundle check"
                 )
         );
+    }
+
+    @Test
+    void toJsonShouldIncludePortTypeAndSuperClassData() {
+        ObjectNode jsonNode = generalPort.toJson();
+
+        assertTrue(jsonNode.has("portType"), "JSON should contain 'portType' field.");
+        assertEquals("GeneralPort", jsonNode.get("portType").asText(), "'portType' field should be 'GeneralPort'.");
+
+        assertTrue(jsonNode.has("inputResourceAmount"), "JSON should contain 'inputResourceAmount' from superclass.");
+        assertEquals(3, jsonNode.get("inputResourceAmount").asInt(), "'inputResourceAmount' should be 3 for a GeneralPort.");
+
+        assertTrue(jsonNode.has("portStructure"), "JSON should contain 'portStructure' node from superclass.");
+        JsonNode portStructureNode = jsonNode.get("portStructure");
+
+        assertTrue(portStructureNode.has("port"), "'portStructure' should contain a 'port' object.");
+        JsonNode portSubNode = portStructureNode.get("port");
+        assertEquals(0.0, portSubNode.get("x").asDouble(), 0.001, "Default port x-coordinate should be 0.0.");
+        assertEquals(0.0, portSubNode.get("y").asDouble(), 0.001, "Default port y-coordinate should be 0.0.");
+        assertEquals(0.0, portSubNode.get("rotation").asDouble(), 0.001, "Default port rotation should be 0.0.");
+
+        assertTrue(portStructureNode.has("bridge1"), "'portStructure' should contain a 'bridge1' object.");
+        JsonNode bridge1Node = portStructureNode.get("bridge1");
+        assertEquals(0.0, bridge1Node.get("x").asDouble(), 0.001);
+
+        assertTrue(portStructureNode.has("bridge2"), "'portStructure' should contain a 'bridge2' object.");
+        JsonNode bridge2Node = portStructureNode.get("bridge2");
+        assertEquals(0.0, bridge2Node.get("x").asDouble(), 0.001);
+
+        assertFalse(portStructureNode.has("settlementPosition1Id"), "Should not have settlementPosition1Id when settlements are not set.");
+        assertFalse(portStructureNode.has("settlementPosition2Id"), "Should not have settlementPosition2Id when settlements are not set.");
     }
 }

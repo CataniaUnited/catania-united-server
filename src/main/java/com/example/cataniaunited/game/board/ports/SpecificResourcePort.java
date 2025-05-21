@@ -82,7 +82,6 @@ public class SpecificResourcePort extends Port {
         ObjectNode node = super.toJson();
         node.put("portType", "SpecificResourcePort");
         node.put("resource", this.tradeAbleResource.name());
-        node.put("ratio", this.inputResourceAmount + ":1 " + this.tradeAbleResource.name());
         return node;
     }
 }

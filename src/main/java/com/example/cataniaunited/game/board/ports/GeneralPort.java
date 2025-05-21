@@ -81,7 +81,6 @@ public class GeneralPort extends Port {
     public ObjectNode toJson() {
         ObjectNode node = super.toJson();
         node.put("portType", "GeneralPort");
-        node.put("ratio", this.inputResourceAmount + ":1 Any");
         return node;
     }
 }

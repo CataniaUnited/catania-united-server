@@ -1,6 +1,8 @@
 package com.example.cataniaunited.game.board.ports;
 
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -19,7 +21,7 @@ class SpecificResourcePortTest {
     void constructorWithValidResourceShouldCreatePort() {
         SpecificResourcePort woodPort = new SpecificResourcePort(TileType.WOOD);
         assertEquals(2, woodPort.inputResourceAmount, "SpecificResourcePort should have an inputResourceAmount of 2.");
-        assertEquals(TileType.WOOD, woodPort.getTradeAbleResource(), "Port resource should be WOOD.");
+        assertEquals(TileType.WOOD, woodPort.tradeAbleResource, "Port resource should be WOOD.");
     }
 
     @Test
@@ -34,6 +36,7 @@ class SpecificResourcePortTest {
         assertEquals("Specific port must trade a valid resource type.", exception.getMessage());
     }
 
+    // Helper Method to avoid complications
     private TileType getDifferentResource(TileType typeToAvoid) {
         for (TileType t : TileType.values()) {
             if (t != typeToAvoid && t != TileType.WASTE) {
@@ -144,5 +147,54 @@ class SpecificResourcePortTest {
         List<TileType> offered = Arrays.asList(portResource, portResource);
         List<TileType> desired = Collections.singletonList(portResource);
         assertFalse(port.canTrade(offered, desired), "Trading " + portResource + " for " + portResource + " should be invalid.");
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = TileType.class, names = {"WOOD", "SHEEP", "WHEAT", "CLAY", "ORE"})
+    void getTradeAbleResourceShouldReturnCorrectResource(TileType portResource) {
+        SpecificResourcePort woodPort = new SpecificResourcePort(portResource);
+        assertEquals(portResource, woodPort.getTradeAbleResource(), "Wrong Resource Returned.");
+    }
+
+    @Test
+    void toJsonShouldIncludePortTypeResourceAndSuperClassData() {
+        SpecificResourcePort woodPort = new SpecificResourcePort(TileType.WOOD);
+
+        ObjectNode jsonNode = woodPort.toJson();
+
+        assertTrue(jsonNode.has("portType"), "JSON should contain 'portType' field.");
+        assertEquals("SpecificResourcePort", jsonNode.get("portType").asText(), "'portType' field should be 'SpecificResourcePort'.");
+
+        assertTrue(jsonNode.has("resource"), "JSON should contain 'resource' field for the specific tradeable resource.");
+        assertEquals(TileType.WOOD.name(), jsonNode.get("resource").asText(), "'resource' field should be 'WOOD'.");
+
+        assertTrue(jsonNode.has("inputResourceAmount"), "JSON should contain 'inputResourceAmount' from superclass.");
+        assertEquals(2, jsonNode.get("inputResourceAmount").asInt(), "'inputResourceAmount' should be 2 for a SpecificResourcePort.");
+
+        assertTrue(jsonNode.has("portStructure"), "JSON should contain 'portStructure' node from superclass.");
+        JsonNode portStructureNode = jsonNode.get("portStructure");
+
+        assertTrue(portStructureNode.has("port"), "'portStructure' should contain a 'port' object.");
+        JsonNode portSubNode = portStructureNode.get("port");
+        assertEquals(0.0, portSubNode.get("x").asDouble(), 0.001, "Default port x-coordinate should be 0.0.");
+        assertEquals(0.0, portSubNode.get("y").asDouble(), 0.001, "Default port y-coordinate should be 0.0.");
+        assertEquals(0.0, portSubNode.get("rotation").asDouble(), 0.001, "Default port rotation should be 0.0.");
+
+        assertTrue(portStructureNode.has("bridge1"), "'portStructure' should contain a 'bridge1' object.");
+        JsonNode bridge1Node = portStructureNode.get("bridge1");
+        assertEquals(0.0, bridge1Node.get("x").asDouble(), 0.001);
+
+        assertTrue(portStructureNode.has("bridge2"), "'portStructure' should contain a 'bridge2' object.");
+        JsonNode bridge2Node = portStructureNode.get("bridge2");
+        assertEquals(0.0, bridge2Node.get("x").asDouble(), 0.001);
+
+        assertFalse(portStructureNode.has("settlementPosition1Id"), "Should not have settlementPosition1Id when settlements are not set.");
+        assertFalse(portStructureNode.has("settlementPosition2Id"), "Should not have settlementPosition2Id when settlements are not set.");
+
+
+        SpecificResourcePort sheepPort = new SpecificResourcePort(TileType.SHEEP);
+        ObjectNode sheepJsonNode = sheepPort.toJson();
+        assertTrue(sheepJsonNode.has("resource"), "JSON for sheep port should contain 'resource' field.");
+        assertEquals(TileType.SHEEP.name(), sheepJsonNode.get("resource").asText(), "'resource' field should be 'SHEEP' for a sheep port.");
     }
 }
