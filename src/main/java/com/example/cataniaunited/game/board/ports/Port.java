@@ -21,7 +21,7 @@ public abstract class Port implements Placable {
     protected final int inputResourceAmount;
     protected SettlementPosition settlementPosition1;
     protected SettlementPosition settlementPosition2;
-    private final static double PORT_DISTANCE = 10.0;
+    private static final double PORT_DISTANCE = 10.0;
 
     protected double portCenterX;
     protected double portCenterY;
