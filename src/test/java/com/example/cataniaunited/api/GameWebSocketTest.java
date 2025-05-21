@@ -1169,7 +1169,7 @@ public class GameWebSocketTest {
         Lobby lobby = lobbyService.getLobbyById(actualLobbyId);
         assertNotNull(lobby, "Lobby should not be null after retrieval");
 
-        gameService.startGame(actualLobbyId);
+        gameService.startGame(actualLobbyId, player1ActualId);
         lobby.setActivePlayer(player1ActualId);
 
         MessageDTO rollDiceMsg = new MessageDTO(MessageType.ROLL_DICE, player1ActualId, actualLobbyId);
@@ -1283,7 +1283,7 @@ public class GameWebSocketTest {
         lobbyService.joinLobbyByCode(actualLobbyId, player2ActualId);
         System.out.println("Test: Player " + player2ActualId + " joined lobby " + actualLobbyId);
 
-        gameService.startGame(actualLobbyId);
+        gameService.startGame(actualLobbyId, player1ActualId);
         System.out.println("Test: Gameboard created for lobby " + actualLobbyId);
 
         Lobby lobby = lobbyService.getLobbyById(actualLobbyId);
@@ -1575,14 +1575,14 @@ public class GameWebSocketTest {
         String lobbyId = lobbyService.createLobby(player1.getUniqueId());
         lobbyService.joinLobbyByCode(lobbyId, player2.getUniqueId());
 
-        MessageDTO startedMessage = new MessageDTO(MessageType.START_GAME, null, lobbyId);
+        MessageDTO startedMessage = new MessageDTO(MessageType.START_GAME, player1.getUniqueId(), lobbyId);
         connection.sendTextAndAwait(startedMessage);
 
         assertTrue(latch.await(5, TimeUnit.SECONDS), "never saw GAME_STARTED");
         assertEquals(1, seen.size());
         assertEquals(MessageType.GAME_STARTED, seen.get(0).getType());
 
-        verify(gameService).startGame(lobbyId);
+        verify(gameService).startGame(lobbyId, player1.getUniqueId());
         verify(lobbyService, atLeastOnce()).getLobbyById(lobbyId);
     }
 

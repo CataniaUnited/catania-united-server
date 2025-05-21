@@ -5,11 +5,15 @@ import com.example.cataniaunited.player.PlayerColor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class LobbyTest {
 
@@ -152,10 +156,10 @@ class LobbyTest {
     }
 
     @Test
-    void randomizePlayerOrder_changesOrderButKeepsSameElements() {
+    void startGameChangesOrderButKeepsSameElements() {
         assertTrue(lobby.getPlayerOrder().isEmpty());
         assertEquals(3, lobby.getPlayers().size());
-        lobby.randomizePlayerOrder();
+        lobby.startGame();
         assertEquals(lobby.getPlayers().size(), lobby.getPlayerOrder().size());
         assertTrue(lobby.getPlayerOrder().containsAll(lobby.getPlayers()));
     }

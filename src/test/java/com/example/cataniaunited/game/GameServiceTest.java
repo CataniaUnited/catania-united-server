@@ -34,7 +34,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 
@@ -64,10 +63,9 @@ class GameServiceTest {
     }
 
     @Test
-    void startGame_setsFlagsBroadcastsAndReturnsDto() throws GameException {
+    void startGame_setsFlagsAndReturnsDto() throws GameException {
         String hostId = "host";
         String lobbyId = lobbyService.createLobby(hostId);
-
 
         Lobby lobbySpy = spy(lobbyService.getLobbyById(lobbyId));
         lobbySpy.getPlayers().add("p2");
@@ -83,17 +81,46 @@ class GameServiceTest {
         when(playerService.getPlayerById(hostId)).thenReturn(host);
         when(playerService.getPlayerById("p2")).thenReturn(p2);
 
-        MessageDTO dto = gameService.startGame(lobbyId);
+        MessageDTO dto = gameService.startGame(lobbyId, hostId);
         assertNotNull(dto);
         assertEquals(MessageType.GAME_STARTED, dto.getType());
         assertEquals(lobbyId, dto.getLobbyId());
 
         assertFalse(dto.getMessageNode("playerOrder").isArray());
         assertTrue(dto.getMessageNode("board").isObject());
+    }
 
-        verify(host).sendMessage(dto);
-        verify(p2).sendMessage(dto);
-        verifyNoMoreInteractions(host, p2);
+    @Test
+    void startGameShouldThrowExceptionIfGameIsAlreadyStarted() throws GameException {
+        String playerId = "player";
+        String lobbyId = lobbyService.createLobby(playerId);
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+        lobby.setGameStarted(true);
+        lobby.addPlayer(playerId);
+        lobby.addPlayer("Player2");
+        GameException ge = assertThrows(GameException.class, () -> gameService.startGame(lobbyId, playerId));
+        assertEquals("Starting of game failed", ge.getMessage());
+    }
+
+    @Test
+    void startGameShouldThrowExceptionIfPlayerCountIsSmallerThanTwo() throws GameException {
+        String playerId = "player";
+        String lobbyId = lobbyService.createLobby(playerId);
+        GameException ge = assertThrows(GameException.class, () -> gameService.startGame(lobbyId, "Player1"));
+        assertEquals("Starting of game failed", ge.getMessage());
+    }
+
+    @Test
+    void startGameShouldThrowExceptionIfRequestingPlayerIsNotHost() throws GameException {
+        String playerId = "player";
+        String notHostPlayerId = "notHostPlayer";
+        String lobbyId = lobbyService.createLobby(playerId);
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+        lobby.setGameStarted(false);
+        lobby.addPlayer(playerId);
+        lobby.addPlayer(notHostPlayerId);
+        GameException ge = assertThrows(GameException.class, () -> gameService.startGame(lobbyId, notHostPlayerId));
+        assertEquals("Starting of game failed", ge.getMessage());
     }
 
     @Test

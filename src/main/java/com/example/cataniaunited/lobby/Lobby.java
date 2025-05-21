@@ -218,11 +218,11 @@ public class Lobby {
      * @return {@code true} if all conditions are met, {@code false} otherwise.
      */
     public boolean canStartGame(String requestingPlayer) {
+        logger.debugf("Trying to start game in lobby: lobbyId=%s, hostPlayer=%s, players = %s, isGameStarted = %s", lobbyId, hostPlayer, players, gameStarted);
         return hostPlayer.equals(requestingPlayer)
                 && players.size() >= 2
                 && !gameStarted;
     }
-
 
     /**
      * Randomizes the order of players currently in the lobby to determine the turn sequence for the game.
@@ -232,7 +232,7 @@ public class Lobby {
      * The first player in the shuffled order is set as the {@code activePlayer}.
      * Finally, the game is marked as {@code gameStarted = true}.
      */
-    public synchronized void randomizePlayerOrder() {
+    public synchronized void startGame() {
         playerOrder.clear();
         playerOrder.addAll(players);
         Collections.shuffle(playerOrder);
@@ -244,7 +244,7 @@ public class Lobby {
     /**
      * Advances the turn to the next player in the sequence.
      * The sequence is determined by the current order of players in the {@code players} set
-     * (which was established by {@link #randomizePlayerOrder()} or {@link #setPlayerOrder(List)}).
+     * (which was established by {@link #startGame()} or {@link #setPlayerOrder(List)}).
      * If the lobby has no players or no active player is set, this method returns early.
      * The turn wraps around to the first player after the last player in the sequence.
      */

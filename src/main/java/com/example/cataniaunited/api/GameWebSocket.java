@@ -455,16 +455,8 @@ public class GameWebSocket {
      * @throws GameException if the game cannot be started (e.g., not enough players, game already started).
      */
     private Uni<MessageDTO> handleStartGame(MessageDTO message) throws GameException {
-        MessageDTO startPkt = gameService.startGame(message.getLobbyId());
-
-        GameBoard board = gameService.getGameboardByLobbyId(message.getLobbyId());
-        MessageDTO boardPkt = new MessageDTO(MessageType.GAME_BOARD_JSON,
-                null, message.getLobbyId(), board.getJson());
-        lobbyService.notifyPlayers(message.getLobbyId(), boardPkt);
-        return lobbyService.notifyPlayers(message.getLobbyId(), startPkt)
-                .chain(() -> lobbyService.notifyPlayers(message.getLobbyId(), boardPkt))
-                .onFailure(GameException.class)
-                .recoverWithItem(boardPkt);
+        MessageDTO response = gameService.startGame(message.getLobbyId(), message.getPlayer());
+        return lobbyService.notifyPlayers(message.getLobbyId(), response);
     }
 
     /**

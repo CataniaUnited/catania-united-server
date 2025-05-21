@@ -3,7 +3,6 @@ package com.example.cataniaunited.game;
 import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.exception.GameException;
-import com.example.cataniaunited.exception.ui.InvalidTurnException;
 import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.lobby.Lobby;
 import com.example.cataniaunited.lobby.LobbyService;
@@ -18,8 +17,6 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -120,36 +117,23 @@ public class GameService {
      * @return A {@link MessageDTO} of type GAME_STARTED containing initial game state (player order, game board).
      * @throws GameException if the game cannot be started (e.g., already started, not enough players).
      */
-    public MessageDTO startGame(String lobbyId) throws GameException {
+    public MessageDTO startGame(String lobbyId, String playerId) throws GameException {
         Lobby lobby = lobbyService.getLobbyById(lobbyId);
 
-        if (lobby.isGameStarted())
-            throw new GameException("Game already started");
-        if (lobby.getPlayers().size() < 2)
-            throw new GameException("Need at least 2 players");
+        if (!lobby.canStartGame(playerId)) {
+            throw new GameException("Starting of game failed");
+        }
 
         GameBoard board = createGameboard(lobbyId);
-
-        List<String> order = new ArrayList<>(lobby.getPlayers());
-        Collections.shuffle(order);
-        lobby.setPlayerOrder(order);
-        lobby.setActivePlayer(order.get(0));
-        lobby.setGameStarted(true);
+        lobby.startGame();
+        List<String> order = lobby.getPlayerOrder();
 
         ObjectNode payload = JsonNodeFactory.instance.objectNode();
         payload.putPOJO("playerOrder", order);
         payload.set("gameboard", board.getJson());
 
-        MessageDTO dto = new MessageDTO(
-                MessageType.GAME_STARTED, null, lobbyId, payload);
-
-        order.stream()
-                .map(playerService::getPlayerById)
-                .filter(Objects::nonNull)
-                .forEach(p -> p.sendMessage(dto));
-
         logger.infof("Game started in lobby: lobbyId=%s, order=%s", lobbyId, order);
-        return dto;
+        return new MessageDTO(MessageType.GAME_STARTED, null, lobbyId, payload);
     }
 
     /**
