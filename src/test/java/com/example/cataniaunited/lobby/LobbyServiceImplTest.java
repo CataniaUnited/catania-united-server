@@ -24,6 +24,7 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -31,6 +32,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
@@ -92,6 +94,21 @@ class LobbyServiceImplTest {
             assertFalse(ids.contains(id), "Duplicate Lobby ID found: " + id);
             ids.add(id);
         }
+    }
+
+    @Test
+    void createLobbyShouldReGenerateLobbyIdsUntilAUniqueOneIsFound() {
+        String lobbyId = lobbyService.createLobby("Player 1");
+        when(lobbyService.generateLobbyId())
+                .thenReturn(lobbyId)
+                .thenReturn(lobbyId)
+                .thenCallRealMethod();
+        String newLobbyId = lobbyService.createLobby("Player 1");
+
+        assertNotEquals(lobbyId, newLobbyId);
+
+        //4 times, since one call on initial create and then 3 calls when creating second lobby
+        verify(lobbyService, times(4)).generateLobbyId();
     }
 
     @Test
@@ -218,7 +235,9 @@ class LobbyServiceImplTest {
         Lobby lobby = spy(lobbyService.getLobbyById(lobbyId));
         lobby.setActivePlayer("anotherPlayer");
 
-        InvalidTurnException ite = assertThrows(InvalidTurnException.class, () -> {lobbyService.checkPlayerTurn(lobbyId, playerId);});
+        InvalidTurnException ite = assertThrows(InvalidTurnException.class, () -> {
+            lobbyService.checkPlayerTurn(lobbyId, playerId);
+        });
         assertEquals("It is not your turn!", ite.getMessage());
     }
 
