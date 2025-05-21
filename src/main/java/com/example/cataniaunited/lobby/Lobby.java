@@ -233,8 +233,7 @@ public class Lobby {
      * Finally, the game is marked as {@code gameStarted = true}.
      */
     public synchronized void startGame() {
-        playerOrder.clear();
-        playerOrder.addAll(players);
+        setPlayerOrder(players.stream().toList());
         Collections.shuffle(playerOrder);
         activePlayer = playerOrder.getFirst();
         gameStarted = true;
@@ -301,6 +300,7 @@ public class Lobby {
      *              The order of players in this list will determine the sequence of turns.
      */
     public void setPlayerOrder(List<String> order) {
+        playerOrder.clear();
         playerOrder.addAll(order);
     }
 }
