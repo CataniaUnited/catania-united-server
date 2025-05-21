@@ -134,20 +134,16 @@ public class LobbyServiceImpl implements LobbyService {
      * Restores the player's color to the available pool if they had one.
      */
     @Override
-    public void removePlayerFromLobby(String lobbyId, String player) {
-        Lobby lobby = lobbies.get(lobbyId);
-        if (lobby != null) {
-            PlayerColor color = lobby.getPlayerColor(player);
-            if (color != null) {
-                lobby.restoreColor(color);
-                logger.infof("Color %s returned to pool from player %s", color, player);
-            }
-            lobby.removePlayer(player);
-            lobby.removePlayerColor(player);
-            logger.infof("Player %s removed from lobby %s", player, lobbyId);
-        } else {
-            logger.warnf("Attempted to remove player from non-existing lobby: %s", lobbyId);
+    public void removePlayerFromLobby(String lobbyId, String player) throws GameException {
+        Lobby lobby = getLobbyById(lobbyId);
+        PlayerColor color = lobby.getPlayerColor(player);
+        if (color != null) {
+            lobby.restoreColor(color);
+            logger.infof("Color %s returned to pool from player %s", color, player);
         }
+        lobby.removePlayer(player);
+        lobby.removePlayerColor(player);
+        logger.infof("Player %s removed from lobby %s", player, lobbyId);
     }
 
     /**
