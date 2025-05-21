@@ -97,18 +97,16 @@ public class LobbyServiceImpl implements LobbyService {
      */
     @Override
     public boolean joinLobbyByCode(String lobbyId, String player) {
-        try{
+        try {
             Lobby lobby = getLobbyById(lobbyId);
-            if (lobby != null) {
-                PlayerColor assignedColor = setPlayerColor(lobby, player);
-                if (assignedColor == null) {
-                    return false;
-                }
-                lobby.addPlayer(player);
-                logger.infof("Player %s joined lobby %s with color %s", player, lobbyId, assignedColor);
-                return true;
+            PlayerColor assignedColor = setPlayerColor(lobby, player);
+            if (assignedColor == null) {
+                return false;
             }
-        } catch (GameException ge){
+            lobby.addPlayer(player);
+            logger.infof("Player %s joined lobby %s with color %s", player, lobbyId, assignedColor);
+            return true;
+        } catch (GameException ge) {
             logger.errorf(ge, "Invalid or expired lobby ID: %s", lobbyId);
         }
         return false;
