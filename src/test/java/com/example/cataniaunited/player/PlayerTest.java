@@ -4,6 +4,7 @@ import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.exception.InsufficientResourcesException;
+import com.example.cataniaunited.game.board.ports.Port;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -386,6 +387,93 @@ class PlayerTest {
                 .assertTerminated();
 
         verify(mockConnection).sendText(testMessage);
+    }
+
+    @Test
+    void addPortWithNullPortShouldThrowIllegalArgumentException() {
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> player.addPort(null));
+        assertEquals("Port can't be null", exception.getMessage());
+    }
+
+    @Test
+    void addPortShouldAddPortToAccessiblePortsAndIncreaseSetSize() {
+
+        Port mockPort1 = mock(Port.class);
+        Port mockPort2 = mock(Port.class);
+
+        assertTrue(player.accessiblePorts.isEmpty(), "Accessible ports should be empty initially.");
+
+        player.addPort(mockPort1);
+        assertEquals(1, player.accessiblePorts.size(), "Size should be 1 after adding one port.");
+        assertTrue(player.accessiblePorts.contains(mockPort1), "Accessible ports should contain the first added port.");
+
+        player.addPort(mockPort2);
+        assertEquals(2, player.accessiblePorts.size(), "Size should be 2 after adding a second distinct port.");
+        assertTrue(player.accessiblePorts.contains(mockPort2), "Accessible ports should contain the second added port.");
+        assertTrue(player.accessiblePorts.contains(mockPort1), "Accessible ports should still contain the first port.");
+    }
+
+    @Test
+    void addPortAddingSamePortInstanceMultipleTimesShouldOnlyAddItOnceToSet() {
+
+        Port mockPort = mock(Port.class);
+
+        assertTrue(player.accessiblePorts.isEmpty(), "Accessible ports should be empty initially.");
+
+        player.addPort(mockPort);
+        assertEquals(1, player.accessiblePorts.size(), "Size should be 1 after adding the port once.");
+        assertTrue(player.accessiblePorts.contains(mockPort), "Accessible ports should contain the port.");
+
+        player.addPort(mockPort);
+        assertEquals(1, player.accessiblePorts.size(), "Size should remain 1 after adding the same port instance again, due to Set behavior.");
+        assertTrue(player.accessiblePorts.contains(mockPort), "Accessible ports should still contain the port.");
+
+        player.addPort(mockPort);
+        assertEquals(1, player.accessiblePorts.size(), "Size should still be 1.");
+    }
+
+
+
+    @Test
+    void equalsSameObjectShouldReturnTrue() {
+        assertTrue(player.equals(player), "A player should be equal to itself.");
+    }
+
+    @Test
+    void equalsNullObjectShouldReturnFalse() {
+        assertFalse(player.equals(null), "A player should not be equal to null.");
+    }
+
+    @Test
+    void equalsDifferentClassObjectShouldReturnFalse() {
+        Object otherObject = new Object();
+        assertFalse(player.equals(otherObject), "A player should not be equal to an object of a different class.");
+    }
+
+    @Test
+    void equalsDifferentPlayerObjectWithDifferentIdShouldReturnFalse() {
+        Player player1 = new Player("1");
+        Player player2 = new Player("2");
+
+        assertNotEquals(player1.getUniqueId(), player2.getUniqueId(), "Test setup: Player IDs should be different for this test.");
+
+        assertFalse(player1.equals(player2), "Two different players with different unique IDs should not be equal.");
+        assertFalse(player2.equals(player1), "Two different players with different unique IDs should not be equal.");
+    }
+
+    @Test
+    void equalsPlayerWithSameFieldsButDifferentInstanceShouldReturnFalseDueToUniqueId() {
+
+        String sharedUsername = "1";
+        WebSocketConnection mockConnection = mock(WebSocketConnection.class);
+
+        Player playerA = new Player(sharedUsername, mockConnection);
+        Player playerB = new Player(sharedUsername, mockConnection);
+
+        assertNotEquals(playerA.getUniqueId(), playerB.getUniqueId(), "Test setup: New instances should have different unique IDs.");
+
+        assertFalse(playerA.equals(playerB), "Players with same fields but different unique IDs should not be equal.");
+        assertFalse(playerB.equals(playerA), "Players with same fields but different unique IDs should not be equal.");
     }
 }
 

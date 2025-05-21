@@ -209,4 +209,8 @@ public abstract class Port implements Placable {
         
         return node;
     }
+
+    public List<SettlementPosition> getSettlementPositions() {
+        return List.of(settlementPosition1, settlementPosition2);
+    }
 }

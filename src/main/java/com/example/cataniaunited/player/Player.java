@@ -28,7 +28,8 @@ public class Player {
     private final WebSocketConnection connection;
     private int victoryPoints = 0;
     HashMap<TileType, Integer> resources = new HashMap<>();
-    private final Set<Port> accessiblePorts = new HashSet<>();
+
+    final Set<Port> accessiblePorts = new HashSet<>();
 
     private static final Logger logger = Logger.getLogger(Player.class);
 

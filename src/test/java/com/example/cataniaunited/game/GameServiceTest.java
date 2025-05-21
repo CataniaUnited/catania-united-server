@@ -4,6 +4,7 @@ import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.board.GameBoard;
+import com.example.cataniaunited.game.board.ports.Port;
 import com.example.cataniaunited.lobby.Lobby;
 import com.example.cataniaunited.lobby.LobbyService;
 import com.example.cataniaunited.player.Player;
@@ -269,5 +270,56 @@ class GameServiceTest {
         verify(mockConnection.broadcast()).sendText(any(MessageDTO.class));
     }
 
+    @Test
+    void placeSettlementWhenPositionHasPortShouldAddPortToPlayer() throws GameException {
+        String playerId = "playerWithPort";
+        Player mockPlayer = mock(Player.class);
+        int settlementPositionId = 10;
+        String lobbyId = lobbyMock.getLobbyId();
+        Port mockPort = mock(Port.class);
+
+        doReturn(lobbyMock).when(lobbyService).getLobbyById(lobbyId);
+        doReturn(true).when(lobbyMock).isPlayerTurn(playerId);
+        doReturn(PlayerColor.RED).when(lobbyMock).getPlayerColor(playerId);
+        doReturn(mockPlayer).when(playerService).getPlayerById(playerId);
+        doReturn(gameboardMock).when(gameService).getGameboardByLobbyId(lobbyId);
+
+        when(gameboardMock.getPortOfSettlement(settlementPositionId)).thenReturn(mockPort);
+        doNothing().when(gameboardMock).placeSettlement(any(Player.class), any(PlayerColor.class), anyInt());
+        doNothing().when(playerService).addVictoryPoints(anyString(), anyInt());
+
+
+        gameService.placeSettlement(lobbyId, playerId, settlementPositionId);
+
+        verify(gameboardMock).placeSettlement(mockPlayer, PlayerColor.RED, settlementPositionId);
+        verify(gameboardMock).getPortOfSettlement(settlementPositionId);
+        verify(mockPlayer).addPort(mockPort);
+        verify(playerService).addVictoryPoints(playerId, 1);
+    }
+
+    @Test
+    void placeSettlementWhenPositionHasNoPortShouldNotAddPortToPlayer() throws GameException {
+        String playerId = "playerWithoutPort";
+        Player mockPlayer = mock(Player.class);
+        int settlementPositionId = 12;
+        String lobbyId = lobbyMock.getLobbyId();
+
+        doReturn(lobbyMock).when(lobbyService).getLobbyById(lobbyId);
+        doReturn(true).when(lobbyMock).isPlayerTurn(playerId);
+        doReturn(PlayerColor.GREEN).when(lobbyMock).getPlayerColor(playerId);
+        doReturn(mockPlayer).when(playerService).getPlayerById(playerId);
+        doReturn(gameboardMock).when(gameService).getGameboardByLobbyId(lobbyId);
+
+        when(gameboardMock.getPortOfSettlement(settlementPositionId)).thenReturn(null);
+        doNothing().when(gameboardMock).placeSettlement(any(Player.class), any(PlayerColor.class), anyInt());
+        doNothing().when(playerService).addVictoryPoints(anyString(), anyInt());
+
+        gameService.placeSettlement(lobbyId, playerId, settlementPositionId);
+
+        verify(gameboardMock).placeSettlement(mockPlayer, PlayerColor.GREEN, settlementPositionId);
+        verify(gameboardMock).getPortOfSettlement(settlementPositionId);
+        verify(mockPlayer, never()).addPort(any(Port.class));
+        verify(playerService).addVictoryPoints(playerId, 1);
+    }
 
 }
