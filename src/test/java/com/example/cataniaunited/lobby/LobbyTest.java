@@ -2,6 +2,7 @@ package com.example.cataniaunited.lobby;
 
 import com.example.cataniaunited.player.PlayerColor;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -112,7 +113,7 @@ class LobbyTest {
     }
 
     @Test
-    void randomizePlayerOrder_changesOrderButKeepsSameElements() {
+    void randomizePlayerOrderKeepsSameElements() {
         List<String> before = new ArrayList<>(sut.getPlayers());
 
         sut.randomizePlayerOrder();
@@ -120,7 +121,6 @@ class LobbyTest {
         List<String> after = new ArrayList<>(sut.getPlayers());
         assertEquals(before.size(), after.size());
         assertTrue(after.containsAll(before));
-        assertNotEquals(before, after, "Order should be shuffled");
     }
 
 

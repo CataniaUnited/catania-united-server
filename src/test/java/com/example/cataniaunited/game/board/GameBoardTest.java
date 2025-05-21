@@ -346,6 +346,7 @@ class GameBoardTest {
     void debuggingTest() {
         GameBoard board = new GameBoard(4);
         board.generateBoard();
+        System.out.println(board.getJson());
         assertTrue(true);
     }
 }
