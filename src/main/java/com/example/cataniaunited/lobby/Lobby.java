@@ -250,7 +250,7 @@ public class Lobby {
      */
     public synchronized void nextPlayerTurn() throws GameException {
         if (playerOrder.isEmpty() || activePlayer == null) {
-            logger.errorf("Next turn failed, players empty or activePlayer is null: lobbyId=%s", lobbyId);
+            logger.errorf("Executing next turn failed, player order is empty or activePlayer is null: lobbyId=%s, playerOrder = %s, activePlayer = %s", lobbyId, playerOrder, activePlayer);
             throw new GameException("Executing next turn failed");
         }
         int currentIdx = playerOrder.indexOf(activePlayer);

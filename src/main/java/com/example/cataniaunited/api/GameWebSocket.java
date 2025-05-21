@@ -117,8 +117,9 @@ public class GameWebSocket {
     }
 
     Uni<MessageDTO> endTurn(MessageDTO message) throws GameException {
-        String activePlayer = lobbyService.nextTurn(message.getLobbyId(), message.getPlayer());
-        ObjectNode payload = JsonNodeFactory.instance.objectNode().put("activePlayer", activePlayer);
+        String activePlayerId = lobbyService.nextTurn(message.getLobbyId(), message.getPlayer());
+        ObjectNode payload = createGameBoardWithPlayers(message.getLobbyId());
+        payload.put("activePlayerId", activePlayerId);
         var response = new MessageDTO(MessageType.NEXT_TURN, payload);
         return lobbyService.notifyPlayers(message.getLobbyId(), response);
     }

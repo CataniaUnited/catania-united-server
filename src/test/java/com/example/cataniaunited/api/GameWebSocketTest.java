@@ -1581,9 +1581,99 @@ public class GameWebSocketTest {
         assertTrue(latch.await(5, TimeUnit.SECONDS), "never saw GAME_STARTED");
         assertEquals(1, seen.size());
         assertEquals(MessageType.GAME_STARTED, seen.get(0).getType());
+        assertTrue(lobbyService.getLobbyById(lobbyId).isGameStarted());
 
         verify(gameService).startGame(lobbyId, player1.getUniqueId());
         verify(lobbyService, atLeastOnce()).getLobbyById(lobbyId);
+    }
+
+    @Test
+    void testEndTurn() throws InterruptedException, GameException {
+        final String[] client1PlayerIdHolder = new String[1];
+        final String[] client2PlayerIdHolder = new String[1];
+
+        CountDownLatch connectionLatch = new CountDownLatch(2);
+
+        List<MessageDTO> player1ReceivedMessages = new CopyOnWriteArrayList<>();
+        CountDownLatch player1NextTurnLatch = new CountDownLatch(1);
+
+        System.out.println("Setting up Client 1...");
+        BasicWebSocketConnector client1Connector = BasicWebSocketConnector.create()
+                .baseUri(serverUri).path("/game")
+                .onTextMessage((conn, msg) -> {
+                    try {
+                        MessageDTO dto = objectMapper.readValue(msg, MessageDTO.class);
+                        System.out.println("Client1 RX: " + msg);
+
+                        if (dto.getType() == MessageType.CONNECTION_SUCCESSFUL) {
+                            client1PlayerIdHolder[0] = dto.getMessageNode("playerId").asText();
+                            System.out.println("Client1 Connected with ID: " + client1PlayerIdHolder[0]);
+                            connectionLatch.countDown();
+                        } else if (dto.getType() == MessageType.NEXT_TURN) {
+                            player1ReceivedMessages.add(dto);
+                            player1NextTurnLatch.countDown();
+                        }
+                    } catch (JsonProcessingException e) {
+                        fail("Client1: Failed to parse message: " + msg, e);
+                    }
+                });
+        var client1WebSocketClientConnection = client1Connector.connectAndAwait();
+        System.out.println("Client 1 connection object: " + client1WebSocketClientConnection);
+
+
+        System.out.println("Setting up Client 2...");
+        BasicWebSocketConnector client2Connector = BasicWebSocketConnector.create()
+                .baseUri(serverUri).path("/game")
+                .onTextMessage((conn, msg) -> {
+                    try {
+                        MessageDTO dto = objectMapper.readValue(msg, MessageDTO.class);
+                        System.out.println("Client2 RX: " + msg);
+                        if (dto.getType() == MessageType.CONNECTION_SUCCESSFUL) {
+                            client2PlayerIdHolder[0] = dto.getMessageNode("playerId").asText();
+                            System.out.println("Client2 Connected with ID: " + client2PlayerIdHolder[0]);
+                            connectionLatch.countDown();
+                        }
+                    } catch (JsonProcessingException e) {
+                        fail("Client2: Failed to parse message: " + msg, e);
+                    }
+                });
+        var client2WebSocketClientConnection = client2Connector.connectAndAwait();
+        System.out.println("Client 2 connection object: " + client2WebSocketClientConnection);
+
+
+        assertTrue(connectionLatch.await(10, TimeUnit.SECONDS), "Not all clients connected and received their IDs. Latch: " + connectionLatch.getCount());
+        assertNotNull(client1PlayerIdHolder[0], "Client 1 Player ID not set");
+        assertNotNull(client2PlayerIdHolder[0], "Client 2 Player ID not set");
+
+        String player1ActualId = client1PlayerIdHolder[0];
+        String player2ActualId = client2PlayerIdHolder[0];
+        System.out.println("Test: player1ActualId = " + player1ActualId);
+        System.out.println("Test: player2ActualId = " + player2ActualId);
+
+        String actualLobbyId = lobbyService.createLobby(player1ActualId);
+        System.out.println("Test: Created lobby with ID: " + actualLobbyId + " for host " + player1ActualId);
+        lobbyService.joinLobbyByCode(actualLobbyId, player2ActualId);
+        System.out.println("Test: Player " + player2ActualId + " joined lobby " + actualLobbyId);
+
+        gameService.startGame(actualLobbyId, player1ActualId);
+        System.out.println("Test: Gameboard created for lobby " + actualLobbyId);
+
+        Lobby lobby = lobbyService.getLobbyById(actualLobbyId);
+        lobby.setPlayerOrder(List.of(player1ActualId, player2ActualId));
+        lobby.setActivePlayer(player1ActualId);
+
+        MessageDTO messageDTO = new MessageDTO(MessageType.END_TURN, player1ActualId, actualLobbyId);
+        client1WebSocketClientConnection.sendTextAndAwait(messageDTO);
+
+        assertTrue(player1NextTurnLatch.await(10, TimeUnit.SECONDS));
+        assertEquals(1, player1ReceivedMessages.size());
+
+        var receivedDTO = player1ReceivedMessages.get(0);
+        assertEquals(receivedDTO.getType(), MessageType.NEXT_TURN);
+        assertEquals(player2ActualId, receivedDTO.getMessageNode("activePlayerId").asText());
+        assertNotNull(receivedDTO.getMessageNode("gameboard"));
+        assertNotNull(receivedDTO.getMessageNode("players"));
+
     }
 
     @Test
@@ -1828,4 +1918,3 @@ public class GameWebSocketTest {
 
 
 }
-//trying sonar cloud
