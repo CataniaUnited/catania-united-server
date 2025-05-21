@@ -2,6 +2,7 @@ package com.example.cataniaunited.game.board;
 
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.exception.ui.InsufficientResourcesException;
+import com.example.cataniaunited.game.board.ports.Port;
 import com.example.cataniaunited.game.board.tile_list_builder.Tile;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.example.cataniaunited.game.buildings.Settlement;
@@ -118,12 +119,14 @@ class GameBoardTest {
 
         List<Tile> tiles = gameBoard.getTileList();
         List<SettlementPosition> graph = gameBoard.getSettlementPositionGraph();
+        List<Port> ports = gameBoard.portList;
 
         // More Detailed tests have been conducted in the respective test classes
         assertNotNull(tiles, "Generated tile list should not be null");
         assertNotNull(graph, "Generated settlement graph should not be null");
         assertFalse(tiles.isEmpty(), "Generated tile list should not be empty");
         assertFalse(graph.isEmpty(), "Generated settlement graph should not be empty");
+        assertFalse(ports.isEmpty(), "Generated Port List should not be empty");
     }
 
     static Stream<Arguments> playerCountProvider() {
@@ -153,9 +156,9 @@ class GameBoardTest {
     @Disabled("BenchmarkTest Tests how many Players theoretically can play a game, doesn't test functionality, therefore disabled")
     @ParameterizedTest
     @MethodSource("benchMarkTestProvider")
-    void benchMarkTest(int sizeOfBoard) {
+    void benchMarkTest(int playerCount) {
         try {
-            new GameBoard(sizeOfBoard);
+            new GameBoard(playerCount);
         } catch (OutOfMemoryError e) {
             fail("Out of Memory");
         }
@@ -278,6 +281,7 @@ class GameBoardTest {
         assertTrue(boardJson.has("tiles"), "JSON should contain 'tiles' field");
         assertTrue(boardJson.has("settlementPositions"), "JSON should contain 'settlementPositions' field");
         assertTrue(boardJson.has("roads"), "JSON should contain 'roads' field");
+        assertTrue(boardJson.has("ports"), "JSON should contain 'ports' field");
         assertTrue(boardJson.has("ringsOfBoard"), "JSON should contain 'ringsOfBoard' field");
         assertTrue(boardJson.has("sizeOfHex"), "JSON should contain 'sizeOfHex' field");
 
@@ -289,6 +293,7 @@ class GameBoardTest {
         assertTrue(boardJson.get("tiles").isArray(), "'tiles' field should be a JSON array");
         assertTrue(boardJson.get("settlementPositions").isArray(), "'settlementPositions' field should be a JSON array");
         assertTrue(boardJson.get("roads").isArray(), "'roads' field should be a JSON array");
+        assertTrue(boardJson.get("ports").isArray(), "'ports' field should be a JSON array");
     }
 
     @Test
@@ -300,10 +305,12 @@ class GameBoardTest {
         List<Tile> expectedTiles = gameBoard.getTileList();
         List<SettlementPosition> expectedPositions = gameBoard.getSettlementPositionGraph();
         List<Road> expectedRoads = gameBoard.getRoadList();
+        List<Port> expectedPorts = gameBoard.portList;
 
         assertNotNull(expectedTiles, "Internal tile list should exist");
         assertNotNull(expectedPositions, "Internal position list should exist");
         assertNotNull(expectedRoads, "Internal road list should exist");
+        assertNotNull(expectedPorts, "Internal Port list should exist");
 
         // Get the JSON
         ObjectNode boardJson = gameBoard.getJson();
@@ -313,15 +320,18 @@ class GameBoardTest {
         JsonNode tilesNode = boardJson.get("tiles");
         JsonNode positionsNode = boardJson.get("settlementPositions");
         JsonNode roadsNode = boardJson.get("roads");
+        JsonNode portsNode = boardJson.get("ports");
 
         assertTrue(tilesNode.isArray(), "'tiles' node should be an array");
         assertTrue(positionsNode.isArray(), "'settlementPositions' node should be an array");
         assertTrue(roadsNode.isArray(), "'roads' node should be an array");
+        assertTrue(portsNode.isArray(), "'ports' node should be an array");
 
         // Compare sizes
         assertEquals(expectedTiles.size(), tilesNode.size(), "JSON tiles array size should match internal list size");
         assertEquals(expectedPositions.size(), positionsNode.size(), "JSON positions array size should match internal list size");
         assertEquals(expectedRoads.size(), roadsNode.size(), "JSON roads array size should match internal list size");
+        assertEquals(expectedPorts.size(), portsNode.size(), "JSON roads array size should match internal list size");
 
         // Optional: Basic check of first element structure (relies on individual toJson tests)
         if (!expectedTiles.isEmpty()) {
@@ -338,6 +348,11 @@ class GameBoardTest {
         }
     }
 
+    /**
+     * Test for debugging Purposes, generates a GameBoard and Passes Automatically. Used to get information of a generated board
+     * For example an example JSON ...
+     */
+    @Disabled("For Debugging Purposes")
     @Test
     void debuggingTest() {
         GameBoard board = new GameBoard(4);

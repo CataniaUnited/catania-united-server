@@ -4,6 +4,7 @@ import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.exception.ui.IntersectionOccupiedException;
 import com.example.cataniaunited.exception.ui.NoAdjacentRoadException;
 import com.example.cataniaunited.exception.ui.SpacingRuleViolationException;
+import com.example.cataniaunited.game.board.ports.Port;
 import com.example.cataniaunited.game.board.tile_list_builder.Tile;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.example.cataniaunited.game.buildings.Building;
@@ -465,14 +466,57 @@ class SettlementPositionTest {
         Building mockBuilding = mock(Building.class);
         when(mockBuilding.getPlayer()).thenReturn(player); // Building's owner
 
-        // Place the mock building
         settlementPosition.setBuilding(mockBuilding);
         assertEquals(mockBuilding, settlementPosition.building, "Building should be set correctly.");
 
-        // Act: Call the update method
         settlementPosition.update(TileType.WHEAT);
 
-        // Assert: Verify that distributeResourcesToPlayer was called on the building
         verify(mockBuilding, times(1)).distributeResourcesToPlayer(TileType.WHEAT);
+    }
+
+    @Test
+    void getPortInitiallyShouldReturnNull() {
+        assertNull(settlementPosition.getPort(), "Initially, the port should be null.");
+    }
+
+    @Test
+    void setPortWhenCurrentPortIsNullShouldSetThePort() {
+        Port mockPort = mock(Port.class);
+
+        assertNull(settlementPosition.getPort(), "Port should be null before setting.");
+
+        settlementPosition.setPort(mockPort);
+
+        assertNotNull(settlementPosition.getPort(), "Port should not be null after setting.");
+        assertEquals(mockPort, settlementPosition.getPort(), "The retrieved port should be the one that was set.");
+    }
+
+    @Test
+    void setPortWhenPortIsAlreadySetShouldNotChangeThePort() {
+        Port initialMockPort = mock(Port.class);
+        Port newMockPort = mock(Port.class);
+
+        settlementPosition.setPort(initialMockPort);
+        assertEquals(initialMockPort, settlementPosition.getPort(), "Initial port should be set correctly.");
+
+        settlementPosition.setPort(newMockPort);
+
+        assertEquals(initialMockPort, settlementPosition.getPort(), "Port should not have changed after attempting to set a new one when one was already present.");
+        assertNotEquals(newMockPort, settlementPosition.getPort(), "The port should not be the new port instance.");
+    }
+
+    @Test
+    void setPortWithNullArgumentShouldNotThrowErrorAndPortRemainsUnchanged() {
+        assertNull(settlementPosition.getPort(), "Port is initially null.");
+        settlementPosition.setPort(null);
+        assertNull(settlementPosition.getPort(), "Port should remain null if set to null when already null.");
+
+        Port mockPort = mock(Port.class);
+        settlementPosition.setPort(mockPort);
+        assertNotNull(settlementPosition.getPort());
+
+        settlementPosition.setPort(null);
+        assertNotNull(settlementPosition.getPort(), "Port should remain the originally set port, not become null.");
+        assertEquals(mockPort, settlementPosition.getPort(), "Port should be the original mockPort.");
     }
 }

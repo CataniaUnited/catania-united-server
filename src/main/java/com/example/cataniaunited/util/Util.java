@@ -1,5 +1,7 @@
 package com.example.cataniaunited.util;
 
+import java.util.List;
+
 public class Util {
 
     /**
@@ -19,5 +21,15 @@ public class Util {
      */
     public static boolean isEmpty(String str) {
         return str == null || str.trim().isEmpty();
+    }
+
+    /**
+     * Checks if a List is null or empty
+     *
+     * @param l The list to check.
+     * @return true if the object is null or empty; false otherwise.
+     */
+    public static boolean isEmpty(List<?> l) {
+        return l == null || l.isEmpty();
     }
 }

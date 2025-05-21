@@ -5,6 +5,7 @@ import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.exception.ui.IntersectionOccupiedException;
 import com.example.cataniaunited.exception.ui.NoAdjacentRoadException;
 import com.example.cataniaunited.exception.ui.SpacingRuleViolationException;
+import com.example.cataniaunited.game.board.ports.Port;
 import com.example.cataniaunited.game.board.tile_list_builder.Tile;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.example.cataniaunited.game.buildings.Building;
@@ -30,6 +31,7 @@ public class SettlementPosition implements Placable, Subscriber<TileType> {
     Building building = null;
     List<Road> roads = new ArrayList<>(3); // Max 3 roads per settlement position
     ArrayList<Tile> tiles = new ArrayList<>(3); // Max 3 tiles per settlement position
+    Port port = null;
 
     double[] coordinates = new double[2];
 
@@ -186,6 +188,17 @@ public class SettlementPosition implements Placable, Subscriber<TileType> {
         }
 
         this.building = building;
+    }
+
+    public void setPort(Port port) {
+        if (this.port != null)
+            return;
+
+        this.port = port;
+    }
+
+    public Port getPort() {
+        return port;
     }
 
     /**

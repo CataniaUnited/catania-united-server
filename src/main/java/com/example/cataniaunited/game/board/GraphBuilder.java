@@ -1,7 +1,11 @@
 package com.example.cataniaunited.game.board;
 
+import com.example.cataniaunited.game.board.ports.GeneralPort;
+import com.example.cataniaunited.game.board.ports.Port;
+import com.example.cataniaunited.game.board.ports.SpecificResourcePort;
 import com.example.cataniaunited.game.board.tile_list_builder.StandardTileListBuilder;
 import com.example.cataniaunited.game.board.tile_list_builder.Tile;
+import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 
 import java.util.*;
 
@@ -15,6 +19,7 @@ public class GraphBuilder {
     final List<Tile> tileList;
     List<SettlementPosition> nodeList;
     List<Road> roadList;
+    List<Port> portList;
     int sizeOfBoard;
 
     int nodeId=0;
@@ -54,6 +59,7 @@ public class GraphBuilder {
      * Generates the complete graph of SettlementPositions.
      * Orchestrates the building process layer by layer, assigns tiles to nodes,
      * and calculates coordinates for settlement positions and roads.
+     * Additionally, adds Ports and calculates the coordinates of them
      *
      * @return The generated list of {@link SettlementPosition} nodes.
      */
@@ -72,6 +78,9 @@ public class GraphBuilder {
         // Calculate coordinates and angles for roads
         // if possible refactor to reduce runtime complexity back to O(n)
         calculateRoadCoordinates();
+
+        // add ports
+        addPorts();
 
         return nodeList;
     }
@@ -303,6 +312,120 @@ public class GraphBuilder {
         roadList.add(roadToAdd);
     }
 
+    // TODO: Add Javadoc
+    private void addPorts() {
+        // We are only talking about the Outermost nodes
+        int startingIndex = (int) (6 * Math.pow((sizeOfBoard - 1), 2));
+        int numberOfCoastalSettlements = nodeList.size() - startingIndex;
+
+        int currentIndex = startingIndex;
+        int currentPortIndex = 0;
+        int portCount;
+        int rhythm;
+
+        List<Port> ports = getPortsToPlace(numberOfCoastalSettlements);
+        Collections.shuffle(ports);
+        portCount = ports.size();
+
+        // assign ports
+        rhythm = Math.max(2, numberOfCoastalSettlements / portCount);
+
+        while (currentPortIndex < portCount) {
+            if (currentIndex + 1 >= nodeList.size()) {
+                // Not enough space for this port
+                break;
+            }
+
+            Port currentPort = ports.get(currentPortIndex);
+            nodeList.get(currentIndex).setPort(currentPort);
+            nodeList.get(currentIndex + 1).setPort(currentPort);
+            currentPort.setAssociatedSettlements(nodeList.get(currentIndex), nodeList.get(currentIndex+1));
+            currentPort.calculatePosition();
+
+            currentIndex += rhythm;
+            currentPortIndex++;
+        }
+
+        portList = ports;
+    }
+
+
+    private List<Port> getPortsToPlace(int numberOfCoastalSettlements) {
+        List<Port> ports = new ArrayList<>();
+        TileType[] resourceTypes = Arrays.stream(TileType.values()).filter(type -> type != TileType.WASTE).toArray(TileType[]::new);
+
+        List<TileType> shuffledList = new ArrayList<>(Arrays.asList(resourceTypes));
+        Collections.shuffle(shuffledList);
+
+        resourceTypes = shuffledList.toArray(new TileType[0]);
+
+        int targetPortCount = calculateTargetPortCount(numberOfCoastalSettlements);
+
+        // --- Distribute Port Types ---
+        int specificPortCount;
+        int generalPortCount;
+
+        if (targetPortCount <= 5) { // prioritize specific ports if few
+            specificPortCount = targetPortCount;
+            generalPortCount = 0;
+        } else if (targetPortCount <= 11) { // Classic Boards: 5 specific, rest general
+            specificPortCount = 5;
+            generalPortCount = targetPortCount - specificPortCount;
+        } else { // More than 11 ports (very large boards)
+            // Maintain ratio from classic boards~45% general.
+            generalPortCount = (int) Math.round(targetPortCount * 0.45);
+            specificPortCount = targetPortCount - generalPortCount;
+        }
+
+
+        // Add general ports
+        for (int i = 0; i < generalPortCount; i++) {
+            ports.add(new GeneralPort());
+        }
+
+        // Add specific ports, cycling through types to distribute them
+        for (int i = 0; i < specificPortCount; i++) {
+            ports.add(new SpecificResourcePort(resourceTypes[i % resourceTypes.length]));
+        }
+        // This ensures that if specificPortCount is 7, you get WOOD,CLAY,SHEEP,WHEAT,ORE,WOOD,CLAY
+
+        return ports;
+    }
+
+    private int calculateTargetPortCount(int numberOfCoastalSettlements) {
+        int targetPortCount;
+        int basePortsForLargeBoards = 11;
+        int maximumPositionsPerPortForLargeBoards = 5;
+
+        // --- Determine Target Port Count ---
+        switch (sizeOfBoard) {
+            case 1:
+                return 0;
+            case 2: // 7 tiles, 18 coastal settlements
+                targetPortCount = 5;
+                break;
+            case 3: // Standard 3-4 player board (19 tiles, 30 coastal)
+                targetPortCount = 9; // 4 general, 5 specific (classic rules)
+                break;
+            case 4: // Standard 5-6 player board (37 tiles, 42 coastal)
+                targetPortCount = 11; // 6 general, 5 specific (classic rules)
+                break;
+            default:  // massive boards -> slower scaling (sqrt bases)
+                int additionalPorts = (sizeOfBoard - 4) / 2; // Add 1 port for every 2 rings
+                targetPortCount = basePortsForLargeBoards + additionalPorts;
+                // Ensure growth is not too slow at least one port every few settlements
+                int densityBasedMin = numberOfCoastalSettlements / maximumPositionsPerPortForLargeBoards;
+                targetPortCount = Math.max(targetPortCount, Math.max(11, densityBasedMin));
+                break;
+        }
+        return targetPortCount;
+    }
+
+    public List<Port> getPortList() {
+        return portList;
+    }
+
+// ------------------- Coordinate Calculation ------------------------
     /**
      * Calculates and sets the coordinates and rotation angle for all roads in the road list.
      * This is done after settlement positions have their coordinates calculated.
