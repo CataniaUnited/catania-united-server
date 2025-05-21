@@ -2,9 +2,9 @@ package com.example.cataniaunited.game.board;
 
 import com.example.cataniaunited.Subscriber;
 import com.example.cataniaunited.exception.GameException;
-import com.example.cataniaunited.exception.IntersectionOccupiedException;
-import com.example.cataniaunited.exception.NoAdjacentRoadException;
-import com.example.cataniaunited.exception.SpacingRuleViolationException;
+import com.example.cataniaunited.exception.ui.IntersectionOccupiedException;
+import com.example.cataniaunited.exception.ui.NoAdjacentRoadException;
+import com.example.cataniaunited.exception.ui.SpacingRuleViolationException;
 import com.example.cataniaunited.game.board.ports.Port;
 import com.example.cataniaunited.game.board.tile_list_builder.Tile;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;

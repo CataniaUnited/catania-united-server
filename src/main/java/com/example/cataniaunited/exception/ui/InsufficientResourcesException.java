@@ -1,4 +1,6 @@
-package com.example.cataniaunited.exception;
+package com.example.cataniaunited.exception.ui;
+
+import com.example.cataniaunited.exception.GameException;
 
 public class InsufficientResourcesException extends GameException {
 
