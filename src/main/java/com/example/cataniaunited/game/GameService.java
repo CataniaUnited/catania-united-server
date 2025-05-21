@@ -96,7 +96,7 @@ public class GameService {
         GameBoard gameboard = getGameboardByLobbyId(lobbyId);
         PlayerColor color = lobbyService.getPlayerColor(lobbyId, playerId);
         gameboard.placeCity(playerService.getPlayerById(playerId), color, settlementPositionId);
-        playerService.addVictoryPoints(playerId, 2);
+        playerService.addVictoryPoints(playerId, 1); // Only add one additional Point
     }
 
     /**
