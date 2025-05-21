@@ -3,13 +3,15 @@ package com.example.cataniaunited.util;
 import org.junit.jupiter.api.Test;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class UtilTest {
 
     @Test
     void testIsEmptyWithNullString() {
-        assertTrue(Util.isEmpty(null), "isEmpty should return true for null string.");
+        assertTrue(Util.isEmpty((String) null), "isEmpty should return true for null string.");
     }
 
     @Test
@@ -46,5 +48,21 @@ class UtilTest {
         assertNotNull(exception.getCause(), "InvocationTargetException should have a cause.");
         assertEquals(IllegalStateException.class, exception.getCause().getClass(), "The cause should be an IllegalStateException.");
         assertEquals("Utility class", exception.getCause().getMessage(), "The exception message should match.");
+    }
+
+
+    @Test
+    void testIsEmptyWithNullList() {
+        assertTrue(Util.isEmpty((List<?>) null), "isEmpty should return true for null List.");
+    }
+
+    @Test
+    void testIsEmptyWithEmptyList() {
+        assertTrue(Util.isEmpty(List.of()), "isEmpty should return true for an empty list.");
+    }
+
+    @Test
+    void testIsEmptyWithNonEmptyList() {
+        assertFalse(Util.isEmpty(List.of("Element")), "isEmpty should return false for a non-empty list.");
     }
 }

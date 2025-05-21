@@ -3,6 +3,7 @@ package com.example.cataniaunited.player;
 import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.exception.InsufficientResourcesException;
+import com.example.cataniaunited.game.board.ports.Port;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
@@ -11,11 +12,7 @@ import io.quarkus.websockets.next.WebSocketConnection;
 import io.smallrye.mutiny.Uni;
 import org.jboss.logging.Logger;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Random;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Represents a player in the Catan game.
@@ -31,6 +28,8 @@ public class Player {
     private final WebSocketConnection connection;
     private int victoryPoints = 0;
     HashMap<TileType, Integer> resources = new HashMap<>();
+
+    final Set<Port> accessiblePorts = new HashSet<>();
 
     private static final Logger logger = Logger.getLogger(Player.class);
 
@@ -112,6 +111,14 @@ public class Player {
 
     public int getVictoryPoints() {
         return victoryPoints;
+    }
+
+    public void addPort(Port port){
+        if (port == null){
+            throw new IllegalArgumentException("Port can't be null");
+        }
+
+        accessiblePorts.add(port);
     }
 
     /**

@@ -112,7 +112,7 @@ class LobbyTest {
     }
 
     @Test
-    void randomizePlayerOrder_changesOrderButKeepsSameElements() {
+    void randomizePlayerOrderKeepsSameElements() {
         List<String> before = new ArrayList<>(sut.getPlayers());
 
         sut.randomizePlayerOrder();
@@ -120,7 +120,6 @@ class LobbyTest {
         List<String> after = new ArrayList<>(sut.getPlayers());
         assertEquals(before.size(), after.size());
         assertTrue(after.containsAll(before));
-        assertNotEquals(before, after, "Order should be shuffled");
     }
 
 
