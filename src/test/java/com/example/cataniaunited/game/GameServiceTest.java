@@ -27,7 +27,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -104,7 +106,7 @@ class GameServiceTest {
     }
 
     @Test
-    void startGameShouldThrowExceptionIfPlayerCountIsSmallerThanTwo() throws GameException {
+    void startGameShouldThrowExceptionIfPlayerCountIsSmallerThanTwo() {
         String playerId = "player";
         String lobbyId = lobbyService.createLobby(playerId);
         GameException ge = assertThrows(GameException.class, () -> gameService.startGame(lobbyId, "Player1"));

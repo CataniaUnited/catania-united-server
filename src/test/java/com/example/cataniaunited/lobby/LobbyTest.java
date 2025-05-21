@@ -17,13 +17,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class LobbyTest {
 
-    Lobby lobby;
+    Lobby testLobby;
 
     @BeforeEach
     void setUpExtraLobby() {
-        lobby = new Lobby("L-extra", "host");
-        lobby.addPlayer("p2");
-        lobby.addPlayer("p3");
+        testLobby = new Lobby("L-extra", "host");
+        testLobby.addPlayer("p2");
+        testLobby.addPlayer("p3");
     }
 
     @Test
@@ -103,92 +103,92 @@ class LobbyTest {
 
     @Test
     void nextPlayerShouldThrowExceptionIfPlayerOrderIsEmpty() {
-        lobby.setPlayerOrder(List.of());
-        GameException ge = assertThrows(GameException.class, () -> lobby.nextPlayerTurn());
+        testLobby.setPlayerOrder(List.of());
+        GameException ge = assertThrows(GameException.class, () -> testLobby.nextPlayerTurn());
         assertEquals("Executing next turn failed", ge.getMessage());
     }
 
     @Test
     void nextPlayerShouldThrowExceptionIfActivePlayerIsNull() {
-        lobby.setActivePlayer(null);
-        GameException ge = assertThrows(GameException.class, () -> lobby.nextPlayerTurn());
+        testLobby.setActivePlayer(null);
+        GameException ge = assertThrows(GameException.class, () -> testLobby.nextPlayerTurn());
         assertEquals("Executing next turn failed", ge.getMessage());
     }
 
     @Test
     void testNextPlayerTurn() throws GameException {
         List<String> playerOrder = List.of("p2", "host", "p3");
-        lobby.setPlayerOrder(playerOrder);
-        lobby.setActivePlayer("p2");
+        testLobby.setPlayerOrder(playerOrder);
+        testLobby.setActivePlayer("p2");
 
         //First round in order
-        lobby.nextPlayerTurn();
-        assertEquals("host", lobby.getActivePlayer());
-        lobby.nextPlayerTurn();
-        assertEquals("p3", lobby.getActivePlayer());
+        testLobby.nextPlayerTurn();
+        assertEquals("host", testLobby.getActivePlayer());
+        testLobby.nextPlayerTurn();
+        assertEquals("p3", testLobby.getActivePlayer());
 
         //Second round in reverse order
-        lobby.nextPlayerTurn();
-        assertEquals("p3", lobby.getActivePlayer());
-        assertEquals(1, lobby.getRoundsPlayed());
-        lobby.nextPlayerTurn();
-        assertEquals("host", lobby.getActivePlayer());
-        lobby.nextPlayerTurn();
-        assertEquals("p2", lobby.getActivePlayer());
-        assertEquals(2, lobby.getRoundsPlayed());
+        testLobby.nextPlayerTurn();
+        assertEquals("p3", testLobby.getActivePlayer());
+        assertEquals(1, testLobby.getRoundsPlayed());
+        testLobby.nextPlayerTurn();
+        assertEquals("host", testLobby.getActivePlayer());
+        testLobby.nextPlayerTurn();
+        assertEquals("p2", testLobby.getActivePlayer());
+        assertEquals(2, testLobby.getRoundsPlayed());
 
         //Third and subsequent rounds in order again
-        lobby.nextPlayerTurn();
-        assertEquals("host", lobby.getActivePlayer());
-        lobby.nextPlayerTurn();
-        assertEquals("p3", lobby.getActivePlayer());
-        lobby.nextPlayerTurn();
-        assertEquals("p2", lobby.getActivePlayer());
-        assertEquals(3, lobby.getRoundsPlayed());
+        testLobby.nextPlayerTurn();
+        assertEquals("host", testLobby.getActivePlayer());
+        testLobby.nextPlayerTurn();
+        assertEquals("p3", testLobby.getActivePlayer());
+        testLobby.nextPlayerTurn();
+        assertEquals("p2", testLobby.getActivePlayer());
+        assertEquals(3, testLobby.getRoundsPlayed());
 
-        lobby.nextPlayerTurn();
-        assertEquals("host", lobby.getActivePlayer());
-        lobby.nextPlayerTurn();
-        assertEquals("p3", lobby.getActivePlayer());
-        lobby.nextPlayerTurn();
-        assertEquals("p2", lobby.getActivePlayer());
-        assertEquals(4, lobby.getRoundsPlayed());
+        testLobby.nextPlayerTurn();
+        assertEquals("host", testLobby.getActivePlayer());
+        testLobby.nextPlayerTurn();
+        assertEquals("p3", testLobby.getActivePlayer());
+        testLobby.nextPlayerTurn();
+        assertEquals("p2", testLobby.getActivePlayer());
+        assertEquals(4, testLobby.getRoundsPlayed());
     }
 
     @Test
     void startGameChangesOrderButKeepsSameElements() {
-        assertTrue(lobby.getPlayerOrder().isEmpty());
-        assertEquals(3, lobby.getPlayers().size());
-        lobby.startGame();
-        assertEquals(lobby.getPlayers().size(), lobby.getPlayerOrder().size());
-        assertTrue(lobby.getPlayerOrder().containsAll(lobby.getPlayers()));
+        assertTrue(testLobby.getPlayerOrder().isEmpty());
+        assertEquals(3, testLobby.getPlayers().size());
+        testLobby.startGame();
+        assertEquals(testLobby.getPlayers().size(), testLobby.getPlayerOrder().size());
+        assertTrue(testLobby.getPlayerOrder().containsAll(testLobby.getPlayers()));
     }
 
     @Test
     void canStartGame_requiresTwoPlayersAndGameNotYetStarted() {
         // host can start when ≥2 players
-        assertTrue(lobby.canStartGame("host"));
+        assertTrue(testLobby.canStartGame("host"));
 
         // once started, cannot start again
-        lobby.setGameStarted(true);
-        assertFalse(lobby.canStartGame("host"));
+        testLobby.setGameStarted(true);
+        assertFalse(testLobby.canStartGame("host"));
     }
 
     @Test
     void canStartGame_returnsFalseForNonHostEvenWithEnoughPlayers() {
-        assertFalse(lobby.canStartGame("p2"), "only the host may start the game");
-        assertFalse(lobby.canStartGame("p3"), "only the host may start the game");
+        assertFalse(testLobby.canStartGame("p2"), "only the host may start the game");
+        assertFalse(testLobby.canStartGame("p3"), "only the host may start the game");
     }
 
     @Test
     void testResetForNewGame_resetsActivePlayerAndStartedFlag() {
-        lobby.setActivePlayer("p2");
-        lobby.setGameStarted(true);
+        testLobby.setActivePlayer("p2");
+        testLobby.setGameStarted(true);
 
-        lobby.resetForNewGame();
+        testLobby.resetForNewGame();
 
-        assertFalse(lobby.isGameStarted(), "gameStarted should be reset to false");
-        assertNull(lobby.getActivePlayer(), "activePlayer should be reset to null");
+        assertFalse(testLobby.isGameStarted(), "gameStarted should be reset to false");
+        assertNull(testLobby.getActivePlayer(), "activePlayer should be reset to null");
     }
 
     @Test

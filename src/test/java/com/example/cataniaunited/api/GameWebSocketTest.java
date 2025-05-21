@@ -388,7 +388,7 @@ public class GameWebSocketTest {
         assertTrue(messageLatch.await(5, TimeUnit.SECONDS), "Not all messages were received in time!");
         assertEquals(4, receivedMessages.size());
 
-        MessageDTO responseMessage = receivedMessages.stream().filter((m) -> m.getType() == MessageType.PLAYER_JOINED).findFirst().get();
+        MessageDTO responseMessage = receivedMessages.stream().filter(m -> m.getType() == MessageType.PLAYER_JOINED).findFirst().get();
         assertNotNull(responseMessage);
 
         Lobby lobby = lobbyService.getLobbyById(lobbyId);
@@ -1670,7 +1670,7 @@ public class GameWebSocketTest {
         assertEquals(1, player1ReceivedMessages.size());
 
         var receivedDTO = player1ReceivedMessages.get(0);
-        assertEquals(receivedDTO.getType(), MessageType.NEXT_TURN);
+        assertEquals(MessageType.NEXT_TURN, receivedDTO.getType());
         assertEquals(player2ActualId, receivedDTO.getMessageNode("activePlayerId").asText());
         assertNotNull(receivedDTO.getMessageNode("gameboard"));
         assertNotNull(receivedDTO.getMessageNode("players"));
