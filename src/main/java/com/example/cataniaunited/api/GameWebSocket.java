@@ -24,7 +24,6 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -87,7 +86,7 @@ public class GameWebSocket {
      * @param message    The {@link MessageDTO} received from the client.
      * @param connection The WebSocket connection from which the message was received.
      * @return A Uni emitting a {@link MessageDTO} as a response, or null if no direct response is needed for the client.
-     *         In case of an error, a Uni emitting an error message is returned.
+     * In case of an error, a Uni emitting an error message is returned.
      */
     @OnTextMessage
     public Uni<MessageDTO> onTextMessage(MessageDTO message, WebSocketConnection connection) {
@@ -108,7 +107,7 @@ public class GameWebSocket {
                 case START_GAME -> handleStartGame(message);
                 case GAME_STARTED -> null;
                 case ERROR, CONNECTION_SUCCESSFUL, CLIENT_DISCONNECTED, LOBBY_CREATED, LOBBY_UPDATED, PLAYER_JOINED,
-                        GAME_BOARD_JSON, GAME_WON, DICE_RESULT, PLAYER_RESOURCES ->
+                     GAME_BOARD_JSON, GAME_WON, DICE_RESULT, PLAYER_RESOURCES ->
                         throw new GameException("Invalid client command");
             };
         } catch (GameException ge) {
@@ -137,7 +136,7 @@ public class GameWebSocket {
      * @param message    The {@link MessageDTO} containing the lobby ID, player ID, and road ID.
      * @param connection The WebSocket connection of the player making the request.
      * @return A Uni emitting a {@link MessageDTO} with the updated game board and player resources,
-     *         which is also broadcast to other players in the lobby.
+     * which is also broadcast to other players in the lobby.
      * @throws GameException if the road ID is invalid or if the game service encounters an error.
      */
     Uni<MessageDTO> placeRoad(MessageDTO message, WebSocketConnection connection) throws GameException {
@@ -160,7 +159,7 @@ public class GameWebSocket {
 
 
         return lobbyService.notifyPlayers(message.getLobbyId(), update)
-                .chain(() -> sendPlayerResources(playerService.getPlayerById(message.getPlayer()), message.getLobbyId()))
+                .chain(() -> sendPlayerResources(message.getPlayer(), message.getLobbyId()))
                 .chain(() -> Uni.createFrom().item(update));
     }
 
@@ -170,7 +169,7 @@ public class GameWebSocket {
      *
      * @param lobbyId The ID of the lobby for which to retrieve the game board and player data.
      * @return An {@link ObjectNode} containing the "gameboard" (JSON representation of the game board)
-     *         and a "players" object mapping player IDs to their details.
+     * and a "players" object mapping player IDs to their details.
      * @throws GameException if the lobby or game board cannot be found, or if a player in the lobby cannot be retrieved.
      */
     ObjectNode createGameBoardWithPlayers(String lobbyId) throws GameException {
@@ -203,7 +202,7 @@ public class GameWebSocket {
      * @param message    The {@link MessageDTO} containing the lobby ID, player ID, and settlement position ID.
      * @param connection The WebSocket connection of the player making the request.
      * @return A Uni emitting a {@link MessageDTO} with the updated game state (or win message),
-     *         which is also broadcast to other players in the lobby.
+     * which is also broadcast to other players in the lobby.
      * @throws GameException if the settlement position ID is invalid or if the game service encounters an error
      *                       during settlement placement (e.g., rules violation, insufficient resources).
      */
@@ -218,7 +217,7 @@ public class GameWebSocket {
      * @param message    The {@link MessageDTO} containing the lobby ID, player ID, and settlement position ID.
      * @param connection The WebSocket connection of the player making the request.
      * @return A Uni emitting a {@link MessageDTO} with the updated game state,
-     *         which is also broadcast to other players in the lobby.
+     * which is also broadcast to other players in the lobby.
      * @throws GameException if the game service encounters an error during settlement upgrade.
      */
     Uni<MessageDTO> upgradeSettlement(MessageDTO message, WebSocketConnection connection) throws GameException {
@@ -247,7 +246,7 @@ public class GameWebSocket {
         }
 
         if (playerService.checkForWin(message.getPlayer())) {
-            return gameService.broadcastWin(connection, message.getLobbyId(), message.getPlayer());
+            return gameService.broadcastWin(message.getLobbyId(), message.getPlayer());
         }
 
         ObjectNode payload = createGameBoardWithPlayers(message.getLobbyId());
@@ -260,7 +259,7 @@ public class GameWebSocket {
         );
 
         return lobbyService.notifyPlayers(message.getLobbyId(), update)
-                .chain(() -> sendPlayerResources(playerService.getPlayerById(message.getPlayer()), message.getLobbyId()))
+                .chain(() -> sendPlayerResources(message.getPlayer(), message.getLobbyId()))
                 .chain(() -> Uni.createFrom().item(update));
     }
 
@@ -270,7 +269,7 @@ public class GameWebSocket {
      * @param message    The {@link MessageDTO} containing the lobby ID (code) and player ID.
      * @param connection The WebSocket connection of the player attempting to join.
      * @return A Uni emitting a {@link MessageDTO} confirming the player joined and their assigned color,
-     *         which is also broadcast to other players in the lobby.
+     * which is also broadcast to other players in the lobby.
      * @throws GameException if the lobby is not found or the player cannot join.
      */
     Uni<MessageDTO> joinLobby(MessageDTO message, WebSocketConnection connection) throws GameException {
@@ -286,7 +285,7 @@ public class GameWebSocket {
         colorNode.put(COLOR_FIELD, color.getHexCode());
         MessageDTO playerJoinedMessage = new MessageDTO(MessageType.PLAYER_JOINED, message.getPlayer(), message.getLobbyId(), colorNode);
         return lobbyService.notifyPlayers(message.getLobbyId(), playerJoinedMessage)
-                .chain(() -> sendPlayerResources(playerService.getPlayerById(message.getPlayer()), message.getLobbyId()))
+                .chain(() -> sendPlayerResources(message.getPlayer(), message.getLobbyId()))
                 .chain(() -> {
                     try {
                         ObjectNode updatedGameState = createGameBoardWithPlayers(message.getLobbyId());
@@ -340,7 +339,7 @@ public class GameWebSocket {
     //TODO: Remove after implementation of player order
     Uni<MessageDTO> setActivePlayer(MessageDTO message) throws GameException {
         lobbyService.getLobbyById(message.getLobbyId()).setActivePlayer(message.getPlayer());
-        return sendPlayerResources(playerService.getPlayerById(message.getPlayer()), message.getLobbyId())
+        return sendPlayerResources(message.getPlayer(), message.getLobbyId())
                 .chain(() -> Uni.createFrom().item(new MessageDTO(MessageType.SET_ACTIVE_PLAYER, message.getPlayer(), message.getLobbyId())));
     }
 
@@ -362,7 +361,7 @@ public class GameWebSocket {
      * @param message    The {@link MessageDTO} containing the lobby ID.
      * @param connection The WebSocket connection of the player initiating the request.
      * @return A Uni emitting a {@link MessageDTO} with the game board JSON,
-     *         which is also broadcast to other players in the lobby.
+     * which is also broadcast to other players in the lobby.
      * @throws GameException if game board creation fails.
      */
     Uni<MessageDTO> createGameBoard(MessageDTO message, WebSocketConnection connection) throws GameException {
@@ -379,7 +378,7 @@ public class GameWebSocket {
         );
 
         return lobbyService.notifyPlayers(message.getLobbyId(), updateJson)
-                .chain(() -> sendPlayerResources(playerService.getPlayerById(message.getPlayer()), message.getLobbyId()))
+                .chain(() -> sendPlayerResources(message.getPlayer(), message.getLobbyId()))
                 .replaceWith(Uni.createFrom().item(updateJson));
 
     }
@@ -387,7 +386,7 @@ public class GameWebSocket {
     /**
      * Handles a request to get the current game board for a lobby.
      *
-     * @param message    The {@link MessageDTO} containing the lobby ID.
+     * @param message The {@link MessageDTO} containing the lobby ID.
      * @return A Uni emitting a {@link MessageDTO} with the game board JSON, sent only to the requesting client.
      * @throws GameException if the game board cannot be retrieved.
      */
@@ -398,7 +397,7 @@ public class GameWebSocket {
                 message.getLobbyId(),
                 createGameBoardObjectNode(message.getLobbyId())
         );
-        return sendPlayerResources(playerService.getPlayerById(message.getPlayer()), message.getLobbyId())
+        return sendPlayerResources(message.getPlayer(), message.getLobbyId())
                 .chain(() -> Uni.createFrom().item(updateJson));
     }
 
@@ -425,7 +424,7 @@ public class GameWebSocket {
      * @param connection The WebSocket connection of the player who initiated the dice roll.
      *                   This connection is used as the source for broadcasting.
      * @return A Uni emitting the {@link MessageDTO} containing the dice roll result. This DTO is the one
-     *         that was broadcast. The primary purpose of the returned Uni is to chain asynchronous operations.
+     * that was broadcast. The primary purpose of the returned Uni is to chain asynchronous operations.
      * @throws GameException if an error occurs during dice rolling or retrieving lobby/player information.
      */
     Uni<MessageDTO> handleDiceRoll(MessageDTO message, WebSocketConnection connection) throws GameException {
@@ -440,16 +439,8 @@ public class GameWebSocket {
 
         // send updated resources
         Lobby currentLobby = lobbyService.getLobbyById(message.getLobbyId());
-        List<Uni<Void>> individualResourceSendUnis = new ArrayList<>();
-
-        for (String playerIdInLobby : currentLobby.getPlayers()) {
-            Player player = playerService.getPlayerById(playerIdInLobby);
-            if (player == null) {
-                logger.warnf("Player object not found for ID %s in lobby %s during resource update.", playerIdInLobby, currentLobby.getLobbyId());
-                continue;
-            }
-            individualResourceSendUnis.add(sendPlayerResources(player, message.getLobbyId()));
-        }
+        List<Uni<Void>> individualResourceSendUnis = currentLobby.getPlayers()
+                .stream().map(pid -> sendPlayerResources(pid, message.getLobbyId())).toList();
 
         Uni<Void> resourceUpdatesUni = Uni.join().all(individualResourceSendUnis).andCollectFailures().replaceWithVoid();
         return lobbyService.notifyPlayers(message.getLobbyId(), diceResultMessage)
@@ -481,12 +472,17 @@ public class GameWebSocket {
     /**
      * Sends a message containing the player's current resources to their WebSocket connection.
      *
-     * @param player     The {@link Player} whose resources are to be sent.
-     * @param lobbyId    The ID of the lobby the player is in (used for constructing the {@link MessageDTO}).
+     * @param playerId The id of the {@link Player} whose resources are to be sent.
+     * @param lobbyId  The ID of the lobby the player is in (used for constructing the {@link MessageDTO}).
      * @return A {@link Uni<Void>} that completes when the send operation is initiated, or fails if the send fails.
-     *         Logs an error on failure to send.
+     * Logs an error on failure to send.
      */
-    Uni<Void> sendPlayerResources(Player player, String lobbyId){
+    Uni<Void> sendPlayerResources(String playerId, String lobbyId) {
+        Player player = playerService.getPlayerById(playerId);
+        if (player == null) {
+            logger.warnf("Player not found in lobby for resource update: lobbyId = %s, playerId = %s", lobbyId, playerId);
+            return Uni.createFrom().voidItem();
+        }
         ObjectNode resourcesPayload = player.getResourceJSON();
         MessageDTO resourceMsg = new MessageDTO(
                 MessageType.PLAYER_RESOURCES,
@@ -495,7 +491,7 @@ public class GameWebSocket {
                 resourcesPayload
         );
 
-        logger.infof("Sending PLAYER_RESOURCES to %s: %s", player.getUniqueId(), resourcesPayload.toString());
+        logger.infof("Sending player resources: lobbyId = %s, playerId = %s, resources = %s", lobbyId, playerId, resourcesPayload.toString());
         return player.sendMessage(resourceMsg);
     }
 
