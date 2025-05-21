@@ -96,17 +96,13 @@ public class GameWebSocket {
                 case CREATE_LOBBY -> createLobby(message);
                 case JOIN_LOBBY -> joinLobby(message, connection);
                 case SET_USERNAME -> setUsername(message, connection);
-                case CREATE_GAME_BOARD ->
-                        createGameBoard(message, connection); // TODO: Remove after regular game start is implemented
-                case GET_GAME_BOARD -> getGameBoard(message); // TODO: Remove after regular game start is implemented
                 case PLACE_SETTLEMENT -> placeSettlement(message, connection);
                 case UPGRADE_SETTLEMENT -> upgradeSettlement(message, connection);
                 case PLACE_ROAD -> placeRoad(message, connection);
                 case ROLL_DICE -> handleDiceRoll(message);
                 case START_GAME -> handleStartGame(message);
-                case GAME_STARTED -> null;
                 case ERROR, CONNECTION_SUCCESSFUL, CLIENT_DISCONNECTED, LOBBY_CREATED, LOBBY_UPDATED, PLAYER_JOINED,
-                     GAME_BOARD_JSON, GAME_WON, DICE_RESULT, PLAYER_RESOURCES, NEXT_TURN ->
+                     GAME_BOARD_JSON, GAME_WON, DICE_RESULT, PLAYER_RESOURCES, NEXT_TURN, GAME_STARTED ->
                         throw new GameException("Invalid client command");
                 case END_TURN -> endTurn(message);
             };
@@ -354,66 +350,6 @@ public class GameWebSocket {
         ObjectNode errorNode = JsonNodeFactory.instance.objectNode();
         errorNode.put("error", errorMessage);
         return new MessageDTO(MessageType.ERROR, errorNode);
-    }
-
-    /**
-     * Handles a request to create a new game board for a lobby.
-     *
-     * @param message    The {@link MessageDTO} containing the lobby ID.
-     * @param connection The WebSocket connection of the player initiating the request.
-     * @return A Uni emitting a {@link MessageDTO} with the game board JSON,
-     * which is also broadcast to other players in the lobby.
-     * @throws GameException if game board creation fails.
-     */
-    Uni<MessageDTO> createGameBoard(MessageDTO message, WebSocketConnection connection) throws GameException {
-        GameBoard board = gameService.createGameboard(message.getLobbyId());
-
-        ObjectNode gameData = createGameBoardWithPlayers(message.getLobbyId());
-        gameData.setAll(board.getJson());
-
-        MessageDTO updateJson = new MessageDTO(
-                MessageType.GAME_BOARD_JSON,
-                null,
-                message.getLobbyId(),
-                gameData
-        );
-
-        return lobbyService.notifyPlayers(message.getLobbyId(), updateJson)
-                .chain(() -> sendPlayerResources(message.getPlayer(), message.getLobbyId()))
-                .replaceWith(Uni.createFrom().item(updateJson));
-
-    }
-
-    /**
-     * Handles a request to get the current game board for a lobby.
-     *
-     * @param message The {@link MessageDTO} containing the lobby ID.
-     * @return A Uni emitting a {@link MessageDTO} with the game board JSON, sent only to the requesting client.
-     * @throws GameException if the game board cannot be retrieved.
-     */
-    private Uni<MessageDTO> getGameBoard(MessageDTO message) throws GameException {
-        MessageDTO updateJson = new MessageDTO(
-                MessageType.GAME_BOARD_JSON,
-                null,
-                message.getLobbyId(),
-                createGameBoardObjectNode(message.getLobbyId())
-        );
-        return sendPlayerResources(message.getPlayer(), message.getLobbyId())
-                .chain(() -> Uni.createFrom().item(updateJson));
-    }
-
-    /**
-     * Creates a JSON object node containing the game board data for a specified lobby.
-     *
-     * @param lobbyId The ID of the lobby for which to retrieve the game board.
-     * @return An {@link ObjectNode} with a "gameboard" field containing the JSON representation of the game board.
-     * @throws GameException if the game board for the lobby cannot be found.
-     */
-    private ObjectNode createGameBoardObjectNode(String lobbyId) throws GameException {
-        GameBoard gameboard = gameService.getGameboardByLobbyId(lobbyId);
-        ObjectNode payload = JsonNodeFactory.instance.objectNode();
-        payload.set("gameboard", gameboard.getJson());
-        return payload;
     }
 
     /**

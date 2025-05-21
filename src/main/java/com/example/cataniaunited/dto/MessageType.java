@@ -11,24 +11,19 @@ public enum MessageType {
     LOBBY_CREATED,
     GAME_WON,
     GAME_BOARD_JSON,
-
-    START_GAME,
     GAME_STARTED,
-
     DICE_RESULT,
     PLAYER_RESOURCES,
     NEXT_TURN,
-
 
     //Client Messages
     CREATE_LOBBY,
     JOIN_LOBBY,
     SET_USERNAME,
+    START_GAME,
     PLACE_SETTLEMENT,
     UPGRADE_SETTLEMENT,
     PLACE_ROAD,
-    CREATE_GAME_BOARD,
-    GET_GAME_BOARD,
     ROLL_DICE,
     END_TURN
 }
