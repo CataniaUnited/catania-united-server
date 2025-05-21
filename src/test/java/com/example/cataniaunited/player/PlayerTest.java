@@ -436,18 +436,18 @@ class PlayerTest {
 
     @Test
     void equalsSameObjectShouldReturnTrue() {
-        assertTrue(player.equals(player), "A player should be equal to itself.");
+        assertEquals(player, player, "A player should be equal to itself.");
     }
 
     @Test
     void equalsNullObjectShouldReturnFalse() {
-        assertFalse(player.equals(null), "A player should not be equal to null.");
+        assertNotEquals(null, player, "A player should not be equal to null.");
     }
 
     @Test
     void equalsDifferentClassObjectShouldReturnFalse() {
         Object otherObject = new Object();
-        assertFalse(player.equals(otherObject), "A player should not be equal to an object of a different class.");
+        assertNotEquals(player, otherObject, "A player should not be equal to an object of a different class.");
     }
 
     @Test
@@ -457,8 +457,8 @@ class PlayerTest {
 
         assertNotEquals(player1.getUniqueId(), player2.getUniqueId(), "Test setup: Player IDs should be different for this test.");
 
-        assertFalse(player1.equals(player2), "Two different players with different unique IDs should not be equal.");
-        assertFalse(player2.equals(player1), "Two different players with different unique IDs should not be equal.");
+        assertNotEquals(player1, player2, "Two different players with different unique IDs should not be equal.");
+        assertNotEquals(player2, player1, "Two different players with different unique IDs should not be equal.");
     }
 
     @Test
@@ -472,8 +472,8 @@ class PlayerTest {
 
         assertNotEquals(playerA.getUniqueId(), playerB.getUniqueId(), "Test setup: New instances should have different unique IDs.");
 
-        assertFalse(playerA.equals(playerB), "Players with same fields but different unique IDs should not be equal.");
-        assertFalse(playerB.equals(playerA), "Players with same fields but different unique IDs should not be equal.");
+        assertNotEquals(playerA, playerB, "Players with same fields but different unique IDs should not be equal.");
+        assertNotEquals(playerB, playerA, "Players with same fields but different unique IDs should not be equal.");
     }
 }
 

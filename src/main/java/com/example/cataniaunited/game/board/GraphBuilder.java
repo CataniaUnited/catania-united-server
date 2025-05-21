@@ -398,21 +398,25 @@ public class GraphBuilder {
         int maximumPositionsPerPortForLargeBoards = 5;
 
         // --- Determine Target Port Count ---
-        if (sizeOfBoard == 1) {
-            return 0;
-        } else if (sizeOfBoard == 2) { // 7 tiles, 18 coastal settlements
-            targetPortCount = 5;
-        } else if (sizeOfBoard == 3) { // Standard 3-4 player board (19 tiles, 30 coastal)
-            targetPortCount = 9; // 4 general, 5 specific (classic rules)
-        } else if (sizeOfBoard == 4) { // Standard 5-6 player board (37 tiles, 42 coastal)
-            targetPortCount = 11; // 6 general, 5 specific (classic rules)
-        } else {  // massive boards -> slower scaling (sqrt bases)
-            int additionalPorts = (sizeOfBoard - 4) / 2; // Add 1 port for every 2 rings
-            targetPortCount = basePortsForLargeBoards + additionalPorts;
-
-            // Ensure growth is not too slow at least one port every few settlements
-            int densityBasedMin = numberOfCoastalSettlements / maximumPositionsPerPortForLargeBoards;
-            targetPortCount = Math.max(targetPortCount, Math.max(11, densityBasedMin));
+        switch (sizeOfBoard) {
+            case 1:
+                return 0;
+            case 2: // 7 tiles, 18 coastal settlements
+                targetPortCount = 5;
+                break;
+            case 3: // Standard 3-4 player board (19 tiles, 30 coastal)
+                targetPortCount = 9; // 4 general, 5 specific (classic rules)
+                break;
+            case 4: // Standard 5-6 player board (37 tiles, 42 coastal)
+                targetPortCount = 11; // 6 general, 5 specific (classic rules)
+                break;
+            default:  // massive boards -> slower scaling (sqrt bases)
+                int additionalPorts = (sizeOfBoard - 4) / 2; // Add 1 port for every 2 rings
+                targetPortCount = basePortsForLargeBoards + additionalPorts;
+                // Ensure growth is not too slow at least one port every few settlements
+                int densityBasedMin = numberOfCoastalSettlements / maximumPositionsPerPortForLargeBoards;
+                targetPortCount = Math.max(targetPortCount, Math.max(11, densityBasedMin));
+                break;
         }
         return targetPortCount;
     }

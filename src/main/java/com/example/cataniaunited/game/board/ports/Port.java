@@ -27,12 +27,12 @@ public abstract class Port implements Placable {
     protected double portCenterY;
     protected double portRotation;
 
-    protected double bridge1X;
-    protected double bridge1Y;
+    protected double bridgeX1;
+    protected double bridgeY1;
     protected double bridge1Rotation;
 
-    protected double bridge2X;
-    protected double bridge2Y;
+    protected double bridgeX2;
+    protected double bridgeY2;
     protected double bridge2Rotation;
 
     /**
@@ -154,15 +154,15 @@ public abstract class Port implements Placable {
         double vec_sp1_to_portX = this.portCenterX - x1;
         double vec_sp1_to_portY = this.portCenterY - y1;
         this.bridge1Rotation = Math.atan2(vec_sp1_to_portY, vec_sp1_to_portX);
-        this.bridge1X = (x1 + this.portCenterX) / 2;
-        this.bridge1Y = (y1 + this.portCenterY) / 2;
+        this.bridgeX1 = (x1 + this.portCenterX) / 2;
+        this.bridgeY1 = (y1 + this.portCenterY) / 2;
 
         // Step 7: Bridge 2 (from settlementPosition2 to portCenter)
         double vec_settlementPosition2_to_portX = this.portCenterX - x2;
         double vec_settlementPosition2_to_portY = this.portCenterY - y2;
         this.bridge2Rotation = Math.atan2(vec_settlementPosition2_to_portY, vec_settlementPosition2_to_portX);
-        this.bridge2X = (x2 + this.portCenterX) / 2;
-        this.bridge2Y = (y2 + this.portCenterY) / 2;
+        this.bridgeX2 = (x2 + this.portCenterX) / 2;
+        this.bridgeY2 = (y2 + this.portCenterY) / 2;
     }
 
     /**
@@ -193,12 +193,12 @@ public abstract class Port implements Placable {
                 .put("y", this.portCenterY)
                 .put("rotation", this.portRotation);
         portNode.putObject("bridge1")
-                .put("x", this.bridge1X)
-                .put("y", this.bridge1Y)
+                .put("x", this.bridgeX1)
+                .put("y", this.bridgeY1)
                 .put("rotation", this.bridge1Rotation);
         portNode.putObject("bridge2")
-                .put("x", this.bridge2X)
-                .put("y", this.bridge2Y)
+                .put("x", this.bridgeX2)
+                .put("y", this.bridgeY2)
                 .put("rotation", this.bridge2Rotation);
 
         

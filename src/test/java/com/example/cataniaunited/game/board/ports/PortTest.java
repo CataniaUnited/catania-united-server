@@ -9,7 +9,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.mockito.Mockito;
 
 import java.util.List;
 
@@ -49,43 +48,43 @@ class PortTest {
 
     @Test
     void isNotTradingForOfferedResourcesWithNullOfferedShouldReturnFalse() {
-        Port port = new TestablePort(3);
-        assertFalse(port.isNotTradingForOfferedResources(null, List.of(TileType.CLAY)));
+        Port customTestPort = new TestablePort(3);
+        assertFalse(customTestPort.isNotTradingForOfferedResources(null, List.of(TileType.CLAY)));
     }
 
     @Test
     void isNotTradingForOfferedResourcesWithNullDesiredShouldReturnFalse() {
-        Port port = new TestablePort(3);
-        assertFalse(port.isNotTradingForOfferedResources(List.of(TileType.WOOD), null));
+        Port customTestPort = new TestablePort(3);
+        assertFalse(customTestPort.isNotTradingForOfferedResources(List.of(TileType.WOOD), null));
     }
     @Test
     void isNotTradingForOfferedResourcesWithEmptyOfferedShouldReturnFalse() {
-        Port port = new TestablePort(3);
-        assertFalse(port.isNotTradingForOfferedResources(List.of(), List.of(TileType.CLAY)));
+        Port customTestPort = new TestablePort(3);
+        assertFalse(customTestPort.isNotTradingForOfferedResources(List.of(), List.of(TileType.CLAY)));
     }
 
     @Test
     void isNotTradingForOfferedResourcesWithEmptyDesiredShouldReturnFalse() {
-        Port port = new TestablePort(3);
-        assertFalse(port.isNotTradingForOfferedResources(List.of(TileType.WOOD), List.of()));
+        Port customTestPort = new TestablePort(3);
+        assertFalse(customTestPort.isNotTradingForOfferedResources(List.of(TileType.WOOD), List.of()));
     }
 
     @Test
     void isNotTradingForOfferedResourcesWithOfferedResourcesInDesiredShouldReturnFalse(){
-        Port port = new TestablePort(3);
-        assertFalse(port.isNotTradingForOfferedResources(List.of(TileType.WOOD, TileType.WOOD, TileType.WOOD), List.of(TileType.WOOD)));
+        Port customTestPort = new TestablePort(3);
+        assertFalse(customTestPort.isNotTradingForOfferedResources(List.of(TileType.WOOD, TileType.WOOD, TileType.WOOD), List.of(TileType.WOOD)));
     }
 
     @Test
     void isNotTradingForOfferedResourcesWithOneOfferedResourcesInDesiredShouldReturnFalse(){
-        Port port = new TestablePort(3);
-        assertFalse(port.isNotTradingForOfferedResources(List.of(TileType.WOOD, TileType.WOOD, TileType.WOOD, TileType.WOOD, TileType.WOOD, TileType.WOOD, TileType.WOOD, TileType.WOOD, TileType.WOOD), List.of(TileType.WHEAT, TileType.WHEAT, TileType.WOOD)));
+        Port customTestPort = new TestablePort(3);
+        assertFalse(customTestPort.isNotTradingForOfferedResources(List.of(TileType.WOOD, TileType.WOOD, TileType.WOOD, TileType.WOOD, TileType.WOOD, TileType.WOOD, TileType.WOOD, TileType.WOOD, TileType.WOOD), List.of(TileType.WHEAT, TileType.WHEAT, TileType.WOOD)));
     }
 
     @Test
     void isNotTradingForOfferedResourcesWithNoOfferedResourcesInDesiredShouldReturnTrue(){
-        Port port = new TestablePort(3);
-        assertTrue(port.isNotTradingForOfferedResources(List.of(TileType.WOOD, TileType.WOOD, TileType.WOOD), List.of(TileType.WHEAT)));
+        Port customTestPort = new TestablePort(3);
+        assertTrue(customTestPort.isNotTradingForOfferedResources(List.of(TileType.WOOD, TileType.WOOD, TileType.WOOD), List.of(TileType.WHEAT)));
     }
 
 
@@ -195,14 +194,14 @@ class PortTest {
 
         assertTrue(portStructure.has("bridge1"), "PortStructure should have bridge1 node.");
         JsonNode bridge1Node = portStructure.get("bridge1");
-        assertEquals(port.bridge1X, bridge1Node.get("x").asDouble(), 0.001);
-        assertEquals(port.bridge1Y, bridge1Node.get("y").asDouble(), 0.001);
+        assertEquals(port.bridgeX1, bridge1Node.get("x").asDouble(), 0.001);
+        assertEquals(port.bridgeY1, bridge1Node.get("y").asDouble(), 0.001);
         assertEquals(port.bridge1Rotation, bridge1Node.get("rotation").asDouble(), 0.001);
 
         assertTrue(portStructure.has("bridge2"), "PortStructure should have bridge2 node.");
         JsonNode bridge2Node = portStructure.get("bridge2");
-        assertEquals(port.bridge2X, bridge2Node.get("x").asDouble(), 0.001);
-        assertEquals(port.bridge2Y, bridge2Node.get("y").asDouble(), 0.001);
+        assertEquals(port.bridgeX2, bridge2Node.get("x").asDouble(), 0.001);
+        assertEquals(port.bridgeY2, bridge2Node.get("y").asDouble(), 0.001);
         assertEquals(port.bridge2Rotation, bridge2Node.get("rotation").asDouble(), 0.001);
 
         assertTrue(portStructure.has("settlementPosition1Id"), "PortStructure should have settlementPosition1Id.");
@@ -225,11 +224,11 @@ class PortTest {
         port.portCenterX = 1.0;
         port.portCenterY = 2.0;
         port.portRotation = 0.5;
-        port.bridge1X = 0.1;
-        port.bridge1Y = 0.2;
+        port.bridgeX1 = 0.1;
+        port.bridgeY1 = 0.2;
         port.bridge1Rotation = 0.3;
-        port.bridge2X = 0.4;
-        port.bridge2Y = 0.5;
+        port.bridgeX2 = 0.4;
+        port.bridgeY2 = 0.5;
         port.bridge2Rotation = 0.6;
 
         ObjectNode json = port.toJson();
@@ -249,11 +248,11 @@ class PortTest {
         port.calculatePosition();
         assertArrayEquals(new double[]{0.0, 0.0}, port.getCoordinates(), "Coordinates should be default [0,0] when settlements are null.");
         assertEquals(0.0, port.portRotation);
-        assertEquals(0.0, port.bridge1X);
-        assertEquals(0.0, port.bridge1Y);
+        assertEquals(0.0, port.bridgeX1);
+        assertEquals(0.0, port.bridgeY1);
         assertEquals(0.0, port.bridge1Rotation);
-        assertEquals(0.0, port.bridge2X);
-        assertEquals(0.0, port.bridge2Y);
+        assertEquals(0.0, port.bridgeX2);
+        assertEquals(0.0, port.bridgeY2);
         assertEquals(0.0, port.bridge2Rotation);
     }
 
@@ -277,12 +276,12 @@ class PortTest {
         assertEquals(10.0, port.portCenterY, 0.001, "PortCenterY is incorrect.");
         assertEquals(0.0, port.portRotation, 0.001, "PortRotation is incorrect.");
 
-        assertEquals(5.0, port.bridge1X, 0.001, "Bridge1X is incorrect.");
-        assertEquals(5.0, port.bridge1Y, 0.001, "Bridge1Y is incorrect.");
+        assertEquals(5.0, port.bridgeX1, 0.001, "Bridge1X is incorrect.");
+        assertEquals(5.0, port.bridgeY1, 0.001, "Bridge1Y is incorrect.");
         assertEquals(Math.atan2(10,10), port.bridge1Rotation, 0.001, "Bridge1Rotation is incorrect.");
 
-        assertEquals(15.0, port.bridge2X, 0.001, "Bridge2X is incorrect.");
-        assertEquals(5.0, port.bridge2Y, 0.001, "Bridge2Y is incorrect.");
+        assertEquals(15.0, port.bridgeX2, 0.001, "Bridge2X is incorrect.");
+        assertEquals(5.0, port.bridgeY2, 0.001, "Bridge2Y is incorrect.");
         assertEquals(Math.atan2(10, -10), port.bridge2Rotation, 0.001, "Bridge2Rotation is incorrect.");
 
         assertArrayEquals(new double[]{10.0, 10.0}, port.getCoordinates(), 0.001, "getCoordinates returned incorrect values.");
@@ -301,12 +300,12 @@ class PortTest {
         assertEquals(10.0, port.portCenterY, 0.001, "PortCenterY is incorrect.");
         assertEquals(Math.PI / 2, port.portRotation, 0.001, "PortRotation is incorrect.");
 
-        assertEquals(-5.0, port.bridge1X, 0.001);
-        assertEquals(5.0, port.bridge1Y, 0.001);
+        assertEquals(-5.0, port.bridgeX1, 0.001);
+        assertEquals(5.0, port.bridgeY1, 0.001);
         assertEquals(Math.atan2(10, -10), port.bridge1Rotation, 0.001);
 
-        assertEquals(-5.0, port.bridge2X, 0.001);
-        assertEquals(15.0, port.bridge2Y, 0.001);
+        assertEquals(-5.0, port.bridgeX2, 0.001);
+        assertEquals(15.0, port.bridgeY2, 0.001);
         assertEquals(Math.atan2(-10, -10), port.bridge2Rotation, 0.001);
     }
 
@@ -354,8 +353,8 @@ class PortTest {
         assertArrayEquals(new double[]{10.0, 15.0}, port.getCoordinates(), 0.001, "Port should be at the common settlement location.");
 
         assertEquals(0.0, port.portRotation, 0.001, "PortRotation should be 0 for identical points.");
-        assertEquals(10.0, port.bridge1X, 0.001);
-        assertEquals(15.0, port.bridge1Y, 0.001);
+        assertEquals(10.0, port.bridgeX1, 0.001);
+        assertEquals(15.0, port.bridgeY1, 0.001);
         assertEquals(0.0, port.bridge1Rotation, 0.001);
     }
 
@@ -365,8 +364,8 @@ class PortTest {
         port.setAssociatedSettlements(null, mockSettlement2);
 
         port.portCenterX = 1.0; port.portCenterY = 2.0; port.portRotation = 0.1;
-        port.bridge1X = 0.11; port.bridge1Y = 0.22; port.bridge1Rotation = 0.33;
-        port.bridge2X = 0.44; port.bridge2Y = 0.55; port.bridge2Rotation = 0.66;
+        port.bridgeX1 = 0.11; port.bridgeY1 = 0.22; port.bridge1Rotation = 0.33;
+        port.bridgeX2 = 0.44; port.bridgeY2 = 0.55; port.bridge2Rotation = 0.66;
 
         ObjectNode json = port.toJson();
         JsonNode portStructure = json.get("portStructure");
@@ -387,8 +386,8 @@ class PortTest {
         port.setAssociatedSettlements(mockSettlement1, null);
 
         port.portCenterX = 3.0; port.portCenterY = 4.0; port.portRotation = 0.2;
-        port.bridge1X = 0.11; port.bridge1Y = 0.22; port.bridge1Rotation = 0.33;
-        port.bridge2X = 0.44; port.bridge2Y = 0.55; port.bridge2Rotation = 0.66;
+        port.bridgeX1 = 0.11; port.bridgeY1 = 0.22; port.bridge1Rotation = 0.33;
+        port.bridgeX2 = 0.44; port.bridgeY2 = 0.55; port.bridge2Rotation = 0.66;
 
         ObjectNode json = port.toJson();
         JsonNode portStructure = json.get("portStructure");

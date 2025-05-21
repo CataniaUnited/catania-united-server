@@ -221,8 +221,8 @@ class GraphBuilderTest {
 
         assertEquals(9, ports.size(), "Total ports for size 3 board should be 9.");
 
-        long generalPortCount = ports.stream().filter(p -> p instanceof GeneralPort).count();
-        long specificPortCount = ports.stream().filter(p -> p instanceof SpecificResourcePort).count();
+        long generalPortCount = ports.stream().filter(GeneralPort.class::isInstance).count();
+        long specificPortCount = ports.stream().filter(SpecificResourcePort.class::isInstance).count();
 
         assertEquals(4, generalPortCount, "Should have 4 GeneralPorts for size 3 board.");
         assertEquals(5, specificPortCount, "Should have 5 SpecificResourcePorts for size 3 board.");
@@ -241,8 +241,8 @@ class GraphBuilderTest {
         List<Port> ports = graphBuilder.getPortList();
 
         assertEquals(5, ports.size(), "Total ports for size 2 board should be 5.");
-        assertEquals(0, ports.stream().filter(p -> p instanceof GeneralPort).count(), "Should have 0 GeneralPorts for size 2 board.");
-        assertEquals(5, ports.stream().filter(p -> p instanceof SpecificResourcePort).count(), "Should have 5 SpecificResourcePorts for size 2 board.");
+        assertEquals(0, ports.stream().filter(GeneralPort.class::isInstance).count(), "Should have 0 GeneralPorts for size 2 board.");
+        assertEquals(5, ports.stream().filter(SpecificResourcePort.class::isInstance).count(), "Should have 5 SpecificResourcePorts for size 2 board.");
     }
 
     @Test
@@ -258,8 +258,8 @@ class GraphBuilderTest {
         List<Port> ports = graphBuilder.getPortList();
 
         assertEquals(11, ports.size(), "Total ports for size 4 board should be 11.");
-        assertEquals(6, ports.stream().filter(p -> p instanceof GeneralPort).count(), "Should have 6 GeneralPorts for size 4 board.");
-        assertEquals(5, ports.stream().filter(p -> p instanceof SpecificResourcePort).count(), "Should have 5 SpecificResourcePorts for size 4 board.");
+        assertEquals(6, ports.stream().filter(GeneralPort.class::isInstance).count(), "Should have 6 GeneralPorts for size 4 board.");
+        assertEquals(5, ports.stream().filter(SpecificResourcePort.class::isInstance).count(), "Should have 5 SpecificResourcePorts for size 4 board.");
     }
     @Test
     void specificResourcePortsShouldHaveVarietyForStandardBoard() {
@@ -268,7 +268,7 @@ class GraphBuilderTest {
         List<Port> ports = graphBuilder.getPortList();
 
         List<SpecificResourcePort> specificPorts = ports.stream()
-                .filter(p -> p instanceof SpecificResourcePort)
+                .filter(SpecificResourcePort.class::isInstance)
                 .map(p -> (SpecificResourcePort) p)
                 .toList();
 
@@ -321,14 +321,14 @@ class GraphBuilderTest {
 
         assertEquals(15, ports.size(), "Total ports for size " + boardSize);
 
-        long generalPortCount = ports.stream().filter(p -> p instanceof GeneralPort).count();
-        long specificPortCount = ports.stream().filter(p -> p instanceof SpecificResourcePort).count();
+        long generalPortCount = ports.stream().filter(GeneralPort.class::isInstance).count();
+        long specificPortCount = ports.stream().filter(SpecificResourcePort.class::isInstance).count();
 
         assertEquals(7, generalPortCount, "GeneralPorts for size " + boardSize);
         assertEquals(8, specificPortCount, "SpecificResourcePorts for size " + boardSize);
 
         Map<TileType, Long> resourceDistribution = ports.stream()
-                .filter(p -> p instanceof SpecificResourcePort)
+                .filter(SpecificResourcePort.class::isInstance)
                 .map(p -> (SpecificResourcePort) p)
                 .collect(Collectors.groupingBy(SpecificResourcePort::getTradeAbleResource, Collectors.counting()));
 

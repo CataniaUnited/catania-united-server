@@ -2,7 +2,6 @@ package com.example.cataniaunited.lobby;
 
 import com.example.cataniaunited.player.PlayerColor;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
