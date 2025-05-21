@@ -188,7 +188,7 @@ public class GameWebSocket {
         root.set("gameboard", gameboard.getJson());
 
         ObjectNode playersJson = root.putObject("players");
-        for (String playerId : lobby.getPlayers()) {
+        for (String playerId : lobby.getPlayerOrder()) {
             Player player = playerService.getPlayerById(playerId);
             if (player != null) {
                 ObjectNode playerNode = player.toJson();
@@ -199,7 +199,7 @@ public class GameWebSocket {
                 playersJson.set(player.getUniqueId(), playerNode);
             }
         }
-
+        root.put("activePlayerId", lobby.getActivePlayer());
         return root;
     }
 
@@ -421,7 +421,7 @@ public class GameWebSocket {
      * This method processes the dice roll, broadcasts the result to all players in the lobby,
      * and then sends updated resource information individually to each player in that lobby.
      *
-     * @param message    The {@link MessageDTO} containing the player ID and lobby ID.
+     * @param message The {@link MessageDTO} containing the player ID and lobby ID.
      * @return A Uni emitting the {@link MessageDTO} containing the dice roll result. This DTO is the one
      * that was broadcast. The primary purpose of the returned Uni is to chain asynchronous operations.
      * @throws GameException if an error occurs during dice rolling or retrieving lobby/player information.
@@ -456,7 +456,9 @@ public class GameWebSocket {
      * @throws GameException if the game cannot be started (e.g., not enough players, game already started).
      */
     private Uni<MessageDTO> handleStartGame(MessageDTO message) throws GameException {
-        MessageDTO response = gameService.startGame(message.getLobbyId(), message.getPlayer());
+        gameService.startGame(message.getLobbyId(), message.getPlayer());
+        ObjectNode payload = createGameBoardWithPlayers(message.getLobbyId());
+        MessageDTO response = new MessageDTO(MessageType.GAME_STARTED, null, message.getLobbyId(), payload);
         return lobbyService.notifyPlayers(message.getLobbyId(), response);
     }
 

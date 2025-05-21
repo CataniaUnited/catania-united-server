@@ -19,11 +19,13 @@ import io.smallrye.mutiny.Uni;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -66,31 +68,30 @@ class GameServiceTest {
     }
 
     @Test
-    void startGame_setsFlagsAndReturnsDto() throws GameException {
+    void startGame_setsFlags() throws GameException {
         String hostId = "host";
         String lobbyId = lobbyService.createLobby(hostId);
 
         Lobby lobbySpy = spy(lobbyService.getLobbyById(lobbyId));
         lobbySpy.getPlayers().add("p2");
-        doReturn(lobbySpy).when(lobbyService).getLobbyById(lobbyId);
-
-
-        doReturn(gameboardMock).when(gameService).createGameboard(lobbyId);
-        ObjectNode dummyBoardJson = new ObjectMapper().createObjectNode();
-        when(gameboardMock.getJson()).thenReturn(dummyBoardJson);
 
         Player host = mock(Player.class);
         Player p2 = mock(Player.class);
         when(playerService.getPlayerById(hostId)).thenReturn(host);
         when(playerService.getPlayerById("p2")).thenReturn(p2);
 
-        MessageDTO dto = gameService.startGame(lobbyId, hostId);
-        assertNotNull(dto);
-        assertEquals(MessageType.GAME_STARTED, dto.getType());
-        assertEquals(lobbyId, dto.getLobbyId());
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+        assertFalse(lobby.isGameStarted());
+        assertTrue(lobby.getPlayerOrder().isEmpty());
+        assertNull(lobby.getActivePlayer());
 
-        assertFalse(dto.getMessageNode("playerOrder").isArray());
-        assertTrue(dto.getMessageNode("board").isObject());
+        gameService.startGame(lobbyId, hostId);
+
+        assertTrue(lobby.isGameStarted());
+        assertFalse(lobby.getPlayerOrder().isEmpty());
+        assertTrue(lobby.getPlayerOrder().containsAll(List.of(hostId, "p2")));
+        assertNotNull(lobby.getActivePlayer());
+        assertNotNull(gameService.getGameboardByLobbyId(lobbyId));
     }
 
     @Test

@@ -583,9 +583,11 @@ public class GameWebSocketTest {
         when(mockPlayer3.getResourceCount(any(TileType.class))).thenReturn(10);
         when(mockPlayer3.toJson()).thenReturn(objectMapper.createObjectNode().put("username", player3));
 
+        gameService.startGame(lobbyId, player1);
+
         Lobby lobby = lobbyService.getLobbyById(lobbyId);
         lobby.setActivePlayer(player1);
-        GameBoard gameBoard = gameService.createGameboard(lobbyId);
+        GameBoard gameBoard = gameService.getGameboardByLobbyId(lobbyId);
         SettlementPosition settlementPosition = gameBoard.getSettlementPositionGraph().get(0);
         settlementPosition.getRoads().get(0).setOwner(mockPlayer1);
 
@@ -1581,7 +1583,11 @@ public class GameWebSocketTest {
 
         assertTrue(latch.await(5, TimeUnit.SECONDS), "never saw GAME_STARTED");
         assertEquals(1, seen.size());
-        assertEquals(MessageType.GAME_STARTED, seen.get(0).getType());
+        MessageDTO response = seen.get(0);
+        assertEquals(MessageType.GAME_STARTED, response.getType());
+        assertNotNull(response.getMessageNode("gameboard"));
+        assertNotNull(response.getMessageNode("players"));
+        assertNotNull(response.getMessageNode("activePlayer"));
         assertTrue(lobbyService.getLobbyById(lobbyId).isGameStarted());
 
         verify(gameService).startGame(lobbyId, player1.getUniqueId());

@@ -19,7 +19,6 @@ import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
 import java.util.Comparator;
-import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -121,26 +120,16 @@ public class GameService {
      * This involves creating a game board, setting player order, and notifying players.
      *
      * @param lobbyId The ID of the lobby where the game is to be started.
-     * @return A {@link MessageDTO} of type GAME_STARTED containing initial game state (player order, game board).
      * @throws GameException if the game cannot be started (e.g., already started, not enough players).
      */
-    public MessageDTO startGame(String lobbyId, String playerId) throws GameException {
+    public void startGame(String lobbyId, String playerId) throws GameException {
         Lobby lobby = lobbyService.getLobbyById(lobbyId);
-
         if (!lobby.canStartGame(playerId)) {
             throw new GameException("Starting of game failed");
         }
-
-        GameBoard board = createGameboard(lobbyId);
+        createGameboard(lobbyId);
         lobby.startGame();
-        List<String> order = lobby.getPlayerOrder();
-
-        ObjectNode payload = JsonNodeFactory.instance.objectNode();
-        payload.putPOJO("playerOrder", order);
-        payload.set("gameboard", board.getJson());
-
-        logger.infof("Game started in lobby: lobbyId=%s, order=%s", lobbyId, order);
-        return new MessageDTO(MessageType.GAME_STARTED, null, lobbyId, payload);
+        logger.infof("Game started in lobby: lobbyId=%s, order=%s", lobbyId, lobby.getPlayerOrder());
     }
 
     /**
