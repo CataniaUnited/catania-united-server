@@ -23,6 +23,7 @@ public abstract class Port implements Placable {
     protected SettlementPosition settlementPosition2;
     private static final double PORT_DISTANCE = 10.0;
 
+    // fixme introduce data structure for the transform / placement information (x,y,rot)
     protected double portCenterX;
     protected double portCenterY;
     protected double portRotation;
@@ -48,6 +49,7 @@ public abstract class Port implements Placable {
         this.inputResourceAmount = inputResourceAmount;
     }
 
+    // fixme add generic trade checks to this class (1st and 3rd in the javadocs)
     /**
      * Determines if a proposed trade is valid according to this port's specific rules.
      *
@@ -81,6 +83,10 @@ public abstract class Port implements Placable {
         return (offeredResources.size() / this.inputResourceAmount) != desiredResources.size();
     }
 
+    // fixme why are trading checks part of the port? and why is the description focused on players not part of the impl
+    //  extract trading logic into trades and dont focus on players if they are not part of the concepts here
+    //  eg, "checks if the offered and desired resources share the same type which makes a trade invalid"
+    //  avoid negation in checks for readability, generally improve the naming of trading checks
     /**
      * Checks if the player is attempting to acquire any resource types that they are also offering.
      * A player cannot trade a resource for the same type of resource at a port.
@@ -114,6 +120,9 @@ public abstract class Port implements Placable {
 
         double[] sp1Coords = settlementPosition1.getCoordinates();
         double[] settlementPosition2Coords = settlementPosition2.getCoordinates();
+        // fixme reuse custom transform data types here
+        //  consider https://commons.apache.org/proper/commons-math/javadocs/api-3.6.1/org/apache/commons/math3/geometry/euclidean/twod/Vector2D.html
+        //  for your computations
         double x1 = sp1Coords[0];
         double y1 = sp1Coords[1];
         double x2 = settlementPosition2Coords[0];
@@ -176,6 +185,7 @@ public abstract class Port implements Placable {
         return new double[]{portCenterX, portCenterY};
     }
 
+    // fixme the port game object shouldnt know about how to serialize itself
     /**
      * Converts this port's state to a JSON representation.
      * Needs to be called by subClasses to add specific Information

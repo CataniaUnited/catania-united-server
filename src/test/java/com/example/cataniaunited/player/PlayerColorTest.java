@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 class PlayerColorTest {
+    // fixme probably unnecessary because its only null on "malicious" impl (ie, passing null or whitespace in the enum constr)
     @Test
     void testHexCodesNotNullOrEmpty(){
         for (PlayerColor color: PlayerColor.values()) {

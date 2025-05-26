@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.IntUnaryOperator;
 
+// fixme avoid long methods with hard to understand functionality. can you improve understandability with naming or submethods?
 /**
  * A standard implementation of {@link TileListBuilder} for creating a list of Catan tiles.
  * This builder handles tile creation, value assignment, shuffling, ID assignment,
@@ -114,11 +115,12 @@ public class StandardTileListBuilder implements TileListBuilder{
      */
     @Override
     public void addValues() {
+        // fixme magic constants, long complex method, bad readability / maintainability
         if (this.tileList == null || this.tileList.isEmpty()) {
             throw new IllegalStateException("Tiles must be built before shuffling.");
         }
 
-        int amountOfValuesToCreate = tileList.size() - 1; // -1, because of Dessert
+        int amountOfValuesToCreate = tileList.size() - 1; // -1, because of Dessert // fixme whats up with desert
         int valueAmount = amountOfValuesToCreate / 10; // How often each value is used at least
 
         List<Integer> valueList = new ArrayList<>(amountOfValuesToCreate);
@@ -134,7 +136,7 @@ public class StandardTileListBuilder implements TileListBuilder{
             // value without unbalancing the distribution
 
             val++;
-            if (val == 7) { // except for 7
+            if (val == 7) { // except for 7 // fixme why?
                 val++;
             }
         }
@@ -146,7 +148,7 @@ public class StandardTileListBuilder implements TileListBuilder{
 
         int index = 0;
         for (Tile tile: tileList){
-            if (tile.type == TileType.WASTE){
+            if (tile.type == TileType.WASTE){ // fixme whats special with waste
                 continue;
             }
 
@@ -215,6 +217,7 @@ public class StandardTileListBuilder implements TileListBuilder{
         changeStartingPositionForSouthWestHalfAndMiddleRow(2, 0, 2, 7, -1, true);
         changeStartingPositionForSouthWestHalfAndMiddleRow(2, 0, 5, 10, -1, false);
 
+        // fixme add datastructure for this set of recurring ints, and improve naming for readability
         // set coordinates for tiles in every row
         int indexOfFirstTileOfThisLayer;
         int indexOfFirstTileOfPreviousLayer;
@@ -435,6 +438,8 @@ public class StandardTileListBuilder implements TileListBuilder{
 
 
     // --- Static Helper Methods  ---
+    // fixme avoid static methods for no reason
+    //  feels like this shouldnd belong into the tile builder then (especially polar to cartesian)
 
     /**
      * Calculates the total number of tiles on a Catan board with a given number of layers/rings.

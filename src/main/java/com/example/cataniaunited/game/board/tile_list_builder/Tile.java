@@ -146,6 +146,7 @@ public class Tile implements Placable, Publisher<SettlementPosition, TileType>, 
         return tileNode;
     }
 
+    // fixme the subscriber interface is too generic for readability, make it specific for resource production
     /**
      * Adds a {@link SettlementPosition} as a subscriber to this tile.
      * Subscribers (settlement positions) will be notified when this tile produces resources.

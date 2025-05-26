@@ -13,6 +13,8 @@ public class Util {
         throw new IllegalStateException("Utility class");
     }
 
+    // fixme https://commons.apache.org/proper/commons-lang/apidocs/org/apache/commons/lang3/StringUtils.html#isBlank(java.lang.CharSequence)
+    //  isBlank
     /**
      * Checks if a string is null, empty, or consists only of whitespace.
      *

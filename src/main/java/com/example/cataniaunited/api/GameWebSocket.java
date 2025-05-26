@@ -26,6 +26,13 @@ import org.jboss.logging.Logger;
 
 import java.util.List;
 
+
+// fixme this class contains the conceptual game logic which shouldnt be part of communication -> split receiving / handling / sending
+//  this is especially visible from the SettlementAction, which is unrelated to websocket responsibilities but closely coupled
+
+// fixme avoid manually parsing and prepping JSONs, either use a auto mapper or extract JSON operations
+//  the websocket shouldnt need to know what to transmit (it shouldnt change much if you move to eg. protobuf)
+
 /**
  * WebSocket endpoint for handling Catan game interactions.
  * This class manages WebSocket connections, receives messages from clients,
@@ -497,6 +504,7 @@ public class GameWebSocket {
 
 }
 
+// fixme extract into class for readability (including seeing changes on this func.int in git)
 @FunctionalInterface
 interface SettlementAction {
     void execute(int settlementPositionId) throws GameException;

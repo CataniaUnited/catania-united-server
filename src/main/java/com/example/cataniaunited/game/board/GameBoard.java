@@ -92,6 +92,7 @@ public class GameBoard {
      * Generates the list of tiles for the game board using a {@link TileListDirector} and a {@link StandardTileListBuilder}.
      */
     void generateTileList() {
+        // fixme again, this shows the interdependency (constructed via director, queried from the builder directly)
         TileListBuilder tileBuilder = new StandardTileListBuilder();
         TileListDirector director = new TileListDirector(tileBuilder);
         director.constructStandardTileList(sizeOfBoard, SIZE_OF_HEX, true);
@@ -151,6 +152,7 @@ public class GameBoard {
         try {
             checkRequiredResources(building.getPlayer(), building);
             logger.debugf("Placing building: playerId = %s, positionId = %s, type = %s", building.getPlayer().getUniqueId(), positionId, building.getClass().getSimpleName());
+            // fixme why is it called settlement position if it might hold cities (any building)
             SettlementPosition settlementPosition = settlementPositionGraph.get(positionId - 1);
             settlementPosition.setBuilding(building);
             removeRequiredResources(building.getPlayer(), building);
@@ -170,7 +172,7 @@ public class GameBoard {
     public void placeRoad(Player player, PlayerColor color, int roadId) throws GameException {
         try {
             Road road = roadList.get(roadId - 1);
-            checkRequiredResources(player, road);
+            checkRequiredResources(player, road); // fixme dont use exceptions for regular program flows (checks which are handled as part of regular functionality)
             logger.debugf("Placing road: playerId = %s, roadId = %s", player.getUniqueId(), roadId);
             road.setOwner(player);
             road.setColor(color);
@@ -219,6 +221,7 @@ public class GameBoard {
             TileType tileType = entry.getKey();
             Integer amount = entry.getValue();
             if (player.getResourceCount(tileType) < amount) {
+                // fixme this check should not throw an exception as this is the core funcitonality of the method and not exceptional behavior
                 throw new InsufficientResourcesException();
             }
         }
