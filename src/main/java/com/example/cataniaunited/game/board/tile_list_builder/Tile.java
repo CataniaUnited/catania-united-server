@@ -145,7 +145,7 @@ public class Tile implements Placable, Publisher<SettlementPosition, TileType>, 
 
         return tileNode;
     }
-    
+
     /**
      * Adds a {@link SettlementPosition} as a subscriber to this tile.
      * Subscribers (settlement positions) will be notified via their

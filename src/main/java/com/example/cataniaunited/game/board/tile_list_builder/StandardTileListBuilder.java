@@ -3,6 +3,7 @@ package com.example.cataniaunited.game.board.tile_list_builder;
 import com.example.cataniaunited.util.Util;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.IntUnaryOperator;
@@ -93,8 +94,8 @@ public class StandardTileListBuilder implements TileListBuilder {
      * One tile is designated as WASTE (desert), and the rest are populated with
      * resource-producing tile types in a repeating sequence.
      *
-     * @throws IllegalStateException if configuration has not been set, if no usable
-     *                               (non-WASTE) tile types are available or Only the Waste Tile is available.
+     * @throws IllegalStateException if configuration has not been set, or if no
+     *                               usable (non-WASTE) tile types are available.
      */
     @Override
     public void buildTiles() {
@@ -102,16 +103,23 @@ public class StandardTileListBuilder implements TileListBuilder {
             throw new IllegalStateException("Configuration must be set before building tiles.");
         }
 
-        TileType[] availableTypes = TileType.values();
-        int usableTypeCount = availableTypes.length - 1; // Assuming one WASTE type (last index)
-        if (usableTypeCount <= 0) throw new IllegalStateException("Requires non-WASTE types.");
-        if (availableTypes[usableTypeCount] != TileType.WASTE)
-            throw new IllegalStateException("WASTE-Type needs to be at last position.");
+        // Filter out the WASTE type to get a list of resource-producing types
+        List<TileType> resourceProducingTypes = Arrays.stream(TileType.values())
+                .filter(type -> type != TileType.WASTE)
+                .toList();
 
+        if (resourceProducingTypes.isEmpty()) {
+            throw new IllegalStateException("Requires at least one non-WASTE tile type to be defined in TileType enum.");
+        }
 
+        // Add one WASTE tile (Desert)
         tileList.add(new Tile(TileType.WASTE));
+
+        // Add the remaining tiles as resource-producing tiles
+        // The loop runs for (amountOfTilesOnBoard - 1) times because one tile is already added as WASTE.
         for (int i = 0; i < amountOfTilesOnBoard - 1; i++) {
-            TileType currentTileType = availableTypes[i % (usableTypeCount)];
+            // Cycle through the resourceProducingTypes
+            TileType currentTileType = resourceProducingTypes.get(i % resourceProducingTypes.size());
             tileList.add(new Tile(currentTileType));
         }
     }

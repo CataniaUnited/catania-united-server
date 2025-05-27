@@ -6,7 +6,7 @@ public enum TileType {
     WOOD(4),
     CLAY(4),
     ORE(0),
-    WASTE(0); // WASTE NEEDS TO BE AT THE LAST INDEX (for StandardTileListBuilder logic)!!! // fixme then definitely change this constraint in the builder
+    WASTE(0);
 
     private final int initialAmount;
 
