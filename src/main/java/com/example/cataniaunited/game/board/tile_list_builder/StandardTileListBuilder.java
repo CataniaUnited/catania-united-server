@@ -10,8 +10,6 @@ import java.util.function.IntUnaryOperator;
 import static com.example.cataniaunited.util.CatanBoardUtils.calculateAmountOfTilesForLayerK;
 import static com.example.cataniaunited.util.CatanBoardUtils.polarToCartesian;
 
-// fixme avoid long methods with hard to understand functionality. can you improve understandability with naming or submethods?
-
 /**
  * A standard implementation of {@link TileListBuilder} for creating a list of Catan tiles.
  * This builder handles tile creation, value assignment, shuffling, ID assignment,
