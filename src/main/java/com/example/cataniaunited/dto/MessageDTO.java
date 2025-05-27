@@ -32,19 +32,13 @@ public class MessageDTO {
         this.player = player;
         this.lobbyId = lobbyId;
     }
-
-    // fixme chain constructors with this(.)
     public MessageDTO(MessageType type, String player, String lobbyId, ObjectNode message) {
-        this.type = type;
-        this.player = player;
-        this.lobbyId = lobbyId;
+        this(type, player, lobbyId);
         this.message = message;
     }
 
     public MessageDTO(MessageType type, String player, String lobbyId, List<String> players) {
-        this.type = type;
-        this.player = player;
-        this.lobbyId = lobbyId;
+        this(type, player, lobbyId);
         this.players = players;
     }
 

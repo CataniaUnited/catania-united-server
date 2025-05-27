@@ -69,20 +69,3 @@ class BuildingTest {
     }
 
 }
-
-// fixme extract to extra file
-class TestBuilding extends Building {
-    protected TestBuilding(Player player, PlayerColor color) throws GameException {
-        super(player, color);
-    }
-
-    @Override
-    public int getResourceDistributionAmount() {
-        return 1;
-    }
-
-    @Override
-    public Map<TileType, Integer> getRequiredResources() {
-        return Map.of();
-    }
-}

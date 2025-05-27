@@ -4,7 +4,6 @@ import com.example.cataniaunited.player.PlayerColor;
 import java.util.*;
 import java.util.concurrent.*;
 
-// fixme - good class for technical game state
 /**
  * Represents a game lobby where players can gather before starting a Catan game.
  * This class manages the list of players in the lobby, their assigned colors,

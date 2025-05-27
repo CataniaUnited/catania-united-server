@@ -87,12 +87,6 @@ public class PlayerService {
     public static void clearAllPlayersForTesting() {
         playersByConnectionId.clear();
         playersById.clear();
-        // The original code had playersByConnectionId.clear() twice. Assuming one was meant for connectionsByPlayerId.
-        // connectionsByPlayerId.clear(); // This map is instance-specific, so cannot be cleared with static context if intended.
-        // For a static clear, if connectionsByPlayerId was also static, it would be cleared here.
-        // Given it's an instance field in the provided snippet, a static clear for it is not directly applicable.
-        // If the intent was to clear an instance map, this method would need to be non-static, or manage a static map.
-        // Sticking to the provided method signature, only static maps are cleared.
     }
 
     /**
@@ -130,17 +124,9 @@ public class PlayerService {
         if (playerId == null) {
             return null;
         }
-        // fixme "get" terminology, this method should not manipulate the state
+
         WebSocketConnection conn = connectionsByPlayerId.get(playerId);
         if (conn != null && !conn.isOpen()) {
-            // Clean up stale connection
-            connectionsByPlayerId.remove(playerId, conn);
-            // Also consider removing from playersByConnectionId and playersById if connection is the primary key for removal logic
-            Player player = playersById.get(playerId);
-            if (player != null && player.getConnection() == conn) { // Ensure it's the same connection
-                playersByConnectionId.remove(conn.id());
-                playersById.remove(playerId);
-            }
             return null;
         }
         return conn;
