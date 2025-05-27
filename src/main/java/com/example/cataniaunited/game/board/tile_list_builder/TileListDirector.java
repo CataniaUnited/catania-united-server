@@ -33,8 +33,6 @@ public class TileListDirector {
         this.builder = builder;
     }
 
-    // fixme so basically this class only manually composes the method calls for the builder?
-    //  as its the same responsibility (knowing class-internal dependencies between method calls ie. feature envy)
     /**
      * Constructs a standard list of Catan game tiles using the configured builder.
      *
