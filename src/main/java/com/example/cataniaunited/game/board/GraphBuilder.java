@@ -6,6 +6,7 @@ import com.example.cataniaunited.game.board.ports.SpecificResourcePort;
 import com.example.cataniaunited.game.board.tile_list_builder.StandardTileListBuilder;
 import com.example.cataniaunited.game.board.tile_list_builder.Tile;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
+import com.example.cataniaunited.util.CatanBoardUtils;
 
 import java.util.*;
 
@@ -42,7 +43,7 @@ public class GraphBuilder {
         }
 
         // Check if tileList has the expected number of tiles for the size
-        int expectedTileCount = StandardTileListBuilder.calculateAmountOfTilesForLayerK(sizeOfBoard);
+        int expectedTileCount = CatanBoardUtils.calculateAmountOfTilesForLayerK(sizeOfBoard);
         if (tileList.size() != expectedTileCount) {
             throw new IllegalArgumentException("Tile list size mismatch.");
         }

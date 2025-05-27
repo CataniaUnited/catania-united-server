@@ -8,6 +8,7 @@ import com.example.cataniaunited.game.board.tile_list_builder.Tile;
 import com.example.cataniaunited.game.board.tile_list_builder.TileListBuilder;
 import com.example.cataniaunited.game.board.tile_list_builder.TileListDirector;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
+import com.example.cataniaunited.util.CatanBoardUtils;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,7 +37,7 @@ class GraphBuilderTest {
     @BeforeEach
     void setUp() {
         validSizeOfBoard = 3;
-        int expectedTileCount = StandardTileListBuilder.calculateAmountOfTilesForLayerK(validSizeOfBoard);
+        int expectedTileCount = CatanBoardUtils.calculateAmountOfTilesForLayerK(validSizeOfBoard);
         validTileList = new ArrayList<>();
         for (int i = 0; i < expectedTileCount; i++) {
             validTileList.add(new Tile(TileType.WASTE));
@@ -231,7 +232,7 @@ class GraphBuilderTest {
     @Test
     void portTypesAndCountsShouldBeCorrectForBoardSize2() {
         int boardSize = 2;
-        int expectedTileCount = StandardTileListBuilder.calculateAmountOfTilesForLayerK(boardSize);
+        int expectedTileCount = CatanBoardUtils.calculateAmountOfTilesForLayerK(boardSize);
         List<Tile> tiles = new ArrayList<>();
         for (int i = 0; i < expectedTileCount; i++) {
             tiles.add(new Tile(TileType.WOOD));
@@ -248,7 +249,7 @@ class GraphBuilderTest {
     @Test
     void portTypesAndCountsShouldBeCorrectForBoardSize4() {
         int boardSize = 4;
-        int expectedTileCount = StandardTileListBuilder.calculateAmountOfTilesForLayerK(boardSize);
+        int expectedTileCount = CatanBoardUtils.calculateAmountOfTilesForLayerK(boardSize);
         List<Tile> tiles = new ArrayList<>();
         for (int i = 0; i < expectedTileCount; i++) {
             tiles.add(new Tile(TileType.ORE));
@@ -288,7 +289,7 @@ class GraphBuilderTest {
     @Test
     void checkPortPlacementRhythmDoesNotGoOutOfBounds() {
         int boardSize = 2;
-        int expectedTileCount = StandardTileListBuilder.calculateAmountOfTilesForLayerK(boardSize);
+        int expectedTileCount = CatanBoardUtils.calculateAmountOfTilesForLayerK(boardSize);
         List<Tile> tiles = new ArrayList<>();
         for (int i = 0; i < expectedTileCount; i++) {
             tiles.add(new Tile(TileType.CLAY));
@@ -310,7 +311,7 @@ class GraphBuilderTest {
     void portDistributionForVeryLargeBoardSize() {
         int boardSize = 7;
 
-        int expectedTileCount = StandardTileListBuilder.calculateAmountOfTilesForLayerK(boardSize);
+        int expectedTileCount = CatanBoardUtils.calculateAmountOfTilesForLayerK(boardSize);
         List<Tile> tiles = new ArrayList<>();
         for (int i = 0; i < expectedTileCount; i++) {
             tiles.add(new Tile(TileType.SHEEP));

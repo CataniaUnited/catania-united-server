@@ -354,31 +354,4 @@ class StandardTileListBuilderTest {
         builder.buildTiles();
         assertDoesNotThrow(() -> builder.getTileList(), "Should succeed after buildTiles");
     }
-
-
-    @Test
-    void calculateAmountOfTilesForLayerKReturnsCorrectValues() {
-        assertEquals(0, StandardTileListBuilder.calculateAmountOfTilesForLayerK(0));
-        assertEquals(1, StandardTileListBuilder.calculateAmountOfTilesForLayerK(1));
-        assertEquals(7, StandardTileListBuilder.calculateAmountOfTilesForLayerK(2));
-        assertEquals(19, StandardTileListBuilder.calculateAmountOfTilesForLayerK(3));
-        assertEquals(37, StandardTileListBuilder.calculateAmountOfTilesForLayerK(4));
-    }
-
-
-    @Test
-    void polarToCartesianConvertsCorrectly() {
-        double r = 10.0;
-        assertArrayEquals(new double[]{10.0, 0.0}, StandardTileListBuilder.polarToCartesian(r, 0, false), 0.001);
-        assertArrayEquals(new double[]{10.0, -0.0}, StandardTileListBuilder.polarToCartesian(r, 0, true), 0.001);
-        assertArrayEquals(new double[]{0.0, 10.0}, StandardTileListBuilder.polarToCartesian(r, Math.PI/2, false), 0.001);
-        assertArrayEquals(new double[]{0.0, -10.0}, StandardTileListBuilder.polarToCartesian(r, Math.PI/2, true), 0.001);
-        assertArrayEquals(new double[]{-10.0, 0.0}, StandardTileListBuilder.polarToCartesian(r, Math.PI, false), 0.001);
-        assertArrayEquals(new double[]{-10.0, -0.0}, StandardTileListBuilder.polarToCartesian(r, Math.PI, true), 0.001);
-        assertArrayEquals(new double[]{0.0, -10.0}, StandardTileListBuilder.polarToCartesian(r, 3*Math.PI/2, false), 0.001);
-        assertArrayEquals(new double[]{0.0, 10.0}, StandardTileListBuilder.polarToCartesian(r, 3*Math.PI/2, true), 0.001);
-    }
-
-
-
 }
