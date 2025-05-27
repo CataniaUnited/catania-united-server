@@ -2,7 +2,9 @@ package com.example.cataniaunited.lobby;
 
 import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.exception.ui.DiceRollException;
 import com.example.cataniaunited.exception.ui.InvalidTurnException;
+import com.example.cataniaunited.fi.LobbyAction;
 import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerColor;
 import com.example.cataniaunited.player.PlayerService;
@@ -159,6 +161,11 @@ public class LobbyServiceImpl implements LobbyService {
         return lobby;
     }
 
+    private void executeLobbyCheck(String lobbyId, LobbyAction action) throws GameException {
+        Lobby lobby = getLobbyById(lobbyId);
+        action.execute(lobby);
+    }
+
     /**
      * {@inheritDoc}
      *
@@ -166,11 +173,30 @@ public class LobbyServiceImpl implements LobbyService {
      */
     @Override
     public void checkPlayerTurn(String lobbyId, String playerId) throws GameException {
-        Lobby lobby = getLobbyById(lobbyId);
+        executeLobbyCheck(lobbyId, lobby -> checkPlayerTurn(lobby, playerId));
+    }
+
+    private void checkPlayerTurn(Lobby lobby, String playerId) throws GameException {
         if (!lobby.isPlayerTurn(playerId)) {
-            logger.errorf("It is not the players turn: playerId=%s, lobbyId=%s", playerId, lobbyId);
+            logger.errorf("It is not the players turn: playerId=%s, lobbyId=%s", playerId, lobby.getLobbyId());
             throw new InvalidTurnException();
         }
+    }
+
+    @Override
+    public void checkPlayerDiceRoll(String lobbyId, String playerId) throws GameException {
+        executeLobbyCheck(lobbyId, lobby -> {
+            checkPlayerTurn(lobby, playerId);
+            if (!lobby.mayRollDice(playerId)) {
+                throw new DiceRollException();
+            }
+        });
+    }
+
+    @Override
+    public void updateLatestDiceRoll(String lobbyId, String playerId) throws GameException {
+        Lobby lobby = getLobbyById(lobbyId);
+        lobby.updateLatestDiceRollOfPlayer(playerId);
     }
 
     /**

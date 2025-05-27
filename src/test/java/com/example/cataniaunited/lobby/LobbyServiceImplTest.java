@@ -3,6 +3,7 @@ package com.example.cataniaunited.lobby;
 import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.exception.ui.DiceRollException;
 import com.example.cataniaunited.exception.ui.InvalidTurnException;
 import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerColor;
@@ -239,6 +240,52 @@ class LobbyServiceImplTest {
             lobbyService.checkPlayerTurn(lobbyId, playerId);
         });
         assertEquals("It is not your turn!", ite.getMessage());
+    }
+
+    @Test
+    void checkPlayerDiceRollShouldThrowExceptionForNotExistingLobby() throws GameException {
+        String lobbyId = "NonExistingLobby";
+        GameException ge = assertThrows(GameException.class, () -> {
+            lobbyService.checkPlayerDiceRoll(lobbyId, "NonExistingPlayer");
+        });
+        assertEquals("Lobby with id %s not found".formatted(lobbyId), ge.getMessage());
+    }
+
+    @Test
+    void checkPlayerDiceRollShouldThrowExceptionForInvalidPlayerRollingDice() throws GameException {
+        String playerId = "player1";
+        String lobbyId = lobbyService.createLobby(playerId);
+        Lobby lobby = spy(lobbyService.getLobbyById(lobbyId));
+        lobby.setActivePlayer("anotherPlayer");
+
+        InvalidTurnException ite = assertThrows(InvalidTurnException.class, () -> {
+            lobbyService.checkPlayerDiceRoll(lobbyId, playerId);
+        });
+        assertEquals("It is not your turn!", ite.getMessage());
+    }
+
+    @Test
+    void checkPlayerDiceRollShouldThrowExceptionIfPlayerRollsTwice() throws GameException {
+        String playerId = "player1";
+        String lobbyId = lobbyService.createLobby(playerId);
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+        lobby.setActivePlayer(playerId);
+
+        assertDoesNotThrow(() -> lobbyService.checkPlayerDiceRoll(lobbyId, playerId));
+        lobby.updateLatestDiceRollOfPlayer(playerId);
+
+        DiceRollException dre = assertThrows(DiceRollException.class, () -> lobbyService.checkPlayerDiceRoll(lobbyId, playerId));
+        assertEquals("Dice may only be rolled once per turn!", dre.getMessage());
+    }
+
+    @Test
+    void checkPlayerDiceRollShouldNotThrowExceptionForValidTurn() throws GameException {
+        String playerId = "player1";
+        String lobbyId = lobbyService.createLobby(playerId);
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+        lobby.setActivePlayer(playerId);
+
+        assertDoesNotThrow(() -> lobbyService.checkPlayerDiceRoll(lobbyId, playerId));
     }
 
     @Test

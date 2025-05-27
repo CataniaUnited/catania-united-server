@@ -173,9 +173,11 @@ public class GameService {
      * @throws GameException if the game board for the lobby is not found.
      */
     public ObjectNode rollDice(String lobbyId, String playerId) throws GameException {
-        lobbyService.checkPlayerTurn(lobbyId, playerId);
+        lobbyService.checkPlayerDiceRoll(lobbyId, playerId);
         GameBoard gameboard = getGameboardByLobbyId(lobbyId);
-        return gameboard.rollDice();
+        ObjectNode result = gameboard.rollDice();
+        lobbyService.updateLatestDiceRoll(lobbyId, playerId);
+        return result;
     }
 
     /**

@@ -74,6 +74,10 @@ public interface LobbyService {
      */
     void checkPlayerTurn(String lobbyId, String playerId) throws GameException;
 
+    void checkPlayerDiceRoll(String lobbyId, String playerId) throws GameException;
+
+    void updateLatestDiceRoll(String lobbyId, String playerId) throws GameException;
+
     /**
      * Gets the color assigned to a specific player in a given lobby.
      *

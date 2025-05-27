@@ -32,6 +32,7 @@ public class Lobby {
     private volatile String activePlayer; // ID of the player whose turn it is
     private volatile boolean gameStarted = false; // Flag indicating if the game has started
     private int roundsPlayed = 0;
+    private final Map<String, Integer> latestDiceRollOfPlayer = new ConcurrentHashMap<>();
 
     /**
      * Constructs a new Lobby instance.
@@ -288,6 +289,14 @@ public class Lobby {
 
     public List<String> getPlayerOrder() {
         return List.copyOf(playerOrder);
+    }
+
+    public boolean mayRollDice(String playerId) {
+        return latestDiceRollOfPlayer.getOrDefault(playerId, 0) <= roundsPlayed;
+    }
+
+    public void updateLatestDiceRollOfPlayer(String playerId) {
+        latestDiceRollOfPlayer.put(playerId, roundsPlayed + 1);
     }
 
     /**

@@ -14,6 +14,7 @@ import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerColor;
 import com.example.cataniaunited.player.PlayerService;
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.junit.mockito.InjectSpy;
 import io.quarkus.websockets.next.WebSocketConnection;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.AfterEach;
@@ -25,6 +26,7 @@ import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 
 @QuarkusTest
@@ -33,7 +35,7 @@ class ResourceDistributionIntegrationTest {
     @Inject
     GameService gameService;
 
-    @Inject
+    @InjectSpy
     LobbyService lobbyService;
 
     @Inject
@@ -74,6 +76,8 @@ class ResourceDistributionIntegrationTest {
 
     @Test
     void testRollDiceDistributesResourcesToPlayer() throws Exception {
+        doNothing().when(lobbyService).checkPlayerDiceRoll(lobbyId, testPlayer.getUniqueId());
+
         // 1. Select a target Tile and set its value for predictability
         Tile targetTile = gameBoard.getTileList().stream()
                 .filter(t -> t.getType() == TileType.WHEAT)
