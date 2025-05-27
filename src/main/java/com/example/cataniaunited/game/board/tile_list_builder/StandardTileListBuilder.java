@@ -1,5 +1,7 @@
 package com.example.cataniaunited.game.board.tile_list_builder;
 
+import com.example.cataniaunited.util.Util;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -9,12 +11,13 @@ import static com.example.cataniaunited.util.CatanBoardUtils.calculateAmountOfTi
 import static com.example.cataniaunited.util.CatanBoardUtils.polarToCartesian;
 
 // fixme avoid long methods with hard to understand functionality. can you improve understandability with naming or submethods?
+
 /**
  * A standard implementation of {@link TileListBuilder} for creating a list of Catan tiles.
  * This builder handles tile creation, value assignment, shuffling, ID assignment,
  * and calculation of tile positions on a hexagonal grid.
  */
-public class StandardTileListBuilder implements TileListBuilder{
+public class StandardTileListBuilder implements TileListBuilder {
 
     int sizeOfBoard;
     int sizeOfHex;
@@ -30,12 +33,18 @@ public class StandardTileListBuilder implements TileListBuilder{
     private static final double NORTH_WEST_ANGLE = 2.0943951023931957; // k = 2
     private static final double SOUTH_EAST_ANGLE = 5.235987755982989; // k = 5
 
+    // --- Constants for Production Number Generation ---
+    private static final int MIN_DICE_VALUE = 2; // Having two die the lowest number one can roll is 2
+    private static final int MAX_DICE_VALUE = 12; // Having two die the highest number one can roll is 12
+    private static final int ROBBER_ACTIVATION_ROLL = 7; // This roll number does not produce resources, it activates the robber
+    private static final int COUNT_OF_DISTINCT_PRODUCTION_NUMBERS = 10; // all numbers that produce resources (-> all numbers except 7 -> 10 Numbers) (2,3,4,5,6,8,9,10,11,12)
+
     List<Tile> tileList;
 
     /**
      * Constructs a new StandardTileListBuilder and initializes its state by calling {@link #reset()}.
      */
-    public StandardTileListBuilder(){
+    public StandardTileListBuilder() {
         this.reset(); // Initialize and Reset
     }
 
@@ -72,7 +81,7 @@ public class StandardTileListBuilder implements TileListBuilder{
         this.sizeOfHex = sizeOfHex;
         this.flipYAxis = flipYAxis;
 
-        this.distanceBetweenTiles = StrictMath.sqrt(3)*this.sizeOfHex; // Distance between centers of adjacent hexes
+        this.distanceBetweenTiles = StrictMath.sqrt(3) * this.sizeOfHex; // Distance between centers of adjacent hexes
         amountOfTilesOnBoard = calculateAmountOfTilesForLayerK(sizeOfBoard);
 
         // precomputing offset since working with bigDecimalObjects takes time
@@ -88,7 +97,7 @@ public class StandardTileListBuilder implements TileListBuilder{
      * resource-producing tile types in a repeating sequence.
      *
      * @throws IllegalStateException if configuration has not been set, if no usable
-     * (non-WASTE) tile types are available or Only the Waste Tile is available.
+     *                               (non-WASTE) tile types are available or Only the Waste Tile is available.
      */
     @Override
     public void buildTiles() {
@@ -99,11 +108,12 @@ public class StandardTileListBuilder implements TileListBuilder{
         TileType[] availableTypes = TileType.values();
         int usableTypeCount = availableTypes.length - 1; // Assuming one WASTE type (last index)
         if (usableTypeCount <= 0) throw new IllegalStateException("Requires non-WASTE types.");
-        if (availableTypes[usableTypeCount] != TileType.WASTE) throw new IllegalStateException("WASTE-Type needs to be at last position.");
+        if (availableTypes[usableTypeCount] != TileType.WASTE)
+            throw new IllegalStateException("WASTE-Type needs to be at last position.");
 
 
         tileList.add(new Tile(TileType.WASTE));
-        for(int i = 0; i < amountOfTilesOnBoard-1; i++){
+        for (int i = 0; i < amountOfTilesOnBoard - 1; i++) {
             TileType currentTileType = availableTypes[i % (usableTypeCount)];
             tileList.add(new Tile(currentTileType));
         }
@@ -117,47 +127,27 @@ public class StandardTileListBuilder implements TileListBuilder{
      */
     @Override
     public void addValues() {
-        // fixme magic constants, long complex method, bad readability / maintainability
-        if (this.tileList == null || this.tileList.isEmpty()) {
-            throw new IllegalStateException("Tiles must be built before shuffling.");
+        if (Util.isEmpty(tileList)) {
+            throw new IllegalStateException("Tiles must be built before assigning values.");
         }
 
-        // Production numbers are only assigned to non-WASTE (non-Desert) tiles.
-        // One tile in the list is TileType.WASTE, so we need values for one less than the total.
-        int amountOfValuesToCreate = tileList.size() - 1;
-
-        int valueAmount = amountOfValuesToCreate / 10; // How often each value is used at least
-
-        List<Integer> valueList = new ArrayList<>(amountOfValuesToCreate);
-        List<Integer> overHeadList = new ArrayList<>(10); // There are 10 different numbers 2 to 12 without 7
-
-        int val = 2;
-        while (val <= 12) { // add each value valueAmount Times
-            for (int i = 0; i < valueAmount; i++) {
-                valueList.add(val);
-            }
-            overHeadList.add(val); // add value to overHeadList to have some values in the backlog
-            // ... in case that the amount of tiles isn't a clean multiplicative of 10 we can still give them a random
-            // value without unbalancing the distribution
-
-            val++;
-            if (val == 7) { // The number 7 activates the Robber and does not produce resources from hexes.
-                val++;
+        // Calculate the number of tiles that require a production value.
+        // Excluding the TileType.WASTE (Desert) tile since it doesn't produce any resources.
+        int amountOfValuesToCreate = 0;
+        for (Tile tile : tileList) {
+            if (tile.getType() != TileType.WASTE) {
+                amountOfValuesToCreate++;
             }
         }
 
-        Collections.shuffle(valueList);
-        Collections.shuffle(overHeadList);
+        List<Integer> productionValues = generateShuffledProductionValues(amountOfValuesToCreate);
+        Collections.shuffle(productionValues); // Shuffle the list again, since the overhead got added at the end
 
-        valueList.addAll(overHeadList); // Add the overHeadList to the end of the Value list to guarantee that there are enough values to add
-
-        int index = 0;
-        for (Tile tile: tileList){
-            if (tile.type == TileType.WASTE){ // Do not add a value for Waste tiles, since they do not Distribute Resources
-                continue;
+        int valueIndex = 0;
+        for (Tile tile : tileList) {
+            if (tile.getType() != TileType.WASTE) { // Do not add a value for Waste tiles since they dont produce resources
+                tile.setValue(productionValues.get(valueIndex++));
             }
-
-            tile.setValue(valueList.get(index++));
         }
     }
 
@@ -214,7 +204,7 @@ public class StandardTileListBuilder implements TileListBuilder{
         // set coordinates of center Tile
         tileList.get(0).setCoordinates(0, 0);
 
-        if (this.tileList.size() == 1){ // If the size is one, there is only one Tile
+        if (this.tileList.size() == 1) { // If the size is one, there is only one Tile
             return;
         }
 
@@ -229,12 +219,12 @@ public class StandardTileListBuilder implements TileListBuilder{
         int indexOfMiddleTileOfThisLayer;
         int indexOfMiddleTileOfPreviousLayer;
 
-        for(int layerIndex = 1; layerIndex < sizeOfBoard; layerIndex++){
+        for (int layerIndex = 1; layerIndex < sizeOfBoard; layerIndex++) {
             // get indices of current Layer
             indexOfFirstTileOfThisLayer = calculateAmountOfTilesForLayerK(layerIndex); // index of current Tile regarding tileList
-            indexOfFirstTileOfPreviousLayer = calculateAmountOfTilesForLayerK(layerIndex-1); // amount of tiles placed before-1 to get index
+            indexOfFirstTileOfPreviousLayer = calculateAmountOfTilesForLayerK(layerIndex - 1); // amount of tiles placed before-1 to get index
             indexOfMiddleTileOfThisLayer = getIndexOfMiddleElementOfLayerK.applyAsInt(layerIndex);
-            indexOfMiddleTileOfPreviousLayer = getIndexOfMiddleElementOfLayerK.applyAsInt(layerIndex-1);
+            indexOfMiddleTileOfPreviousLayer = getIndexOfMiddleElementOfLayerK.applyAsInt(layerIndex - 1);
 
             // calculate next tiles on diagonal
             addCoordinatesToMainDiagonal(indexOfFirstTileOfThisLayer,
@@ -263,36 +253,100 @@ public class StandardTileListBuilder implements TileListBuilder{
         return this.tileList;
     }
 
+    /**
+     * Generates a list of production numbers intended for tile assignment.
+     * The method aims for a somewhat balanced distribution.
+     *
+     * @param numberOfValuesToGenerate The total count of production numbers needed (typically total tiles - 1 for desert).
+     * @return A list of integers representing the production numbers, ready to be shuffled and assigned.
+     */
+    private List<Integer> generateShuffledProductionValues(int numberOfValuesToGenerate) {
+        if (numberOfValuesToGenerate <= 0) {
+            return new ArrayList<>(); // Return empty if no values are needed
+        }
+
+        // Calculate how many times each distinct production number (2-6, 8-12) should appear at a minimum.
+        // There are 10 such distinct numbers.
+        int baseRepetitionsPerNumber = numberOfValuesToGenerate / COUNT_OF_DISTINCT_PRODUCTION_NUMBERS;
+
+        List<Integer> coreProductionValues = new ArrayList<>(numberOfValuesToGenerate);
+
+        // This list will hold "extra" copies of each production number.
+        // These are used to fill up the list if numberOfValuesToGenerate is not a neat multiple of 10.
+        // Each distinct production number gets one slot in this "overhead" list initially.
+        // To ensure a fair distribution (19 Numbers, all once, 9 twice and not all once but one number 10 times)
+        List<Integer> overheadProductionValues = new ArrayList<>(COUNT_OF_DISTINCT_PRODUCTION_NUMBERS);
+
+        int currentDiceValue = MIN_DICE_VALUE;
+        while (currentDiceValue <= MAX_DICE_VALUE) {
+            if (currentDiceValue == ROBBER_ACTIVATION_ROLL) {
+                currentDiceValue++; // Skip 7, as it activates the robber, not production.
+                continue;
+            }
+
+            // Add the number of repetitions for the current dice value.
+            for (int i = 0; i < baseRepetitionsPerNumber; i++) {
+                coreProductionValues.add(currentDiceValue);
+            }
+
+            // Add one instance of the current dice value to the overhead list.
+            // This ensures each production number is available at once beyond the base repetitions,
+            // helping to cover remainders.
+            overheadProductionValues.add(currentDiceValue);
+
+            currentDiceValue++;
+        }
+
+        // Shuffle both lists before combining. To ensure random distribution
+        Collections.shuffle(coreProductionValues);
+        Collections.shuffle(overheadProductionValues);
+
+        // Add the (shuffled) overhead values to the main list.
+        // This ensures there are enough total values, even if numberOfValuesToGenerate wasn't a perfect multiple.
+        // The overhead list acts as a pool to draw from to meet the total required count.
+        // If coreProductionValues.size() < numberOfValuesToGenerate, the needed difference will be
+        // taken from the beginning of the shuffled overheadProductionValues.
+        coreProductionValues.addAll(overheadProductionValues);
+
+        // Ensure the final list is exactly the size requested.
+        // If more values were generated than needed (due to adding all of overhead), trim it.
+        if (coreProductionValues.size() > numberOfValuesToGenerate) {
+            return new ArrayList<>(coreProductionValues.subList(0, numberOfValuesToGenerate));
+        }
+
+        return coreProductionValues;
+    }
+
     // --- coordinate calculation ---
 
     /**
      * Adds coordinates to tiles forming rows radiating from diagonal anchor points.
      * This is part of the hexagonal grid coordinate calculation.
      *
-     * @param layerIndex  The current layer index (0-based for calculation logic within this method).
+     * @param layerIndex                The current layer index (0-based for calculation logic within this method).
      * @param southRowStartingTileIndex Index of the tile starting the "south" radiating row.
      * @param northRowStartingTileIndex Index of the tile starting the "north" radiating row.
      */
-    private void addCoordinatesToRows(int layerIndex, int southRowStartingTileIndex, int northRowStartingTileIndex){
-        int layer = layerIndex+1; // Convert to 1-based layer for offset calculations
+    private void addCoordinatesToRows(int layerIndex, int southRowStartingTileIndex, int northRowStartingTileIndex) {
+        int layer = layerIndex + 1; // Convert to 1-based layer for offset calculations
         int offset;
 
         // Add East Part Of South Row
-        offset =  calculateAmountOfTilesForLayerK(layer) - calculateAmountOfTilesForLayerK(layer-1)+ 1;
+        offset = calculateAmountOfTilesForLayerK(layer) - calculateAmountOfTilesForLayerK(layer - 1) + 1;
         addCoordinatesForRowWhereEveryStepIsIntoANewLayer(layer, southRowStartingTileIndex, offset, true);
 
         // Add West Part Of North Row
-        offset =  calculateAmountOfTilesForLayerK(layer) - calculateAmountOfTilesForLayerK(layer-1)+ 4;
+        offset = calculateAmountOfTilesForLayerK(layer) - calculateAmountOfTilesForLayerK(layer - 1) + 4;
         addCoordinatesForRowWhereEveryStepIsIntoANewLayer(layer, northRowStartingTileIndex, offset, false);
 
         // Add East part Of North Row
-        offset =  calculateAmountOfTilesForLayerK(layer) - calculateAmountOfTilesForLayerK(layer-1)+ 1;
-        addNeighboringTile(layer, northRowStartingTileIndex, offset, layer-1, true);
+        offset = calculateAmountOfTilesForLayerK(layer) - calculateAmountOfTilesForLayerK(layer - 1) + 1;
+        addNeighboringTile(layer, northRowStartingTileIndex, offset, layer - 1, true);
 
         // Add West Part South Row
-        offset =  calculateAmountOfTilesForLayerK(layer) - calculateAmountOfTilesForLayerK(layer-1)+ 4;
-        int irregularIndex = calculateAmountOfTilesForLayerK(layer)-1; // Last tile of current layer
-        changeStartingPositionForSouthWestHalfAndMiddleRow(layer, southRowStartingTileIndex, irregularIndex, offset, layer-2, false);
+        offset = calculateAmountOfTilesForLayerK(layer) - calculateAmountOfTilesForLayerK(layer - 1) + 4;
+        int irregularIndex = calculateAmountOfTilesForLayerK(layer) - 1; // Last tile of current layer
+        changeStartingPositionForSouthWestHalfAndMiddleRow(layer, southRowStartingTileIndex, irregularIndex, offset, layer - 2, false);
 
     }
 
@@ -306,7 +360,7 @@ public class StandardTileListBuilder implements TileListBuilder{
      * @param startingOffset    The initial offset to find the next tile in the sequence. This offset changes for subsequent tiles.
      * @param xIsGettingLarger  Boolean indicating if the x-coordinate should increase (true) or decrease (false) for subsequent tiles.
      */
-    private void addCoordinatesForRowWhereEveryStepIsIntoANewLayer(int startingLayer, int startingTileIndex, int startingOffset, boolean xIsGettingLarger){
+    private void addCoordinatesForRowWhereEveryStepIsIntoANewLayer(int startingLayer, int startingTileIndex, int startingOffset, boolean xIsGettingLarger) {
         Tile lastTile = tileList.get(startingTileIndex);
         int lastTileIndex = startingTileIndex;
         int currentTileIndex;
@@ -319,7 +373,7 @@ public class StandardTileListBuilder implements TileListBuilder{
             currentTile = tileList.get(currentTileIndex);
 
             coordinates = lastTile.getCoordinates();
-            if (xIsGettingLarger){
+            if (xIsGettingLarger) {
                 currentTile.setCoordinates(coordinates[0] + distanceBetweenTiles, coordinates[1]);
             } else {
                 currentTile.setCoordinates(coordinates[0] - distanceBetweenTiles, coordinates[1]);
@@ -335,24 +389,24 @@ public class StandardTileListBuilder implements TileListBuilder{
      * Helper method to calculate coordinates for a sequence of neighboring tiles along a specific axis,
      * and then continue with {@link #addCoordinatesForRowWhereEveryStepIsIntoANewLayer} for tiles further out.
      *
-     * @param startingLayer  The layer number for the subsequent call to {@code addCoordinatesForRowWhereEveryStepIsIntoANewLayer}.
-     * @param startingTileIndex  The index in {@code tileList} of the anchor tile for this sequence.
+     * @param startingLayer               The layer number for the subsequent call to {@code addCoordinatesForRowWhereEveryStepIsIntoANewLayer}.
+     * @param startingTileIndex           The index in {@code tileList} of the anchor tile for this sequence.
      * @param startingOffsetForSubRoutine The offset for the subsequent call to {@code addCoordinatesForRowWhereEveryStepIsIntoANewLayer}.
-     * @param counter The number of immediately adjacent tiles to calculate before calling the subroutine.
-     * @param xIsGettingLarger Boolean indicating if the x-coordinate should increase (true) or decrease (false).
+     * @param counter                     The number of immediately adjacent tiles to calculate before calling the subroutine.
+     * @param xIsGettingLarger            Boolean indicating if the x-coordinate should increase (true) or decrease (false).
      */
-    private void addNeighboringTile(int startingLayer, int startingTileIndex, int startingOffsetForSubRoutine, int counter, boolean xIsGettingLarger){
+    private void addNeighboringTile(int startingLayer, int startingTileIndex, int startingOffsetForSubRoutine, int counter, boolean xIsGettingLarger) {
         Tile lastTile = tileList.get(startingTileIndex);
         int lastTileIndex = startingTileIndex;
         int currentTileIndex;
         Tile currentTile;
         double[] coordinates;
-        for(; counter > 0; counter--){
+        for (; counter > 0; counter--) {
             currentTileIndex = lastTileIndex - 1; // Assumes tiles are ordered such that -1 moves in the desired direction
             currentTile = tileList.get(currentTileIndex);
 
             coordinates = lastTile.getCoordinates();
-            if (xIsGettingLarger){
+            if (xIsGettingLarger) {
                 currentTile.setCoordinates(coordinates[0] + distanceBetweenTiles, coordinates[1]);
             } else {
                 currentTile.setCoordinates(coordinates[0] - distanceBetweenTiles, coordinates[1]);
@@ -371,19 +425,19 @@ public class StandardTileListBuilder implements TileListBuilder{
      * This is used for specific parts of the hexagonal grid generation, particularly for rows that might
      * not start from a main diagonal.
      *
-     * @param startingLayerForSubRoutine The layer for the subsequent call to {@code addNeighboringTile}.
-     * @param startingTileIndex          The index of a reference tile (often already positioned).
-     * @param irregularTileIndex         The index of the tile whose position is being set relative to {@code startingTileIndex}.
+     * @param startingLayerForSubRoutine  The layer for the subsequent call to {@code addNeighboringTile}.
+     * @param startingTileIndex           The index of a reference tile (often already positioned).
+     * @param irregularTileIndex          The index of the tile whose position is being set relative to {@code startingTileIndex}.
      * @param startingOffsetForSubRoutine The offset for the call to {@code addNeighboringTile}.
-     * @param counterForSubRoutine       The counter for the call to {@code addNeighboringTile}.
-     * @param xIsGettingLarger           Boolean indicating if the x-coordinate should increase (true) or decrease (false).
+     * @param counterForSubRoutine        The counter for the call to {@code addNeighboringTile}.
+     * @param xIsGettingLarger            Boolean indicating if the x-coordinate should increase (true) or decrease (false).
      */
-    private void changeStartingPositionForSouthWestHalfAndMiddleRow(int startingLayerForSubRoutine, int startingTileIndex, int irregularTileIndex, int startingOffsetForSubRoutine, int counterForSubRoutine, boolean xIsGettingLarger){
+    private void changeStartingPositionForSouthWestHalfAndMiddleRow(int startingLayerForSubRoutine, int startingTileIndex, int irregularTileIndex, int startingOffsetForSubRoutine, int counterForSubRoutine, boolean xIsGettingLarger) {
         Tile lastTile = tileList.get(startingTileIndex);
         Tile currentTile = tileList.get(irregularTileIndex);
 
         double[] coordinates = lastTile.getCoordinates();
-        if (xIsGettingLarger){
+        if (xIsGettingLarger) {
             currentTile.setCoordinates(coordinates[0] + distanceBetweenTiles, coordinates[1]);
         } else {
             currentTile.setCoordinates(coordinates[0] - distanceBetweenTiles, coordinates[1]);
@@ -398,15 +452,15 @@ public class StandardTileListBuilder implements TileListBuilder{
      * towards the middle/northwest of that layer. Their positions are calculated relative to
      * corresponding tiles in the previous layer.
      *
-     * @param indexOfFirstTileOfThisLayer     Index of the first tile in the current layer (e.g., SE direction).
-     * @param indexOfFirstTileOfPreviousLayer Index of the corresponding tile in the previous layer (SE direction).
-     * @param indexOfMiddleTileOfThisLayer    Index of a middle/NW tile in the current layer.
+     * @param indexOfFirstTileOfThisLayer      Index of the first tile in the current layer (e.g., SE direction).
+     * @param indexOfFirstTileOfPreviousLayer  Index of the corresponding tile in the previous layer (SE direction).
+     * @param indexOfMiddleTileOfThisLayer     Index of a middle/NW tile in the current layer.
      * @param indexOfMiddleTileOfPreviousLayer Index of the corresponding middle/NW tile in the previous layer.
      */
     private void addCoordinatesToMainDiagonal(int indexOfFirstTileOfThisLayer,
-                                             int indexOfFirstTileOfPreviousLayer,
-                                             int indexOfMiddleTileOfThisLayer,
-                                             int indexOfMiddleTileOfPreviousLayer){
+                                              int indexOfFirstTileOfPreviousLayer,
+                                              int indexOfMiddleTileOfThisLayer,
+                                              int indexOfMiddleTileOfPreviousLayer) {
         double x;
         double y;
         double[] previousCoordinates;
