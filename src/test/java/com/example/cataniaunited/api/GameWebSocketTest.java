@@ -1344,7 +1344,7 @@ public class GameWebSocketTest {
 
         verify(gameService).placeSettlement(actualLobbyId, playerId, settlementPositionId);
         verify(playerService, atLeastOnce()).checkForWin(playerId);
-        verify(gameMessageHandler, times(1)).broadcastWin(eq(actualLobbyId), eq(playerId));
+        verify(gameMessageHandler, times(1)).broadcastWin(actualLobbyId, playerId);
         verify(gameService, never()).getGameboardByLobbyId(anyString());
     }
 
