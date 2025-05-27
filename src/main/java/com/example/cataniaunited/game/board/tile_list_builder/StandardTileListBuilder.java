@@ -122,7 +122,10 @@ public class StandardTileListBuilder implements TileListBuilder{
             throw new IllegalStateException("Tiles must be built before shuffling.");
         }
 
-        int amountOfValuesToCreate = tileList.size() - 1; // -1, because of Dessert // fixme whats up with desert
+        // Production numbers are only assigned to non-WASTE (non-Desert) tiles.
+        // One tile in the list is TileType.WASTE, so we need values for one less than the total.
+        int amountOfValuesToCreate = tileList.size() - 1;
+
         int valueAmount = amountOfValuesToCreate / 10; // How often each value is used at least
 
         List<Integer> valueList = new ArrayList<>(amountOfValuesToCreate);
@@ -138,7 +141,7 @@ public class StandardTileListBuilder implements TileListBuilder{
             // value without unbalancing the distribution
 
             val++;
-            if (val == 7) { // except for 7 // fixme why?
+            if (val == 7) { // The number 7 activates the Robber and does not produce resources from hexes.
                 val++;
             }
         }
