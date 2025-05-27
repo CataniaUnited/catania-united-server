@@ -130,6 +130,7 @@ public class PlayerService {
         if (playerId == null) {
             return null;
         }
+        // fixme "get" terminology, this method should not manipulate the state
         WebSocketConnection conn = connectionsByPlayerId.get(playerId);
         if (conn != null && !conn.isOpen()) {
             // Clean up stale connection

@@ -9,6 +9,7 @@ import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 
 import java.util.*;
 
+// fixme many magic constants
 /**
  * Builds the graph structure of the Catan game board, consisting of
  * {@link SettlementPosition} nodes and {@link Road} edges.
@@ -146,6 +147,7 @@ public class GraphBuilder {
         }
     }
 
+    // fixme way too long and implicit-knowledge method
     /**
      * Creates a subsequent layer (ring of nodes) on the game board.
      * This method connects the new nodes to each other within the layer,
@@ -257,7 +259,7 @@ public class GraphBuilder {
             currentTiles = currentNode.getTiles(); // get amount of tiles of this node
 
             if (currentTiles.size() == 3){
-                continue; // if == 3 continue
+                continue; // if == 3 continue // fixme why, also this comment does not add any information
             }
 
             // else < 3
@@ -349,7 +351,7 @@ public class GraphBuilder {
         portList = ports;
     }
 
-
+    // fixme long hard-to-read method
     private List<Port> getPortsToPlace(int numberOfCoastalSettlements) {
         List<Port> ports = new ArrayList<>();
         TileType[] resourceTypes = Arrays.stream(TileType.values()).filter(type -> type != TileType.WASTE).toArray(TileType[]::new);
@@ -477,6 +479,7 @@ public class GraphBuilder {
         }
     }
 
+    // fixme unclear whats happening here, e.g., what is the "previous" method?
     /**
      * Calculates and sets coordinates for outer settlement positions.
      * The method of calculation depends on how many tiles the node is associated with

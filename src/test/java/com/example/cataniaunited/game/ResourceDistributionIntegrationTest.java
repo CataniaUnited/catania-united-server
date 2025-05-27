@@ -72,6 +72,7 @@ class ResourceDistributionIntegrationTest {
         }
     }
 
+    // fixme split in individual tests with each preceding test as the precondition for the next (more writing effort for clearer regression identification)
     @Test
     void testRollDiceDistributesResourcesToPlayer() throws Exception {
         // 1. Select a target Tile and set its value for predictability

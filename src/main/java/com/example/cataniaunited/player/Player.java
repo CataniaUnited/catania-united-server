@@ -135,7 +135,7 @@ public class Player {
         return connection;
     }
 
-
+    // fixme this class shouldnt know about message handling, if its a player model class
     /**
      * Sends a {@link MessageDTO} to this player via their WebSocket connection.
      * If the player has no active connection, a warning is logged and the message is dropped.

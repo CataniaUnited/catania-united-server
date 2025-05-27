@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
+// fixme - good class for the main game logic
 /**
  * Service class for managing game logic, including game board creation,
  * player actions (placing settlements, roads, cities), dice rolling,
@@ -251,6 +252,7 @@ public class GameService {
             message.put("error", "Failed to build leaderboard");
         }
 
+        // fixme this class shouldnt know about message handling
         MessageDTO messageDTO = new MessageDTO(MessageType.GAME_WON, winnerPlayerId, lobbyId, message);
         logger.infof("Player %s has won the game in lobby %s", winnerPlayerId, lobbyId);
         return lobbyService.notifyPlayers(lobbyId, messageDTO);

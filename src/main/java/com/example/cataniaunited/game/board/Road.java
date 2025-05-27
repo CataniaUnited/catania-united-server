@@ -111,6 +111,7 @@ public class Road implements Placable, Buildable {
             return; // position has already been set
         }
 
+        // fixme reuse transform / position struct
         double xMax;
         double yMax;
         double xMin;
