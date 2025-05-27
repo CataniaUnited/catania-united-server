@@ -275,29 +275,6 @@ class GameServiceTest {
     }
 
     @Test
-    void broadcastWinShouldSendCorrectGameWonMessage() throws GameException {
-        String lobbyId = "lobby123";
-        String winnerPlayerId = "playerABC";
-        String winnerUsername = "ChickenNugget";
-
-        Player mockPlayer = mock(Player.class);
-        when(mockPlayer.getUsername()).thenReturn(winnerUsername);
-        doReturn(mockPlayer).when(playerService).getPlayerById(winnerPlayerId);
-        doReturn(new Lobby(lobbyId, winnerPlayerId)).when(lobbyService).getLobbyById(lobbyId);
-
-        Uni<MessageDTO> resultUni = gameService.broadcastWin(lobbyId, winnerPlayerId);
-        MessageDTO result = resultUni.await().indefinitely();
-
-        assertNotNull(result);
-        assertEquals(MessageType.GAME_WON, result.getType());
-        assertEquals(lobbyId, result.getLobbyId());
-        assertEquals(winnerPlayerId, result.getPlayer());
-        assertEquals(winnerUsername, result.getMessageNode("winner").asText());
-
-        verify(lobbyService).notifyPlayers(lobbyId, result);
-    }
-
-    @Test
     void placeSettlementWhenPositionHasPortShouldAddPortToPlayer() throws GameException {
         String playerId = "playerWithPort";
         Player mockPlayer = mock(Player.class);

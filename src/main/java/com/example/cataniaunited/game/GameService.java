@@ -186,41 +186,6 @@ public class GameService {
     }
 
     /**
-     * Broadcasts a game win message to all players in the lobby.
-     * The message includes the winner's username and a leaderboard.
-     *
-     * @param lobbyId        The ID of the lobby where the game was won.
-     * @param winnerPlayerId The ID of the player who won the game.
-     * @return A Uni emitting a {@link MessageDTO} of type GAME_WON.
-     */
-    public Uni<MessageDTO> broadcastWin(String lobbyId, String winnerPlayerId) {
-        ObjectNode message = JsonNodeFactory.instance.objectNode();
-        Player winner = playerService.getPlayerById(winnerPlayerId);
-        message.put("winner", winner.getUsername());
-
-        ArrayNode leaderboard = message.putArray("leaderboard");
-        try {
-            lobbyService.getLobbyById(lobbyId).getPlayers().stream()
-                    .map(playerService::getPlayerById)
-                    .filter(Objects::nonNull)
-                    .sorted(Comparator.comparingInt(Player::getVictoryPoints).reversed())
-                    .forEach(p -> {
-                        ObjectNode entry = leaderboard.addObject();
-                        entry.put("username", p.getUsername());
-                        entry.put("vp", p.getVictoryPoints());
-                    });
-        } catch (GameException e) {
-            logger.errorf("Failed to fetch players for lobby %s: %s", lobbyId, e.getMessage());
-            message.put("error", "Failed to build leaderboard");
-        }
-
-        MessageDTO messageDTO = new MessageDTO(MessageType.GAME_WON, winnerPlayerId, lobbyId, message);
-        logger.infof("Player %s has won the game in lobby %s", winnerPlayerId, lobbyId);
-        return lobbyService.notifyPlayers(lobbyId, messageDTO);
-
-    }
-
-    /**
      * Clears all game boards from the memory. Intended for testing purposes.
      */
     public void clearGameBoardsForTesting() {

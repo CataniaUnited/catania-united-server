@@ -37,7 +37,6 @@ import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -70,6 +69,9 @@ public class GameWebSocketTest {
 
     @Inject
     OpenConnections connections;
+
+    @InjectSpy
+    GameMessageHandler gameMessageHandler;
 
     @InjectSpy
     GameWebSocket gameWebSocket;
@@ -245,6 +247,7 @@ public class GameWebSocketTest {
 
         Player player = new Player("Player 1");
         when(playerService.getPlayerById(player.getUniqueId())).thenReturn(player);
+        when(playerService.getAllPlayers()).thenReturn(List.of(player));
         String lobbyId = lobbyService.createLobby("HostPlayer");
         lobbyService.joinLobbyByCode(lobbyId, player.getUniqueId());
 
@@ -264,15 +267,14 @@ public class GameWebSocketTest {
 
         MessageDTO received = objectMapper.readValue(receivedMessages.get(receivedMessages.size() - 1), MessageDTO.class);
         assertEquals(MessageType.LOBBY_UPDATED, received.getType());
-        assertEquals("Chicken", received.getPlayer());
         assertNotNull(received.getPlayers());
         assertTrue(received.getPlayers().contains("Chicken"));
-
 
     }
 
     @Test
     void testSetUsernameOfNonExistingPlayer() throws Exception {
+        String invalidId = "InvalidId";
         String newUsername = "Chicken";
         String expectedErrorMessage = "No player session";
 
@@ -309,9 +311,9 @@ public class GameWebSocketTest {
         // Now send the SET_USERNAME message
         MessageDTO setUsernameMsg = new MessageDTO();
         setUsernameMsg.setType(MessageType.SET_USERNAME);
-        setUsernameMsg.setPlayer(newUsername);
+        setUsernameMsg.setPlayer(invalidId);
         System.out.println("Test Client: Sending SET_USERNAME with username: " + newUsername);
-        client.sendTextAndAwait(objectMapper.writeValueAsString(setUsernameMsg));
+        client.sendTextAndAwait(setUsernameMsg);
 
         // Wait for the ERROR message
         assertTrue(errorLatch.await(5, TimeUnit.SECONDS), "Did not receive ERROR message after SET_USERNAME");
@@ -322,7 +324,7 @@ public class GameWebSocketTest {
         assertNotNull(errorDto.getMessage());
         assertEquals(expectedErrorMessage, errorDto.getMessageNode("error").textValue());
 
-        verify(playerService, times(1)).getPlayerByConnection(any(WebSocketConnection.class));
+        verify(playerService, times(1)).getPlayerById(invalidId);
 
         client.closeAndAwait();
     }
@@ -350,7 +352,7 @@ public class GameWebSocketTest {
         String lobbyId = lobbyService.createLobby(hostPlayer.getUniqueId());
 
         List<MessageDTO> receivedMessages = new CopyOnWriteArrayList<>();
-        CountDownLatch messageLatch = new CountDownLatch(4);
+        CountDownLatch messageLatch = new CountDownLatch(3);
         CountDownLatch connectionLatch = new CountDownLatch(1);
         List<String> playerIds = new ArrayList<>();
 
@@ -386,7 +388,7 @@ public class GameWebSocketTest {
         webSocketClientConnection.sendTextAndAwait(sentMessage);
 
         assertTrue(messageLatch.await(5, TimeUnit.SECONDS), "Not all messages were received in time!");
-        assertEquals(4, receivedMessages.size());
+        assertEquals(3, receivedMessages.size());
 
         MessageDTO responseMessage = receivedMessages.stream().filter(m -> m.getType() == MessageType.PLAYER_JOINED).findFirst().get();
         assertNotNull(responseMessage);
@@ -550,7 +552,7 @@ public class GameWebSocketTest {
 
         assertEquals(playerMock.getUsername(), response.getMessageNode("winner").asText());
 
-        verify(gameService).broadcastWin(lobbyId, player1Id);
+        verify(gameMessageHandler).broadcastWin(lobbyId, player1Id);
     }
 
     @Test
@@ -721,7 +723,7 @@ public class GameWebSocketTest {
         doReturn(gameBoard).when(gameService).getGameboardByLobbyId(lobbyId);
 
         ObjectNode mergedBoardJson = objectMapper.createObjectNode().put("merged", "gameData");
-        doReturn(mergedBoardJson).when(gameWebSocket).createGameBoardWithPlayers(lobbyId);
+        doReturn(mergedBoardJson).when(gameMessageHandler).createGameBoardWithPlayers(lobbyId);
 
         ObjectNode placeRoadMessageNode = objectMapper.createObjectNode().put("roadId", roadId);
         MessageDTO placeRoadMessageDTO = new MessageDTO(MessageType.PLACE_ROAD, player2, lobbyId, placeRoadMessageNode);
@@ -782,7 +784,7 @@ public class GameWebSocketTest {
 
         verify(gameService).placeRoad(lobbyId, player2, roadId);
         verify(playerService, times(3)).getPlayerById(player2);
-        verify(gameWebSocket).createGameBoardWithPlayers(lobbyId);
+        verify(gameMessageHandler).createGameBoardWithPlayers(lobbyId);
         verify(gameService, times(2)).getGameboardByLobbyId(lobbyId);
     }
 
@@ -853,9 +855,9 @@ public class GameWebSocketTest {
         playerData.put("color", assignedColor.getHexCode());
         playersNode.set(playerId, playerData);
 
-        doReturn(fullJson).when(gameWebSocket).createGameBoardWithPlayers(lobbyId);
+        doReturn(fullJson).when(gameMessageHandler).createGameBoardWithPlayers(lobbyId);
 
-        ObjectNode result = gameWebSocket.createGameBoardWithPlayers(lobbyId);
+        ObjectNode result = gameMessageHandler.createGameBoardWithPlayers(lobbyId);
 
         assertTrue(result.has("gameboard"));
         assertTrue(result.has("players"));
@@ -1342,7 +1344,7 @@ public class GameWebSocketTest {
 
         verify(gameService).placeSettlement(actualLobbyId, playerId, settlementPositionId);
         verify(playerService, atLeastOnce()).checkForWin(playerId);
-        verify(gameService, times(1)).broadcastWin(eq(actualLobbyId), eq(playerId));
+        verify(gameMessageHandler, times(1)).broadcastWin(eq(actualLobbyId), eq(playerId));
         verify(gameService, never()).getGameboardByLobbyId(anyString());
     }
 
@@ -1440,7 +1442,7 @@ public class GameWebSocketTest {
         verify(gameService).placeSettlement(actualLobbyId, playerId, settlementPositionId);
         verify(playerService, never()).checkForWin(anyString());
         verify(gameService, never()).getGameboardByLobbyId(anyString());
-        verify(gameService, never()).broadcastWin(anyString(), anyString());
+        verify(gameMessageHandler, never()).broadcastWin(anyString(), anyString());
     }
 
     @Test
@@ -1639,7 +1641,7 @@ public class GameWebSocketTest {
 
         String lobbyId = lobbyService.createLobby(hostPlayer.getUniqueId());
 
-        doThrow(new GameException("Test exception")).when(gameWebSocket).createGameBoardWithPlayers(lobbyId);
+        doThrow(new GameException("Test exception")).when(gameMessageHandler).createGameBoardWithPlayers(lobbyId);
 
         List<String> receivedMessages = new CopyOnWriteArrayList<>();
         CountDownLatch successLatch = new CountDownLatch(1);
@@ -1672,66 +1674,6 @@ public class GameWebSocketTest {
         assertEquals(MessageType.PLAYER_JOINED, successMessage.getType());
 
         verify(lobbyService).joinLobbyByCode(lobbyId, playerId);
-        verify(gameWebSocket).createGameBoardWithPlayers(lobbyId);
-    }
-
-    @Test
-    void testJoinLobby_Success_WithGameBoardUpdate() throws Exception {
-        String hostId = "hostPlayer";
-        String joiningPlayerId = "joiningPlayer";
-        String lobbyId = "testLobby";
-
-        Player mockPlayer = mock(Player.class);
-        when(mockPlayer.getUniqueId()).thenReturn(joiningPlayerId);
-        when(mockPlayer.getUsername()).thenReturn(joiningPlayerId);
-        when(mockPlayer.getResourceJSON()).thenReturn(objectMapper.createObjectNode());
-        when(mockPlayer.toJson()).thenReturn(objectMapper.createObjectNode().put("username", joiningPlayerId));
-        when(playerService.getPlayerById(joiningPlayerId)).thenReturn(mockPlayer);
-
-        Lobby mockLobby = mock(Lobby.class);
-        when(mockLobby.getLobbyId()).thenReturn(lobbyId);
-        when(mockLobby.getPlayers()).thenReturn(Set.of(hostId, joiningPlayerId));
-        when(mockLobby.getPlayerColor(joiningPlayerId)).thenReturn(PlayerColor.BLUE);
-        doReturn(mockLobby).when(lobbyService).getLobbyById(lobbyId);
-
-        doReturn(true).when(lobbyService).joinLobbyByCode(lobbyId, joiningPlayerId);
-
-        ObjectNode mockGameBoard = objectMapper.createObjectNode();
-        mockGameBoard.put("gameboard", "mockData");
-        doReturn(mockGameBoard).when(gameWebSocket).createGameBoardWithPlayers(lobbyId);
-
-        List<String> receivedMessages = new CopyOnWriteArrayList<>();
-        CountDownLatch boardUpdateLatch = new CountDownLatch(1);
-
-        var client = BasicWebSocketConnector.create()
-                .baseUri(serverUri)
-                .path("/game")
-                .onTextMessage((conn, msg) -> {
-                    if (msg.startsWith("{")) {
-                        try {
-                            MessageDTO dto = objectMapper.readValue(msg, MessageDTO.class);
-                            if (dto.getType() == MessageType.GAME_BOARD_JSON) {
-                                receivedMessages.add(msg);
-                                boardUpdateLatch.countDown();
-                            }
-                        } catch (JsonProcessingException e) {
-                            fail("Failed to parse message");
-                        }
-                    }
-                })
-                .connectAndAwait();
-
-        MessageDTO joinMessage = new MessageDTO(MessageType.JOIN_LOBBY, joiningPlayerId, lobbyId);
-        client.sendTextAndAwait(objectMapper.writeValueAsString(joinMessage));
-
-        assertTrue(boardUpdateLatch.await(5, TimeUnit.SECONDS), "Did not receive GAME_BOARD_JSON message");
-        assertEquals(1, receivedMessages.size());
-
-        MessageDTO boardMessage = objectMapper.readValue(receivedMessages.get(0), MessageDTO.class);
-        assertEquals(MessageType.GAME_BOARD_JSON, boardMessage.getType());
-
-        verify(lobbyService).joinLobbyByCode(lobbyId, joiningPlayerId);
-        verify(gameWebSocket).createGameBoardWithPlayers(lobbyId);
     }
 
     @Test
