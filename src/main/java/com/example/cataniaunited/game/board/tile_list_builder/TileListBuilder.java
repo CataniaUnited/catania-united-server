@@ -36,7 +36,6 @@ public interface TileListBuilder {
      */
     void shuffleTiles();
 
-    // fixme why does this happen only manually and not as part of building or shuffling, what happens if a caller forgets this part
     /**
      * Assigns unique, sequential IDs to each tile in the list.
      */

@@ -190,8 +190,12 @@ public class StandardTileListBuilder implements TileListBuilder {
         if (this.northWestAddition == null || this.southEastAddition == null) {
             throw new IllegalStateException("Configuration must be set before building tiles.");
         }
-        if (this.tileList == null || this.tileList.isEmpty()) {
+        if (Util.isEmpty(tileList)) {
             throw new IllegalStateException("Tiles must be built before calculating coordinates.");
+        }
+
+        if (tileList.get(0).id == 0) {
+            throw new IllegalStateException("ID's must be built before calculating coordinates.");
         }
 
         // Operator to find the index of the "middle" tile of a given layer k.
