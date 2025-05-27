@@ -18,7 +18,6 @@ import static com.example.cataniaunited.util.CatanBoardUtils.polarToCartesian;
  * and calculation of tile positions on a hexagonal grid.
  */
 public class StandardTileListBuilder implements TileListBuilder {
-
     int sizeOfBoard;
     int sizeOfHex;
     boolean flipYAxis;
@@ -197,45 +196,42 @@ public class StandardTileListBuilder implements TileListBuilder {
             throw new IllegalStateException("Tiles must be built before calculating coordinates.");
         }
 
-        IntUnaryOperator getIndexOfMiddleElementOfLayerK = k ->
+        // Operator to find the index of the "middle" tile of a given layer k.
+        // The "middle" here refers to a tile along one of the hexagonal grid's axes.
+        IntUnaryOperator getIndexOfMiddleTileOfLayerK = k ->
                 (calculateAmountOfTilesForLayerK(k + 1) - calculateAmountOfTilesForLayerK(k)) / 2
                         + calculateAmountOfTilesForLayerK(k);
 
-        // set coordinates of center Tile
+        // Set coordinates of the center tile (index 0)
         tileList.get(0).setCoordinates(0, 0);
 
-        if (this.tileList.size() == 1) { // If the size is one, there is only one Tile
+        if (this.tileList.size() == 1) { // If the board has only one tile
             return;
         }
 
-        // Set Middle row coordinates
+        // Initialize coordinates for the first few tiles in the "middle rows" of the first ring (layer 2 conceptually)
+        // These serve as anchors for subsequent calculations.
+        // Arguments: (startingLayerForSubRoutine, startingTileIndex (anchor), irregularTileIndex (tile to position),
+        //             startingOffsetForSubRoutine, counterForSubRoutine, xIsGettingLarger)
         changeStartingPositionForSouthWestHalfAndMiddleRow(2, 0, 2, 7, -1, true);
         changeStartingPositionForSouthWestHalfAndMiddleRow(2, 0, 5, 10, -1, false);
 
-        // fixme add datastructure for this set of recurring ints, and improve naming for readability
-        // set coordinates for tiles in every row
-        int indexOfFirstTileOfThisLayer;
-        int indexOfFirstTileOfPreviousLayer;
-        int indexOfMiddleTileOfThisLayer;
-        int indexOfMiddleTileOfPreviousLayer;
+        for (int currentLayerNumber = 1; currentLayerNumber < sizeOfBoard; currentLayerNumber++) {
+            // Calculate all relevant indices for the current and previous layer
+            TileIndicesOfMainDiagonalForSpecificLayer layerIndices = new TileIndicesOfMainDiagonalForSpecificLayer(
+                    calculateAmountOfTilesForLayerK(currentLayerNumber),              // indexOfFirstTileOfThisLayer
+                    calculateAmountOfTilesForLayerK(currentLayerNumber - 1),        // indexOfFirstTileOfPreviousLayer
+                    getIndexOfMiddleTileOfLayerK.applyAsInt(currentLayerNumber),      // indexOfMiddleTileOfThisLayer
+                    getIndexOfMiddleTileOfLayerK.applyAsInt(currentLayerNumber - 1) // indexOfMiddleTileOfPreviousLayer
+            );
 
-        for (int layerIndex = 1; layerIndex < sizeOfBoard; layerIndex++) {
-            // get indices of current Layer
-            indexOfFirstTileOfThisLayer = calculateAmountOfTilesForLayerK(layerIndex); // index of current Tile regarding tileList
-            indexOfFirstTileOfPreviousLayer = calculateAmountOfTilesForLayerK(layerIndex - 1); // amount of tiles placed before-1 to get index
-            indexOfMiddleTileOfThisLayer = getIndexOfMiddleElementOfLayerK.applyAsInt(layerIndex);
-            indexOfMiddleTileOfPreviousLayer = getIndexOfMiddleElementOfLayerK.applyAsInt(layerIndex - 1);
+            // Calculate coordinates for key tiles on the main "diagonals" of the current layer
+            addCoordinatesToMainDiagonal(layerIndices);
 
-            // calculate next tiles on diagonal
-            addCoordinatesToMainDiagonal(indexOfFirstTileOfThisLayer,
-                    indexOfFirstTileOfPreviousLayer,
-                    indexOfMiddleTileOfThisLayer,
-                    indexOfMiddleTileOfPreviousLayer);
-
-            // calculate rows depending on newly discovered diagonal tiles
-            addCoordinatesToRows(layerIndex, indexOfFirstTileOfThisLayer, indexOfMiddleTileOfThisLayer);
+            // Calculate coordinates for the remaining tiles in the rows of the current layer,
+            // based on the newly positioned diagonal tiles.
+            addCoordinatesToRows(currentLayerNumber, layerIndices.firstTileOfCurrentLayer(), layerIndices.middleTileOfCurrentLayer());
         }
-
     }
 
     /**
@@ -320,34 +316,75 @@ public class StandardTileListBuilder implements TileListBuilder {
     // --- coordinate calculation ---
 
     /**
-     * Adds coordinates to tiles forming rows radiating from diagonal anchor points.
-     * This is part of the hexagonal grid coordinate calculation.
+     * Adds coordinates to two key tiles that form a "main diagonal" in a layer of the hexagonal grid.
+     * These tiles are the first tile of a new layer (e.g., southeast direction) and a tile
+     * towards the middle/northwest of that layer. Their positions are calculated relative to
+     * corresponding tiles in the previous layer.
      *
-     * @param layerIndex                The current layer index (0-based for calculation logic within this method).
-     * @param southRowStartingTileIndex Index of the tile starting the "south" radiating row.
-     * @param northRowStartingTileIndex Index of the tile starting the "north" radiating row.
+     * @param indices A {@link TileIndicesOfMainDiagonalForSpecificLayer} object containing the necessary tile indices.
      */
-    private void addCoordinatesToRows(int layerIndex, int southRowStartingTileIndex, int northRowStartingTileIndex) {
-        int layer = layerIndex + 1; // Convert to 1-based layer for offset calculations
+    private void addCoordinatesToMainDiagonal(TileIndicesOfMainDiagonalForSpecificLayer indices) {
+        double x;
+        double y;
+        double[] previousCoordinates;
+
+        // -------------- set south-east (SE) anchor tile for the current layer --------------
+        Tile previousLayerSETile = tileList.get(indices.firstTileOfPreviousLayer());
+        Tile currentLayerSETile = tileList.get(indices.firstTileOfCurrentLayer());
+
+        previousCoordinates = previousLayerSETile.getCoordinates();
+        x = previousCoordinates[0] + southEastAddition[0]; // southEastAddition is a precomputed [dx, dy]
+        y = previousCoordinates[1] + southEastAddition[1];
+        currentLayerSETile.setCoordinates(x, y);
+
+        // -------------- set north-west (NW) anchor tile for the current layer --------------
+        Tile previousLayerNWTile = tileList.get(indices.middleTileOfPreviousLayer());
+        Tile currentLayerNWTile = tileList.get(indices.middleTileOfCurrentLayer());
+
+        previousCoordinates = previousLayerNWTile.getCoordinates();
+        x = previousCoordinates[0] + northWestAddition[0]; // northWestAddition is a precomputed [dx, dy]
+        y = previousCoordinates[1] + northWestAddition[1];
+        currentLayerNWTile.setCoordinates(x, y);
+    }
+
+    /**
+     * Adds coordinates to tiles forming rows radiating from diagonal anchor points
+     * for a specific layer of the board.
+     *
+     * @param currentLayerNumber The current layer number (0-based from the loop in calculateTilePositions).
+     * @param southRowStartingTileIndex Index of the tile starting the "south" radiating row (SE anchor of current layer).
+     * @param northRowStartingTileIndex Index of the tile starting the "north" radiating row (NW anchor of current layer).
+     */
+    private void addCoordinatesToRows(int currentLayerNumber, int southRowStartingTileIndex, int northRowStartingTileIndex) {
+        // The 'layer' variable here is 1-based for offset calculations,
+        // currentLayerNumber from the calling loop is 0-based for the first ring, 1-based for the second, etc.
+        // So, if currentLayerNumber = 1 (second ring), layer becomes 2.
+        int layerForOffsetCalc = currentLayerNumber + 1;
         int offset;
 
-        // Add East Part Of South Row
-        offset = calculateAmountOfTilesForLayerK(layer) - calculateAmountOfTilesForLayerK(layer - 1) + 1;
-        addCoordinatesForRowWhereEveryStepIsIntoANewLayer(layer, southRowStartingTileIndex, offset, true);
+        // Calculate for the "East Part Of South Row"
+        // This row extends eastward from the south-east anchor tile of the current layer.
+        offset = calculateAmountOfTilesForLayerK(layerForOffsetCalc) - calculateAmountOfTilesForLayerK(layerForOffsetCalc - 1) + 1;
+        addCoordinatesForRowWhereEveryStepIsIntoANewLayer(layerForOffsetCalc, southRowStartingTileIndex, offset, true);
 
-        // Add West Part Of North Row
-        offset = calculateAmountOfTilesForLayerK(layer) - calculateAmountOfTilesForLayerK(layer - 1) + 4;
-        addCoordinatesForRowWhereEveryStepIsIntoANewLayer(layer, northRowStartingTileIndex, offset, false);
+        // Calculate for the "West Part Of North Row"
+        // This row extends westward from the north-west anchor tile of the current layer.
+        offset = calculateAmountOfTilesForLayerK(layerForOffsetCalc) - calculateAmountOfTilesForLayerK(layerForOffsetCalc - 1) + 4;
+        addCoordinatesForRowWhereEveryStepIsIntoANewLayer(layerForOffsetCalc, northRowStartingTileIndex, offset, false);
 
-        // Add East part Of North Row
-        offset = calculateAmountOfTilesForLayerK(layer) - calculateAmountOfTilesForLayerK(layer - 1) + 1;
-        addNeighboringTile(layer, northRowStartingTileIndex, offset, layer - 1, true);
+        // Calculate for the "East Part Of North Row"
+        // This involves placing tiles adjacent (to the east) to the north-west anchor.
+        offset = calculateAmountOfTilesForLayerK(layerForOffsetCalc) - calculateAmountOfTilesForLayerK(layerForOffsetCalc - 1) + 1;
+        // currentLayerNumber represents how many tiles are in this immediate segment.
+        addNeighboringTile(layerForOffsetCalc, northRowStartingTileIndex, offset, currentLayerNumber, true);
 
-        // Add West Part South Row
-        offset = calculateAmountOfTilesForLayerK(layer) - calculateAmountOfTilesForLayerK(layer - 1) + 4;
-        int irregularIndex = calculateAmountOfTilesForLayerK(layer) - 1; // Last tile of current layer
-        changeStartingPositionForSouthWestHalfAndMiddleRow(layer, southRowStartingTileIndex, irregularIndex, offset, layer - 2, false);
 
+        // Calculate for the "West Part Of South Row"
+        // This involves placing tiles adjacent (to the west) to the south-east anchor.
+        offset = calculateAmountOfTilesForLayerK(layerForOffsetCalc) - calculateAmountOfTilesForLayerK(layerForOffsetCalc - 1) + 4;
+        int lastTileOfCurrentLayerIndex = calculateAmountOfTilesForLayerK(layerForOffsetCalc) - 1;
+        // (currentLayerNumber - 1) represents how many tiles are in this immediate segment.
+        changeStartingPositionForSouthWestHalfAndMiddleRow(layerForOffsetCalc, southRowStartingTileIndex, lastTileOfCurrentLayerIndex, offset, currentLayerNumber -1, false);
     }
 
     /**
