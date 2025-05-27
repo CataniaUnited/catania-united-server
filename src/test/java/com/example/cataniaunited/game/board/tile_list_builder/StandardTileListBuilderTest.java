@@ -295,7 +295,7 @@ class StandardTileListBuilderTest {
         builder.buildTiles();
         assertEquals(19, builder.tileList.size());
 
-
+        builder.assignTileIds();
         builder.calculateTilePositions();
 
         assertArrayEquals(new double[]{0.0, 0.0}, builder.tileList.get(0).getCoordinates(), 0.001, "coordinates for index 0 are incorrect");

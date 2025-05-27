@@ -145,13 +145,13 @@ public class Tile implements Placable, Publisher<SettlementPosition, TileType>, 
 
         return tileNode;
     }
-
-    // fixme the subscriber interface is too generic for readability, make it specific for resource production
+    
     /**
      * Adds a {@link SettlementPosition} as a subscriber to this tile.
-     * Subscribers (settlement positions) will be notified when this tile produces resources.
+     * Subscribers (settlement positions) will be notified via their
+     * {@link SettlementPosition#update(TileType)} method when this tile produces its resource.
      *
-     * @param subscriber The {@link SettlementPosition} to add.
+     * @param subscriber The {@link SettlementPosition} to add, which must implement {@link Subscriber}{@code <TileType>}.
      */
     @Override
     public void addSubscriber(SettlementPosition subscriber){
@@ -169,28 +169,32 @@ public class Tile implements Placable, Publisher<SettlementPosition, TileType>, 
     }
 
     /**
-     * Notifies all subscribed {@link SettlementPosition}s that this tile has produced resources.
-     * The notification includes the type of resource produced.
+     * Notifies all subscribed {@link SettlementPosition}s that this tile has produced its resource.
+     * The notification includes the {@link TileType} of the resource produced.
+     * This typically occurs when a dice roll matches this tile's production value.
      *
-     * @param notification The {@link TileType} of the resource produced.
+     * @param resourceProduced The {@link TileType} of the resource this tile produces and is notifying about.
      */
     @Override
-    public void notifySubscribers(TileType notification) {
+    public void notifySubscribers(TileType resourceProduced) {
         for (SettlementPosition subscriber: settlementsOfTile){
-            subscriber.update(notification);
+            subscriber.update(resourceProduced);
         }
     }
 
     /**
-     * Handles an update notification, from a {@link DiceRoller}, indicating a dice roll total.
-     * If the tile's production value matches the dice roll total, it notifies its subscribers
-     * (settlement positions) about resource production.
+     * Handles an update notification from a {@link com.example.cataniaunited.game.dice.DiceRoller},
+     * indicating a dice roll total.
+     * If this tile's production {@link #getValue() value} matches the {@code diceRollTotal}
+     * and this tile is not a {@link TileType#WASTE} tile, it will
+     * {@link #notifySubscribers(TileType) notify its subscribers} (settlement positions)
+     * about the production of its specific {@link #getType() resource type}.
      *
-     * @param notification The integer value of the total dice roll.
+     * @param diceRollTotal The integer value of the total dice roll.
      */
     @Override
-    public void update(Integer notification) {
-        if (value == notification)
+    public void update(Integer diceRollTotal) {
+        if (value == diceRollTotal)
             notifySubscribers(type);
     }
 

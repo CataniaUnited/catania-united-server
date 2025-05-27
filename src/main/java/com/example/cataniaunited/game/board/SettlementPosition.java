@@ -249,17 +249,25 @@ public class SettlementPosition implements Placable, Subscriber<TileType> {
     }
 
     /**
-     * Handles updates received from subscribed tiles (typically resource notifications).
-     * If a building is present on this position, it distributes the received resource
-     * to the building's owner.
+     * Handles notifications specifically related to resource production from an adjacent, subscribed {@link Tile}.
+     * This method is invoked by a {@link Tile} (acting as a {@link com.example.cataniaunited.Publisher})
+     * when that tile produces resources. The {@code resourceTypeNotification} parameter carries the
+     * type of resource that was produced.
+     * <p>
+     * If a {@link Building} (Settlement or City) is present on this SettlementPosition, this method
+     * will trigger the distribution of the received resource to the {@link Building#getPlayer() building's owner}
+     * via the {@link Building#distributeResourcesToPlayer(TileType)} method.
+     * If no building is present, this method has no effect.
      *
-     * @param resourceType The {@link TileType} of the resource produced.
+     * @param resourceTypeNotification The {@link TileType} of the resource produced by the notifying {@link Tile}.
+     *                                 This corresponds to the generic {@code N} (notification type)
+     *                                 in the {@link Subscriber} interface.
      */
     @Override
-    public void update(TileType resourceType) {
+    public void update(TileType resourceTypeNotification) {
         if (building == null)
             return;
 
-        building.distributeResourcesToPlayer(resourceType);
+        building.distributeResourcesToPlayer(resourceTypeNotification);
     }
 }
