@@ -243,7 +243,7 @@ class LobbyServiceImplTest {
     }
 
     @Test
-    void checkPlayerDiceRollShouldThrowExceptionForNotExistingLobby() throws GameException {
+    void checkPlayerDiceRollShouldThrowExceptionForNotExistingLobby() {
         String lobbyId = "NonExistingLobby";
         GameException ge = assertThrows(GameException.class, () -> {
             lobbyService.checkPlayerDiceRoll(lobbyId, "NonExistingPlayer");
