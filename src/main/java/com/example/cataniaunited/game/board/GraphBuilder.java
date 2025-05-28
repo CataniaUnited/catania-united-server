@@ -12,7 +12,7 @@ import java.util.*;
 
 import static java.util.stream.Collectors.toList;
 
-// fixme many magic constants
+
 /**
  * Builds the graph structure of the Catan game board, consisting of
  * {@link SettlementPosition} nodes and {@link Road} edges.
