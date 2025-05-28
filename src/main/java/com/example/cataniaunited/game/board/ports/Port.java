@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Abstract class representing a trading port on the game board.
@@ -22,10 +23,10 @@ public abstract class Port implements Placable {
     protected SettlementPosition settlementPosition1;
     protected SettlementPosition settlementPosition2;
     private static final double PORT_DISTANCE = 10.0;
-    protected Transform portStructureTransform;
+    protected Transform portStructureTransform = Transform.ORIGIN;
 
-    protected Transform bridge1Transform;
-    protected Transform bridge2Transform;
+    protected Transform bridge1Transform = Transform.ORIGIN;
+    protected Transform bridge2Transform = Transform.ORIGIN;
 
     /**
      * Constructs a Port with a specified trade-in ratio.
@@ -227,7 +228,7 @@ public abstract class Port implements Placable {
      */
     @Override
     public double[] getCoordinates() {
-        return portStructureTransform.getCoordinatesArray();
+        return Objects.requireNonNullElse(this.portStructureTransform, Transform.ORIGIN).getCoordinatesArray();
     }
 
     /**
