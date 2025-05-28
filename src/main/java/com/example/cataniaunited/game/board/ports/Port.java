@@ -1,7 +1,7 @@
 package com.example.cataniaunited.game.board.ports;
 
+import com.example.cataniaunited.game.board.BuildingSite;
 import com.example.cataniaunited.game.board.Placable;
-import com.example.cataniaunited.game.board.SettlementPosition;
 import com.example.cataniaunited.game.board.Transform;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.example.cataniaunited.util.Util;
@@ -21,8 +21,8 @@ public abstract class Port implements Placable {
      * The number of identical input resources required to receive one desired resource (N in an N:1 trade).
      */
     protected final int inputResourceAmount;
-    protected SettlementPosition settlementPosition1;
-    protected SettlementPosition settlementPosition2;
+    protected BuildingSite buildingSite1;
+    protected BuildingSite buildingSite2;
     private static final double PORT_DISTANCE = 10.0;
     protected Transform portStructureTransform = Transform.ORIGIN;
 
@@ -134,19 +134,19 @@ public abstract class Port implements Placable {
         return true; // No trying to get a resource that's also offered
     }
 
-    public void setAssociatedSettlements(SettlementPosition s1, SettlementPosition s2) {
-        this.settlementPosition1 = s1;
-        this.settlementPosition2 = s2;
+    public void setAssociatedBuildingSites(BuildingSite s1, BuildingSite s2) {
+        this.buildingSite1 = s1;
+        this.buildingSite2 = s2;
     }
 
     public void calculatePosition() {
-        if (settlementPosition1 == null || settlementPosition2 == null) {
+        if (buildingSite1 == null || buildingSite2 == null) {
             return;
         }
 
         // It's good practice to check if positions have valid coordinates.
-        double[] sp1CoordsArray = settlementPosition1.getCoordinates();
-        double[] sp2CoordsArray = settlementPosition2.getCoordinates();
+        double[] sp1CoordsArray = buildingSite1.getCoordinates();
+        double[] sp2CoordsArray = buildingSite2.getCoordinates();
 
         // --- Existing Coordinate Extraction ---
         double x1 = sp1CoordsArray[0];
@@ -154,11 +154,11 @@ public abstract class Port implements Placable {
         double x2 = sp2CoordsArray[0];
         double y2 = sp2CoordsArray[1];
 
-        // --- Step 1: Midpoint of the two settlement positions ---
+        // --- Step 1: Midpoint of the two building sites ---
         double midX = (x1 + x2) / 2.0;
         double midY = (y1 + y2) / 2.0;
 
-        // --- Step 2: Vector representing the coastline segment between settlements ---
+        // --- Step 2: Vector representing the coastline segment between building sites ---
         double coastVecX = x2 - x1;
         double coastVecY = y2 - y1;
 
@@ -195,8 +195,8 @@ public abstract class Port implements Placable {
         // Assign the calculated transform to the port structure
         this.portStructureTransform = new Transform(currentPortCenterX, currentPortCenterY, calculatedPortRotation);
 
-        // --- Step 7: Bridge 1 Transform (Connecting settlementPosition1 to port structure) ---
-        // Vector from settlement 1 to the port structure's center
+        // --- Step 7: Bridge 1 Transform (Connecting buildingSite1 to port structure) ---
+        // Vector from building site 1 to the port structure's center
         double vecSp1ToPortX = currentPortCenterX - x1;
         double vecSp1ToPortY = currentPortCenterY - y1;
         // Rotation of bridge 1 aligns with this vector
@@ -208,8 +208,8 @@ public abstract class Port implements Placable {
         // Assign the calculated transform to bridge 1
         this.bridge1Transform = new Transform(currentBridge1X, currentBridge1Y, calculatedBridge1Rotation);
 
-        // --- Step 8: Bridge 2 Transform (Connecting settlementPosition2 to port structure) ---
-        // Vector from settlement 2 to the port structure's center
+        // --- Step 8: Bridge 2 Transform (Connecting buildingSite2 to port structure) ---
+        // Vector from building site 2 to the port structure's center
         double vecSp2ToPortX = currentPortCenterX - x2;
         double vecSp2ToPortY = currentPortCenterY - y2;
         // Rotation of bridge 2 aligns with this vector
@@ -257,25 +257,25 @@ public abstract class Port implements Placable {
         // Add the transform for the second bridge
         portNode.set("bridge2Transform", this.bridge2Transform.toJson(factory));
 
-        // Include IDs of associated settlement positions if they exist
-        if (settlementPosition1 != null && settlementPosition2 != null) {
-            portNode.put("settlementPosition1Id", settlementPosition1.getId());
-            portNode.put("settlementPosition2Id", settlementPosition2.getId());
+        // Include IDs of associated building sites if they exist
+        if (buildingSite1 != null && buildingSite2 != null) {
+            portNode.put("settlementPosition1Id", buildingSite1.getId());
+            portNode.put("settlementPosition2Id", buildingSite2.getId());
         }
 
 
-        if (settlementPosition1 != null && settlementPosition2 != null) {
-            portNode.put("settlementPosition1Id", settlementPosition1.getId());
-            portNode.put("settlementPosition2Id", settlementPosition2.getId());
+        if (buildingSite1 != null && buildingSite2 != null) {
+            portNode.put("settlementPosition1Id", buildingSite1.getId());
+            portNode.put("settlementPosition2Id", buildingSite2.getId());
         }
 
         return node;
     }
 
-    public List<SettlementPosition> getSettlementPositions() {
-        if (settlementPosition1 == null || settlementPosition2 == null) {
+    public List<BuildingSite> getBuildingSites() {
+        if (buildingSite1 == null || buildingSite2 == null) {
             return List.of();
         }
-        return List.of(settlementPosition1, settlementPosition2);
+        return List.of(buildingSite1, buildingSite2);
     }
 }

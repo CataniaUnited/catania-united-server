@@ -170,7 +170,7 @@ public class Lobby {
     public PlayerColor assignAvailableColor() {
         if (availableColors.isEmpty()) return null;
         Collections.shuffle(availableColors);
-        return availableColors.removeFirst();
+        return availableColors.remove(0);
     }
 
     /**
@@ -235,7 +235,7 @@ public class Lobby {
     public synchronized void startGame() {
         setPlayerOrder(players.stream().toList());
         Collections.shuffle(playerOrder);
-        activePlayer = playerOrder.getFirst();
+        activePlayer = playerOrder.get(0);
         gameStarted = true;
     }
 

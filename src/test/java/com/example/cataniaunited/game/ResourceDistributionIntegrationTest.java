@@ -3,7 +3,7 @@ package com.example.cataniaunited.game;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.game.board.Road;
-import com.example.cataniaunited.game.board.SettlementPosition;
+import com.example.cataniaunited.game.board.BuildingSite;
 import com.example.cataniaunited.game.board.tile_list_builder.Tile;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.example.cataniaunited.game.dice.Dice;
@@ -46,7 +46,7 @@ class ResourceDistributionIntegrationTest {
     private String lobbyId;
     private GameBoard gameBoard;
     private Tile targetTile;
-    private SettlementPosition targetSettlementPosition;
+    private BuildingSite targetBuildingSite;
     private int wheatAmountBeforeTargetRoll;
     private int wheatAmountAfterTargetRoll;
     private int mockDiceRollTotal;
@@ -99,11 +99,11 @@ class ResourceDistributionIntegrationTest {
     @Test
     @Order(2)
     void findSettlementPositionOfTile(){
-        targetSettlementPosition = targetTile.getSettlementsOfTile().stream()
+        targetBuildingSite = targetTile.getBuildingSitesOfTile().stream()
                 .findFirst()
                 .orElseThrow(() -> new AssertionError(
                         "Target tile (ID: " + targetTile.getId() + ", Type: " + targetTile.getType() +
-                                ") has no associated settlement positions. Check GameBoard setup and SettlementPosition.addTile fix."));
+                                ") has no associated settlement positions. Check GameBoard setup and BuildingSite.addTile fix."));
     }
 
     @Test
@@ -112,17 +112,17 @@ class ResourceDistributionIntegrationTest {
         PlayerColor playerColor = lobbyService.getPlayerColor(lobbyId, testPlayer.getUniqueId());
         assertNotNull(playerColor, "Player should have an assigned color");
 
-        Road roadToPlace = targetSettlementPosition.getRoads().stream()
+        Road roadToPlace = targetBuildingSite.getRoads().stream()
                 .filter(r -> r.getOwner() == null)
                 .findFirst()
-                .orElseThrow(() -> new AssertionError("No available (unowned) road found for target settlement position " + targetSettlementPosition.getId()));
+                .orElseThrow(() -> new AssertionError("No available (unowned) road found for target settlement position " + targetBuildingSite.getId()));
         gameService.placeRoad(lobbyId, testPlayer.getUniqueId(), roadToPlace.getId());
 
-        gameService.placeSettlement(lobbyId, testPlayer.getUniqueId(), targetSettlementPosition.getId());
+        gameService.placeSettlement(lobbyId, testPlayer.getUniqueId(), targetBuildingSite.getId());
 
         // Verify settlement was placed and owned by the testPlayer
-        assertNotNull(targetSettlementPosition.getBuildingOwner(), "Settlement should be placed on position " + targetSettlementPosition.getId());
-        assertEquals(testPlayer.getUniqueId(), targetSettlementPosition.getBuildingOwner().getUniqueId(), "Settlement owner mismatch.");
+        assertNotNull(targetBuildingSite.getBuildingOwner(), "Settlement should be placed on position " + targetBuildingSite.getId());
+        assertEquals(testPlayer.getUniqueId(), targetBuildingSite.getBuildingOwner().getUniqueId(), "Settlement owner mismatch.");
     }
 
     @Test
@@ -166,7 +166,7 @@ class ResourceDistributionIntegrationTest {
         System.out.printf("Test: Rolling dice. Expecting %d + %d = %d. Target Tile %d (type %s) is set to value %d.%n",
                 d1Value, d2Value, mockDiceRollTotal, targetTile.getId(), targetTile.getType(), targetTile.getValue());
         System.out.printf("Test: Player %s has settlement at %d. Initial %s: %d%n",
-                testPlayer.getUniqueId(), targetSettlementPosition.getId(), TileType.WHEAT, wheatAmountBeforeTargetRoll);
+                testPlayer.getUniqueId(), targetBuildingSite.getId(), TileType.WHEAT, wheatAmountBeforeTargetRoll);
 
         gameService.rollDice(lobbyId, testPlayer.getUniqueId());
     }

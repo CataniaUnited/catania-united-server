@@ -20,17 +20,17 @@ import java.util.List;
 
 /**
  * Represents a potential location for a settlement or city on the Catan game board.
- * It is an intersection point connected to tiles and roads.
+ * It is an intersection point connected to tiles and roads. (In the Game Board Graph)
  * Implements {@link Placable} for coordinate and JSON representation, and {@link Subscriber}
  * to receive resource notifications from adjacent tiles.
  */
-public class SettlementPosition implements Placable, Subscriber<TileType> {
+public class BuildingSite implements Placable, Subscriber<TileType> {
 
-    private static final Logger logger = Logger.getLogger(SettlementPosition.class);
+    private static final Logger logger = Logger.getLogger(BuildingSite.class);
 
     Building building = null;
-    List<Road> roads = new ArrayList<>(3); // Max 3 roads per settlement position
-    ArrayList<Tile> tiles = new ArrayList<>(3); // Max 3 tiles per settlement position
+    List<Road> roads = new ArrayList<>(3); // Max 3 roads per building site
+    ArrayList<Tile> tiles = new ArrayList<>(3); // Max 3 tiles per building site
     Port port = null;
 
     double[] coordinates = new double[2];
@@ -38,16 +38,16 @@ public class SettlementPosition implements Placable, Subscriber<TileType> {
     final int id;
 
     /**
-     * Constructs a new SettlementPosition with a unique identifier.
+     * Constructs a new BuildingSite with a unique identifier.
      *
-     * @param id The unique ID for this settlement position.
+     * @param id The unique ID for this building site.
      */
-    public SettlementPosition(int id) {
+    public BuildingSite(int id) {
         this.id = id;
     }
 
     /**
-     * Gets the unique identifier of this settlement position.
+     * Gets the unique identifier of this building site.
      *
      * @return The ID.
      */
@@ -56,13 +56,13 @@ public class SettlementPosition implements Placable, Subscriber<TileType> {
     }
 
     /**
-     * Returns a string representation of the SettlementPosition.
+     * Returns a string representation of the BuildingSite.
      *
      * @return A string detailing the ID, coordinates, associated tiles, and roads.
      */
     @Override
     public String toString() {
-        return String.format("SettlementPosition{" +
+        return String.format("BuildingSite{" +
                 "ID='" + id + '\'' +
                 ", (%s; %s)" +
                 ", tiles=" + tiles +
@@ -71,16 +71,16 @@ public class SettlementPosition implements Placable, Subscriber<TileType> {
     }
 
     /**
-     * Gets a list of neighboring settlement positions connected by roads.
+     * Gets a list of neighboring building sites connected by roads.
      *
-     * @return A list of {@link SettlementPosition} objects.
+     * @return A list of {@link BuildingSite} objects.
      */
-    public List<SettlementPosition> getNeighbours() {
+    public List<BuildingSite> getNeighbours() {
         return roads.stream().map(r -> r.getNeighbour(this)).toList();
     }
 
     /**
-     * Gets a list of tiles adjacent to this settlement position.
+     * Gets a list of tiles adjacent to this building site.
      *
      * @return A copy of the list of {@link Tile} objects.
      */
@@ -89,7 +89,7 @@ public class SettlementPosition implements Placable, Subscriber<TileType> {
     }
 
     /**
-     * Gets a list of roads connected to this settlement position.
+     * Gets a list of roads connected to this building site.
      *
      * @return A copy of the list of {@link Road} objects.
      */
@@ -98,10 +98,10 @@ public class SettlementPosition implements Placable, Subscriber<TileType> {
     }
 
     /**
-     * Associates a tile with this settlement position.
-     * A settlement position can be associated with a maximum of 3 tiles.
+     * Associates a tile with this building site.
+     * A building site can be associated with a maximum of 3 tiles.
      * If the tile is already associated, this method does nothing.
-     * This settlement position also subscribes to the added tile for resource notifications.
+     * This building site also subscribes to the added tile for resource notifications.
      *
      * @param tileToAdd The {@link Tile} to add.
      * @throws IllegalStateException if attempting to add more than 3 tiles.
@@ -113,15 +113,15 @@ public class SettlementPosition implements Placable, Subscriber<TileType> {
         }
 
         if (tiles.size() >= 3) {
-            throw new IllegalStateException("Cannot assign more than 3 Tiles to SettlementPosition " + id);
+            throw new IllegalStateException("Cannot assign more than 3 Tiles to BuildingSite " + id);
         }
         tiles.add(tileToAdd);
         tileToAdd.addSubscriber(this);
     }
 
     /**
-     * Connects a road to this settlement position.
-     * A settlement position can be connected to a maximum of 3 roads.
+     * Connects a road to this building site.
+     * A building site can be connected to a maximum of 3 roads.
      * If the road is already connected, this method does nothing.
      *
      * @param road The {@link Road} to connect.
@@ -134,13 +134,13 @@ public class SettlementPosition implements Placable, Subscriber<TileType> {
         }
 
         if (roads.size() >= 3) {
-            throw new IllegalStateException("Cannot connect more than 3 Roads to SettlementPosition " + id);
+            throw new IllegalStateException("Cannot connect more than 3 Roads to BuildingSite " + id);
         }
         this.roads.add(road);
     }
 
     /**
-     * Sets the 2D coordinates of this settlement position on the game board.
+     * Sets the 2D coordinates of this building site on the game board.
      * Coordinates can only be set once (if they are currently 0,0).
      *
      * @param x The x-coordinate.
@@ -153,7 +153,7 @@ public class SettlementPosition implements Placable, Subscriber<TileType> {
     }
 
     /**
-     * Sets a building (settlement or city) on this settlement position.
+     * Sets a building (settlement or city) on this building site.
      * Enforces game rules such as intersection occupancy, spacing rule, and adjacent road requirement.
      *
      * @param building The {@link Building} to place.
@@ -171,8 +171,8 @@ public class SettlementPosition implements Placable, Subscriber<TileType> {
         //Only check on initial placement of building
         if(this.building == null) {
             /*
-                The three intersections surrounding this settlement position MUST NOT have buildings on it,
-                and there must be one owned road adjacent to this settlement position
+                The three intersections surrounding this building site MUST NOT have buildings on it,
+                and there must be one owned road adjacent to this building site
             */
             boolean hasNoNeighbouringBuildings = getNeighbours().stream().allMatch(sp -> sp.getBuildingOwner() == null);
             if (!hasNoNeighbouringBuildings) {
@@ -202,7 +202,7 @@ public class SettlementPosition implements Placable, Subscriber<TileType> {
     }
 
     /**
-     * Gets the player who owns the building on this settlement position.
+     * Gets the player who owns the building on this building site.
      *
      * @return The {@link Player} owner, or null if no building is present.
      */
@@ -211,7 +211,7 @@ public class SettlementPosition implements Placable, Subscriber<TileType> {
     }
 
     /**
-     * Gets the 2D coordinates of this settlement position.
+     * Gets the 2D coordinates of this building site.
      *
      * @return A clone of the double array representing the [x, y] coordinates.
      */
@@ -220,30 +220,30 @@ public class SettlementPosition implements Placable, Subscriber<TileType> {
     }
 
     /**
-     * Converts the settlement position's state to a JSON representation.
+     * Converts the building site's state to a JSON representation.
      * Includes ID, building information (if any), and coordinates.
      *
-     * @return An {@link ObjectNode} representing the settlement position in JSON format.
+     * @return An {@link ObjectNode} representing the building site in JSON format.
      */
     @Override
     public ObjectNode toJson() {
         ObjectMapper mapper = new ObjectMapper();
-        ObjectNode settlementPositionNode = mapper.createObjectNode();
+        ObjectNode buildingSitePositionNode = mapper.createObjectNode();
 
-        settlementPositionNode.put("id", this.id);
+        buildingSitePositionNode.put("id", this.id);
 
         if (this.building != null) {
-            settlementPositionNode.set("building", this.building.toJson()); // type of Building
+            buildingSitePositionNode.set("building", this.building.toJson()); // type of Building
         } else {
-            settlementPositionNode.putNull("building");
+            buildingSitePositionNode.putNull("building");
         }
 
         ArrayNode coordsNode = mapper.createArrayNode();
         coordsNode.add(this.coordinates[0]); // Add x
         coordsNode.add(this.coordinates[1]); // Add y
-        settlementPositionNode.set("coordinates", coordsNode);
+        buildingSitePositionNode.set("coordinates", coordsNode);
 
-        return settlementPositionNode;
+        return buildingSitePositionNode;
     }
 
     /**
@@ -252,7 +252,7 @@ public class SettlementPosition implements Placable, Subscriber<TileType> {
      * when that tile produces resources. The {@code resourceTypeNotification} parameter carries the
      * type of resource that was produced.
      * <p>
-     * If a {@link Building} (Settlement or City) is present on this SettlementPosition, this method
+     * If a {@link Building} (Settlement or City) is present on this BuildingSite, this method
      * will trigger the distribution of the received resource to the {@link Building#getPlayer() building's owner}
      * via the {@link Building#distributeResourcesToPlayer(TileType)} method.
      * If no building is present, this method has no effect.

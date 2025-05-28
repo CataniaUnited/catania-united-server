@@ -118,7 +118,7 @@ class GameBoardTest {
         assertEquals(GameBoard.calculateSizeOfBoard(playerCount), gameBoard.sizeOfBoard, "Internal board size should be set correctly");
 
         List<Tile> tiles = gameBoard.getTileList();
-        List<SettlementPosition> graph = gameBoard.getSettlementPositionGraph();
+        List<BuildingSite> graph = gameBoard.getBuildingSitePositionGraph();
         List<Port> ports = gameBoard.portList;
 
         // More Detailed tests have been conducted in the respective test classes
@@ -187,7 +187,7 @@ class GameBoardTest {
         Player player = new Player();
         String playerId = player.getUniqueId();
         GameBoard gameBoard = new GameBoard(2);
-        var settlementPosition = gameBoard.getSettlementPositionGraph().get(0);
+        var settlementPosition = gameBoard.getBuildingSitePositionGraph().get(0);
         Road road = settlementPosition.roads.get(0);
         road.setOwner(player);
 
@@ -208,7 +208,7 @@ class GameBoardTest {
     @Test
     void placeSettlementShouldThrowExceptionIfPositionIsBiggerThanSize() {
         GameBoard gameBoard = new GameBoard(2);
-        int positionId = gameBoard.getSettlementPositionGraph().size() + 1;
+        int positionId = gameBoard.getBuildingSitePositionGraph().size() + 1;
         Player player = new Player("Player1");
         GameException ge = assertThrows(GameException.class, () -> gameBoard.placeSettlement(player, PlayerColor.BLUE, positionId));
         assertEquals("Settlement position not found: id = %s".formatted(positionId), ge.getMessage());
@@ -217,7 +217,7 @@ class GameBoardTest {
     @Test
     void placeSettlementShouldThrowExceptionIfPlayerIsNull() {
         GameBoard gameBoard = new GameBoard(2);
-        int positionId = gameBoard.getSettlementPositionGraph().get(0).getId();
+        int positionId = gameBoard.getBuildingSitePositionGraph().get(0).getId();
 
         GameException ge = assertThrows(GameException.class, () -> gameBoard.placeSettlement(null, PlayerColor.BLUE, positionId));
         assertEquals("Owner of building must not be empty", ge.getMessage());
@@ -226,7 +226,7 @@ class GameBoardTest {
     @Test
     void placeBuildingShouldThrowExceptionIfPlayerDoesNotHaveResources() {
         GameBoard gameBoard = new GameBoard(2);
-        int positionId = gameBoard.getSettlementPositionGraph().get(0).getId();
+        int positionId = gameBoard.getBuildingSitePositionGraph().get(0).getId();
         Player mockPlayer = spy(new Player("Player1"));
         when(mockPlayer.getResourceCount(any(TileType.class))).thenReturn(0);
 
@@ -303,7 +303,7 @@ class GameBoardTest {
 
         // Get the generated lists for size comparison
         List<Tile> expectedTiles = gameBoard.getTileList();
-        List<SettlementPosition> expectedPositions = gameBoard.getSettlementPositionGraph();
+        List<BuildingSite> expectedPositions = gameBoard.getBuildingSitePositionGraph();
         List<Road> expectedRoads = gameBoard.getRoadList();
         List<Port> expectedPorts = gameBoard.portList;
 

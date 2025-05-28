@@ -13,27 +13,27 @@ import java.util.Arrays;
 import java.util.Map;
 
 /**
- * Represents a road on the Catan game board, connecting two {@link SettlementPosition}s.
+ * Represents a road on the Catan game board, connecting two {@link BuildingSite}s.
  * Implements {@link Placable} for coordinate and JSON representation, and {@link Buildable}
  * for resource requirements.
  */
 public class Road implements Placable, Buildable {
     Player owner;
     PlayerColor color;
-    final SettlementPosition positionA;
-    final SettlementPosition positionB;
+    final BuildingSite positionA;
+    final BuildingSite positionB;
     final int id;
 
     Transform transform = Transform.ORIGIN;
 
     /**
-     * Constructs a new Road between two settlement positions.
+     * Constructs a new Road between two building sites.
      *
-     * @param positionA The first {@link SettlementPosition} connected by the road.
-     * @param positionB The second {@link SettlementPosition} connected by the road.
+     * @param positionA The first {@link BuildingSite} connected by the road.
+     * @param positionB The second {@link BuildingSite} connected by the road.
      * @param id        The unique identifier for this road.
      */
-    public Road(SettlementPosition positionA, SettlementPosition positionB, int id) {
+    public Road(BuildingSite positionA, BuildingSite positionB, int id) {
         this.positionA = positionA;
         this.positionB = positionB;
         this.id = id;
@@ -57,16 +57,16 @@ public class Road implements Placable, Buildable {
     }
 
     /**
-     * Gets the neighboring settlement position connected by this road, given one of the positions.
+     * Gets the neighboring building site connected by this road, given one of the positions.
      *
-     * @param currentSettlement The {@link SettlementPosition} from which to find the neighbor.
-     * @return The other {@link SettlementPosition} connected by this road, or null if currentSettlement is not part of this road.
+     * @param currentBuildingsite The {@link BuildingSite} from which to find the neighbor.
+     * @return The other {@link BuildingSite} connected by this road, or null if currentBuildingSite is not part of this road.
      */
-    public SettlementPosition getNeighbour(SettlementPosition currentSettlement) {
-        if (this.positionA == currentSettlement) {
+    public BuildingSite getNeighbour(BuildingSite currentBuildingsite) {
+        if (this.positionA == currentBuildingsite) {
             return positionB;
         }
-        if (this.positionB == currentSettlement) {
+        if (this.positionB == currentBuildingsite) {
             return positionA;
         }
         return null;
@@ -101,9 +101,9 @@ public class Road implements Placable, Buildable {
 
     /**
      * Calculates and sets the midpoint coordinates and rotation angle of this road.
-     * This is based on the coordinates of the two {@link SettlementPosition}s it connects.
+     * This is based on the coordinates of the two {@link BuildingSite}s it connects.
      * This method will only calculate if coordinates have not been set yet (are [0,0]) and
-     * if both connected settlement positions have their coordinates set.
+     * if both connected building sites have their coordinates set.
      */
     public void setCoordinatesAndRotationAngle() {
         if (transform != Transform.ORIGIN) {
@@ -121,7 +121,7 @@ public class Road implements Placable, Buildable {
         xMin = xMax;
         yMin = yMax;
 
-        if (coordinatesOfPositions[0] == 0 && coordinatesOfPositions[1] == 0) {  // position of Settlement A is not yet set
+        if (coordinatesOfPositions[0] == 0 && coordinatesOfPositions[1] == 0) {  // position of building site A is not yet set
             return;
         }
 
@@ -131,7 +131,7 @@ public class Road implements Placable, Buildable {
         yMax += coordinatesOfPositions[1];
         yMin -= coordinatesOfPositions[1];
 
-        if (coordinatesOfPositions[0] == 0 && coordinatesOfPositions[1] == 0) {  // position of Settlement B is not yet set
+        if (coordinatesOfPositions[0] == 0 && coordinatesOfPositions[1] == 0) {  // position of building site B is not yet set
             return;
         }
         transform = new Transform(xMax / 2, yMax / 2, StrictMath.atan2(yMin, xMin));

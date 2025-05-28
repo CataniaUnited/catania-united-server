@@ -285,7 +285,7 @@ class GameServiceTest {
         doReturn(mockPlayer).when(playerService).getPlayerById(playerId);
         doReturn(gameboardMock).when(gameService).getGameboardByLobbyId(lobbyId);
 
-        when(gameboardMock.getPortOfSettlement(settlementPositionId)).thenReturn(mockPort);
+        when(gameboardMock.getPortOfBuildingSite(settlementPositionId)).thenReturn(mockPort);
         doNothing().when(gameboardMock).placeSettlement(any(Player.class), any(PlayerColor.class), anyInt());
         doNothing().when(playerService).addVictoryPoints(anyString(), anyInt());
 
@@ -293,7 +293,7 @@ class GameServiceTest {
         gameService.placeSettlement(lobbyId, playerId, settlementPositionId);
 
         verify(gameboardMock).placeSettlement(mockPlayer, PlayerColor.RED, settlementPositionId);
-        verify(gameboardMock).getPortOfSettlement(settlementPositionId);
+        verify(gameboardMock).getPortOfBuildingSite(settlementPositionId);
         verify(mockPlayer).addPort(mockPort);
         verify(playerService).addVictoryPoints(playerId, 1);
     }
@@ -311,14 +311,14 @@ class GameServiceTest {
         doReturn(mockPlayer).when(playerService).getPlayerById(playerId);
         doReturn(gameboardMock).when(gameService).getGameboardByLobbyId(lobbyId);
 
-        when(gameboardMock.getPortOfSettlement(settlementPositionId)).thenReturn(null);
+        when(gameboardMock.getPortOfBuildingSite(settlementPositionId)).thenReturn(null);
         doNothing().when(gameboardMock).placeSettlement(any(Player.class), any(PlayerColor.class), anyInt());
         doNothing().when(playerService).addVictoryPoints(anyString(), anyInt());
 
         gameService.placeSettlement(lobbyId, playerId, settlementPositionId);
 
         verify(gameboardMock).placeSettlement(mockPlayer, PlayerColor.GREEN, settlementPositionId);
-        verify(gameboardMock).getPortOfSettlement(settlementPositionId);
+        verify(gameboardMock).getPortOfBuildingSite(settlementPositionId);
         verify(mockPlayer, never()).addPort(any(Port.class));
         verify(playerService).addVictoryPoints(playerId, 1);
     }

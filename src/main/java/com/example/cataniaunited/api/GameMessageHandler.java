@@ -3,7 +3,7 @@ package com.example.cataniaunited.api;
 import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.exception.GameException;
-import com.example.cataniaunited.fi.SettlementAction;
+import com.example.cataniaunited.fi.BuildingAction;
 import com.example.cataniaunited.game.GameService;
 import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.lobby.Lobby;
@@ -154,41 +154,41 @@ public class GameMessageHandler {
      * Handles a request from a client to place a settlement on the game board.
      * This method uses the {@link #handleSettlementAction} generic handler to process the request.
      *
-     * @param message The {@link MessageDTO} containing the lobby ID, player ID, and settlement position ID.
+     * @param message The {@link MessageDTO} containing the lobby ID, player ID, and building site ID.
      * @return A Uni emitting a {@link MessageDTO} with the updated game state (or win message),
      * which is also broadcast to other players in the lobby.
-     * @throws GameException if the settlement position ID is invalid or if the game service encounters an error
+     * @throws GameException if the building site ID is invalid or if the game service encounters an error
      *                       during settlement placement (e.g., rules violation, insufficient resources).
      */
     Uni<MessageDTO> placeSettlement(MessageDTO message) throws GameException {
-        SettlementAction placeAction = positionId -> gameService.placeSettlement(message.getLobbyId(), message.getPlayer(), positionId);
+        BuildingAction placeAction = positionId -> gameService.placeSettlement(message.getLobbyId(), message.getPlayer(), positionId);
         return handleSettlementAction(message, placeAction);
     }
 
     /**
      * Handles a request to upgrade a settlement to a city on the game board.
      *
-     * @param message The {@link MessageDTO} containing the lobby ID, player ID, and settlement position ID.
+     * @param message The {@link MessageDTO} containing the lobby ID, player ID, and building site ID.
      * @return A Uni emitting a {@link MessageDTO} with the updated game state,
      * which is also broadcast to other players in the lobby.
      * @throws GameException if the game service encounters an error during settlement upgrade.
      */
     Uni<MessageDTO> upgradeSettlement(MessageDTO message) throws GameException {
-        SettlementAction upgradeAction = positionId -> gameService.upgradeSettlement(message.getLobbyId(), message.getPlayer(), positionId);
+        BuildingAction upgradeAction = positionId -> gameService.upgradeSettlement(message.getLobbyId(), message.getPlayer(), positionId);
         return handleSettlementAction(message, upgradeAction);
     }
 
     /**
      * Generic handler for settlement actions (place or upgrade).
-     * It parses the settlement position, executes the provided action, checks for a win condition,
+     * It parses the building site, executes the provided action, checks for a win condition,
      * and then broadcasts the updated game state.
      *
      * @param message The {@link MessageDTO} containing action details.
-     * @param action  The {@link SettlementAction} to execute (e.g., place or upgrade).
+     * @param action  The {@link BuildingAction} to execute (e.g., place or upgrade).
      * @return A Uni emitting a {@link MessageDTO} with the updated game state or a win message.
-     * @throws GameException if the settlement position ID is invalid or the action fails.
+     * @throws GameException if the building site ID is invalid or the action fails.
      */
-    Uni<MessageDTO> handleSettlementAction(MessageDTO message, SettlementAction action) throws GameException {
+    Uni<MessageDTO> handleSettlementAction(MessageDTO message, BuildingAction action) throws GameException {
         JsonNode settlementPosition = message.getMessageNode("settlementPositionId");
         try {
             int position = Integer.parseInt(settlementPosition.toString());

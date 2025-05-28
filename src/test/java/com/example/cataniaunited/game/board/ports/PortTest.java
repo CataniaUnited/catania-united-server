@@ -1,6 +1,6 @@
 package com.example.cataniaunited.game.board.ports;
 
-import com.example.cataniaunited.game.board.SettlementPosition;
+import com.example.cataniaunited.game.board.BuildingSite;
 import com.example.cataniaunited.game.board.Transform;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -21,15 +21,15 @@ import static org.mockito.Mockito.when;
 class PortTest {
 
     private TestablePort port;
-    private SettlementPosition mockSettlement1;
-    private SettlementPosition mockSettlement2;
+    private BuildingSite mockSettlement1;
+    private BuildingSite mockSettlement2;
 
     @BeforeEach
     void setUp() {
         // Default port for most tests
         port = new TestablePort(3);
-        mockSettlement1 = mock(SettlementPosition.class);
-        mockSettlement2 = mock(SettlementPosition.class);
+        mockSettlement1 = mock(BuildingSite.class);
+        mockSettlement2 = mock(BuildingSite.class);
     }
 
     @ParameterizedTest
@@ -144,32 +144,32 @@ class PortTest {
 
     @Test
     void setAssociatedSettlementsShouldSetSettlementPositions() {
-        port.setAssociatedSettlements(mockSettlement1, mockSettlement2);
-        assertSame(mockSettlement1, port.settlementPosition1, "SettlementPosition1 was not set correctly.");
-        assertSame(mockSettlement2, port.settlementPosition2, "SettlementPosition2 was not set correctly.");
+        port.setAssociatedBuildingSites(mockSettlement1, mockSettlement2);
+        assertSame(mockSettlement1, port.buildingSite1, "SettlementPosition1 was not set correctly.");
+        assertSame(mockSettlement2, port.buildingSite2, "SettlementPosition2 was not set correctly.");
     }
 
     @Test
     void getSettlementPositionShouldReturnEmptyListIfNoneOfTheSettlementPositionsAreSet(){
-        assertEquals(List.of(), port.getSettlementPositions(), "getSettlementPosition should return empty list if not both settlements are set");
+        assertEquals(List.of(), port.getBuildingSites(), "getSettlementPosition should return empty list if not both settlements are set");
     }
 
     @Test
     void getSettlementPositionShouldReturnEmptyListIfOneOfTheSettlementPositionsIsNotSet(){
-        port.setAssociatedSettlements(mockSettlement1, null);
-        assertEquals(List.of(), port.getSettlementPositions(), "getSettlementPosition should return empty list if not both settlements are set");
+        port.setAssociatedBuildingSites(mockSettlement1, null);
+        assertEquals(List.of(), port.getBuildingSites(), "getSettlementPosition should return empty list if not both settlements are set");
     }
 
     @Test
     void getSettlementPositionShouldReturnEmptyListIfTheSecondOneOfTheSettlementPositionsIsNotSet(){
-        port.setAssociatedSettlements(null, mockSettlement2);
-        assertEquals(List.of(), port.getSettlementPositions(), "getSettlementPosition should return empty list if not both settlements are set");
+        port.setAssociatedBuildingSites(null, mockSettlement2);
+        assertEquals(List.of(), port.getBuildingSites(), "getSettlementPosition should return empty list if not both settlements are set");
     }
 
     @Test
     void getSettlementPositionShouldReturnCorrectListIfAllSettlementsAreSet(){
-        port.setAssociatedSettlements(mockSettlement1, mockSettlement2);
-        assertEquals(List.of(mockSettlement1, mockSettlement2), port.getSettlementPositions(), "getSettlementPosition should return correct list");
+        port.setAssociatedBuildingSites(mockSettlement1, mockSettlement2);
+        assertEquals(List.of(mockSettlement1, mockSettlement2), port.getBuildingSites(), "getSettlementPosition should return correct list");
     }
 
     @Test
@@ -203,7 +203,7 @@ class PortTest {
         when(mockSettlement1.getId()).thenReturn(1);
         when(mockSettlement2.getId()).thenReturn(2);
 
-        port.setAssociatedSettlements(mockSettlement1, mockSettlement2);
+        port.setAssociatedBuildingSites(mockSettlement1, mockSettlement2);
         port.calculatePosition(); // This will set port.portStructureTransform, etc.
         ObjectNode json = port.toJson();
 
@@ -291,7 +291,7 @@ class PortTest {
 
     @Test
     void calculatePositionWhenOneSettlementIsNullShouldNotThrowExceptionAndTransformsRemainOrigin() {
-        port.setAssociatedSettlements(mockSettlement1, null);
+        port.setAssociatedBuildingSites(mockSettlement1, null);
         port.calculatePosition();
         assertArrayEquals(Transform.ORIGIN.getCoordinatesArray(), port.getCoordinates(), "Coordinates should be from Transform.ORIGIN.");
         assertEquals(Transform.ORIGIN, port.portStructureTransform, "portStructureTransform should be ORIGIN.");
@@ -302,7 +302,7 @@ class PortTest {
         when(mockSettlement1.getCoordinates()).thenReturn(new double[]{0.0, 0.0});
         when(mockSettlement2.getCoordinates()).thenReturn(new double[]{20.0, 0.0});
 
-        port.setAssociatedSettlements(mockSettlement1, mockSettlement2);
+        port.setAssociatedBuildingSites(mockSettlement1, mockSettlement2);
         port.calculatePosition();
 
         assertEquals(10.0, port.portStructureTransform.x(), 0.001, "PortTransform X is incorrect.");
@@ -325,7 +325,7 @@ class PortTest {
         when(mockSettlement1.getCoordinates()).thenReturn(new double[]{0.0, 0.0});
         when(mockSettlement2.getCoordinates()).thenReturn(new double[]{0.0, 20.0});
 
-        port.setAssociatedSettlements(mockSettlement1, mockSettlement2);
+        port.setAssociatedBuildingSites(mockSettlement1, mockSettlement2);
         port.calculatePosition();
 
         assertEquals(-10.0, port.portStructureTransform.x(), 0.001, "PortTransform X is incorrect.");
@@ -346,7 +346,7 @@ class PortTest {
         when(mockSettlement1.getCoordinates()).thenReturn(new double[]{-20.0, 0.0});
         when(mockSettlement2.getCoordinates()).thenReturn(new double[]{0.0, -20.0});
 
-        port.setAssociatedSettlements(mockSettlement1, mockSettlement2);
+        port.setAssociatedBuildingSites(mockSettlement1, mockSettlement2);
         port.calculatePosition();
 
         double expectedPortX = -10.0 - (10.0 / Math.sqrt(2)); // midX + unitNormalX * PORT_DISTANCE
@@ -362,7 +362,7 @@ class PortTest {
         when(mockSettlement1.getCoordinates()).thenReturn(new double[]{0.0, 0.0});
         when(mockSettlement2.getCoordinates()).thenReturn(new double[]{20.0, 0.0});
 
-        port.setAssociatedSettlements(mockSettlement1, mockSettlement2);
+        port.setAssociatedBuildingSites(mockSettlement1, mockSettlement2);
         port.calculatePosition();
 
         assertEquals(10.0, port.portStructureTransform.x(), 0.001, "PortTransform X indicates unit normal was used for offset.");
@@ -376,7 +376,7 @@ class PortTest {
         when(mockSettlement1.getCoordinates()).thenReturn(new double[]{10.0, 15.0});
         when(mockSettlement2.getCoordinates()).thenReturn(new double[]{10.0, 15.0});
 
-        port.setAssociatedSettlements(mockSettlement1, mockSettlement2);
+        port.setAssociatedBuildingSites(mockSettlement1, mockSettlement2);
         port.calculatePosition();
 
         assertEquals(10.0, port.portStructureTransform.x(), 0.001, "PortTransform X should be midX as unitNormalX is 0.");
@@ -392,7 +392,7 @@ class PortTest {
     @Test
     void toJsonWhenSettlement1IsNullShouldNotIncludeIds() {
         when(mockSettlement2.getId()).thenReturn(2);
-        port.setAssociatedSettlements(null, mockSettlement2);
+        port.setAssociatedBuildingSites(null, mockSettlement2);
 
         // Manually set transforms to ensure portVisuals content is predictable beyond defaults
         port.portStructureTransform = new Transform(1.0, 2.0, 0.1);
@@ -415,7 +415,7 @@ class PortTest {
     @Test
     void toJsonWhenSettlement2IsNullShouldNotIncludeIds() {
         when(mockSettlement1.getId()).thenReturn(1);
-        port.setAssociatedSettlements(mockSettlement1, null);
+        port.setAssociatedBuildingSites(mockSettlement1, null);
 
         port.portStructureTransform = new Transform(3.0, 4.0, 0.2);
         port.bridge1Transform = new Transform(0.11, 0.22, 0.33);

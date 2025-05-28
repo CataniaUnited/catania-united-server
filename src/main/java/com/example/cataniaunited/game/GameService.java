@@ -68,7 +68,7 @@ public class GameService {
         gameboard.placeSettlement(playerService.getPlayerById(playerId), color, settlementPositionId);
         Player player = playerService.getPlayerById(playerId);
 
-        Port port = gameboard.getPortOfSettlement(settlementPositionId);
+        Port port = gameboard.getPortOfBuildingSite(settlementPositionId);
         if (port != null) {
             player.addPort(port);
         }

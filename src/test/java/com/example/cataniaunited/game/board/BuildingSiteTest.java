@@ -36,7 +36,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @QuarkusTest
-class SettlementPositionTest {
+class BuildingSiteTest {
     private static final int STANDARD_ID = 42;
 
 
@@ -49,12 +49,12 @@ class SettlementPositionTest {
     private Tile mockTile3;
 
 
-    private SettlementPosition mockNeighbour1;
-    private SettlementPosition mockNeighbour2;
-    private SettlementPosition mockNeighbour3;
+    private BuildingSite mockNeighbour1;
+    private BuildingSite mockNeighbour2;
+    private BuildingSite mockNeighbour3;
 
 
-    private SettlementPosition settlementPosition;
+    private BuildingSite buildingSite;
 
     @BeforeEach
     void setUp() {
@@ -65,64 +65,64 @@ class SettlementPositionTest {
         mockTile1 = mock(Tile.class);
         mockTile2 = mock(Tile.class);
         mockTile3 = mock(Tile.class);
-        mockNeighbour1 = mock(SettlementPosition.class);
-        mockNeighbour2 = mock(SettlementPosition.class);
-        mockNeighbour3 = mock(SettlementPosition.class);
+        mockNeighbour1 = mock(BuildingSite.class);
+        mockNeighbour2 = mock(BuildingSite.class);
+        mockNeighbour3 = mock(BuildingSite.class);
 
-        settlementPosition = new SettlementPosition(STANDARD_ID);
+        buildingSite = new BuildingSite(STANDARD_ID);
     }
 
     @Test
     void testConstructorInitialization() {
-        assertEquals(STANDARD_ID, settlementPosition.getId(), "ID should be set by constructor");
-        assertArrayEquals(new double[]{0.0, 0.0}, settlementPosition.getCoordinates(), 0.001, "Initial coordinates should be [0.0, 0.0]");
-        assertTrue(settlementPosition.getTiles().isEmpty(), "Initial tiles list should be empty");
-        assertTrue(settlementPosition.getRoads().isEmpty(), "Initial roads list should be empty");
+        assertEquals(STANDARD_ID, buildingSite.getId(), "ID should be set by constructor");
+        assertArrayEquals(new double[]{0.0, 0.0}, buildingSite.getCoordinates(), 0.001, "Initial coordinates should be [0.0, 0.0]");
+        assertTrue(buildingSite.getTiles().isEmpty(), "Initial tiles list should be empty");
+        assertTrue(buildingSite.getRoads().isEmpty(), "Initial roads list should be empty");
     }
 
     @Test
     void getIdReturnsCorrectId() {
-        assertEquals(STANDARD_ID, settlementPosition.getId());
+        assertEquals(STANDARD_ID, buildingSite.getId());
     }
 
     @Test
     void addTileSuccessfullyAddsUpToThreeTiles() {
-        settlementPosition.addTile(mockTile1);
-        settlementPosition.addTile(mockTile2);
-        settlementPosition.addTile(mockTile3);
-        List<Tile> tiles = settlementPosition.getTiles();
+        buildingSite.addTile(mockTile1);
+        buildingSite.addTile(mockTile2);
+        buildingSite.addTile(mockTile3);
+        List<Tile> tiles = buildingSite.getTiles();
         assertEquals(3, tiles.size(), "Should have 3 tiles after adding three");
         assertTrue(tiles.containsAll(List.of(mockTile1, mockTile2, mockTile3)), "List should contain all added tiles");
     }
 
     @Test
     void addTileDoesNotAddDuplicateTileInstance() {
-        settlementPosition.addTile(mockTile1);
-        assertEquals(1, settlementPosition.getTiles().size(), "Size should be 1 after first add");
-        settlementPosition.addTile(mockTile1);
+        buildingSite.addTile(mockTile1);
+        assertEquals(1, buildingSite.getTiles().size(), "Size should be 1 after first add");
+        buildingSite.addTile(mockTile1);
 
-        assertEquals(1, settlementPosition.getTiles().size(), "List should not have changed");
-        assertTrue(settlementPosition.getTiles().contains(mockTile1), "List should still contain the original tile");
+        assertEquals(1, buildingSite.getTiles().size(), "List should not have changed");
+        assertTrue(buildingSite.getTiles().contains(mockTile1), "List should still contain the original tile");
     }
 
     @Test
     void addTileThrowsExceptionWhenAddingFourthTile() {
         Tile mockTile4 = mock(Tile.class);
 
-        settlementPosition.addTile(mockTile1);
-        settlementPosition.addTile(mockTile2);
-        settlementPosition.addTile(mockTile3);
+        buildingSite.addTile(mockTile1);
+        buildingSite.addTile(mockTile2);
+        buildingSite.addTile(mockTile3);
 
-        IllegalStateException exception = assertThrows(IllegalStateException.class, () -> settlementPosition.addTile(mockTile4), "Should throw IllegalStateException when adding 4th tile");
+        IllegalStateException exception = assertThrows(IllegalStateException.class, () -> buildingSite.addTile(mockTile4), "Should throw IllegalStateException when adding 4th tile");
 
         assertTrue(exception.getMessage().contains("Cannot assign more than 3 Tiles"), "Exception message should be correct");
-        assertEquals(3, settlementPosition.getTiles().size(), "Tile count should remain 3 after exception");
+        assertEquals(3, buildingSite.getTiles().size(), "Tile count should remain 3 after exception");
     }
 
     @Test
     void cantChangeTileListWhenReceivedFromGetterBecauseImmutable() {
-        settlementPosition.addTile(mockTile1);
-        List<Tile> tiles = settlementPosition.getTiles();
+        buildingSite.addTile(mockTile1);
+        List<Tile> tiles = buildingSite.getTiles();
 
         assertThrows(UnsupportedOperationException.class, () -> tiles.add(mockTile2), "Returned tile list should be immutable");
 
@@ -131,10 +131,10 @@ class SettlementPositionTest {
 
     @Test
     void addRoadSuccessfullyAddsUpToThreeRoads() {
-        settlementPosition.addRoad(mockRoad1);
-        settlementPosition.addRoad(mockRoad2);
-        settlementPosition.addRoad(mockRoad3);
-        List<Road> roads = settlementPosition.getRoads();
+        buildingSite.addRoad(mockRoad1);
+        buildingSite.addRoad(mockRoad2);
+        buildingSite.addRoad(mockRoad3);
+        List<Road> roads = buildingSite.getRoads();
         assertEquals(3, roads.size(), "Should have 3 roads after adding three");
         assertTrue(roads.containsAll(List.of(mockRoad1, mockRoad2, mockRoad3)), "List should contain all added roads");
     }
@@ -143,30 +143,30 @@ class SettlementPositionTest {
     void addRoadThrowsExceptionWhenAddingFourthRoad() {
         Road mockRoad4 = mock(Road.class);
 
-        settlementPosition.addRoad(mockRoad1);
-        settlementPosition.addRoad(mockRoad2);
-        settlementPosition.addRoad(mockRoad3);
+        buildingSite.addRoad(mockRoad1);
+        buildingSite.addRoad(mockRoad2);
+        buildingSite.addRoad(mockRoad3);
 
-        IllegalStateException exception = assertThrows(IllegalStateException.class, () -> settlementPosition.addRoad(mockRoad4), "Should throw IllegalStateException when adding 4th road");
+        IllegalStateException exception = assertThrows(IllegalStateException.class, () -> buildingSite.addRoad(mockRoad4), "Should throw IllegalStateException when adding 4th road");
 
         assertTrue(exception.getMessage().contains("Cannot connect more than 3 Roads"), "Exception message should be correct");
-        assertEquals(3, settlementPosition.getRoads().size(), "Road count should remain 3 after exception");
+        assertEquals(3, buildingSite.getRoads().size(), "Road count should remain 3 after exception");
     }
 
     @Test
     void addRoadDoesNotAddDuplicateRoadInstance() {
-        settlementPosition.addRoad(mockRoad1);
-        assertEquals(1, settlementPosition.getRoads().size(), "Size should be 1 after first add");
-        settlementPosition.addRoad(mockRoad1);
+        buildingSite.addRoad(mockRoad1);
+        assertEquals(1, buildingSite.getRoads().size(), "Size should be 1 after first add");
+        buildingSite.addRoad(mockRoad1);
 
-        assertEquals(1, settlementPosition.getRoads().size(), "List should not have changed");
-        assertTrue(settlementPosition.getRoads().contains(mockRoad1), "List should still contain the original road");
+        assertEquals(1, buildingSite.getRoads().size(), "List should not have changed");
+        assertTrue(buildingSite.getRoads().contains(mockRoad1), "List should still contain the original road");
     }
 
     @Test
     void cantChangeRoadListWhenRecievedFromGetterBecauseImmutable() {
-        settlementPosition.addRoad(mockRoad1);
-        List<Road> roads = settlementPosition.getRoads();
+        buildingSite.addRoad(mockRoad1);
+        List<Road> roads = buildingSite.getRoads();
 
         assertThrows(UnsupportedOperationException.class, () -> roads.add(mockRoad2), "Returned road list should be immutable");
 
@@ -175,23 +175,23 @@ class SettlementPositionTest {
 
     @Test
     void setCoordinatesSetsValuesCorrectlyWhenCalledForTheFirstTime() {
-        settlementPosition.setCoordinates(10, 20);
-        assertArrayEquals(new double[]{10, 20}, settlementPosition.getCoordinates(), 0.001, "Coordinates should be set");
+        buildingSite.setCoordinates(10, 20);
+        assertArrayEquals(new double[]{10, 20}, buildingSite.getCoordinates(), 0.001, "Coordinates should be set");
     }
 
     @Test
     void setCoordinatesDoesNotChangeValuesWhenCalledAgain() {
-        settlementPosition.setCoordinates(10, 20);
-        settlementPosition.setCoordinates(100, 200);
-        assertArrayEquals(new double[]{10, 20}, settlementPosition.getCoordinates(), 0.001, "Coordinates should remain the values from the first call\"");
+        buildingSite.setCoordinates(10, 20);
+        buildingSite.setCoordinates(100, 200);
+        assertArrayEquals(new double[]{10, 20}, buildingSite.getCoordinates(), 0.001, "Coordinates should remain the values from the first call\"");
     }
 
 
     @Test
     void getCoordinatesReturnsCloneNotSameArray() {
-        settlementPosition.setCoordinates(10, 20);
-        double[] coords1 = settlementPosition.getCoordinates();
-        double[] coords2 = settlementPosition.getCoordinates();
+        buildingSite.setCoordinates(10, 20);
+        double[] coords1 = buildingSite.getCoordinates();
+        double[] coords2 = buildingSite.getCoordinates();
 
         // coords1 != coords2, cords1.equals(cords2)
         assertNotSame(coords1, coords2, "getCoordinates should return a clone");
@@ -199,7 +199,7 @@ class SettlementPositionTest {
 
         // Modify the returned array should not change internal position
         coords1[0] = 999.9;
-        coords2 = settlementPosition.getCoordinates();
+        coords2 = buildingSite.getCoordinates();
 
         assertNotEquals(coords1[0], coords2[0], "Modifying clone should not affect internal state");
     }
@@ -207,36 +207,36 @@ class SettlementPositionTest {
 
     @Test
     void getNeighboursReturnsCorrectNeighboursFromRoads() {
-        when(mockRoad1.getNeighbour(settlementPosition)).thenReturn(mockNeighbour1);
-        when(mockRoad2.getNeighbour(settlementPosition)).thenReturn(mockNeighbour2);
-        when(mockRoad3.getNeighbour(settlementPosition)).thenReturn(mockNeighbour3);
+        when(mockRoad1.getNeighbour(buildingSite)).thenReturn(mockNeighbour1);
+        when(mockRoad2.getNeighbour(buildingSite)).thenReturn(mockNeighbour2);
+        when(mockRoad3.getNeighbour(buildingSite)).thenReturn(mockNeighbour3);
 
-        settlementPosition.addRoad(mockRoad1);
-        settlementPosition.addRoad(mockRoad2);
-        settlementPosition.addRoad(mockRoad3);
+        buildingSite.addRoad(mockRoad1);
+        buildingSite.addRoad(mockRoad2);
+        buildingSite.addRoad(mockRoad3);
 
 
-        List<SettlementPosition> neighbours = settlementPosition.getNeighbours();
+        List<BuildingSite> neighbours = buildingSite.getNeighbours();
 
 
         assertEquals(3, neighbours.size(), "Should return 3 neighbours");
         assertTrue(neighbours.containsAll(List.of(mockNeighbour1, mockNeighbour2, mockNeighbour3)), "List should contain all expected mock neighbours");
 
         // Verify that getNeighbour was called on each road exactly once with the correct argument
-        verify(mockRoad1, times(1)).getNeighbour(settlementPosition);
-        verify(mockRoad2, times(1)).getNeighbour(settlementPosition);
-        verify(mockRoad3, times(1)).getNeighbour(settlementPosition);
+        verify(mockRoad1, times(1)).getNeighbour(buildingSite);
+        verify(mockRoad2, times(1)).getNeighbour(buildingSite);
+        verify(mockRoad3, times(1)).getNeighbour(buildingSite);
     }
 
     @Test
     void toStringOutputsCorrectString() {
-        settlementPosition.setCoordinates(10, 20);
-        settlementPosition.addTile(mockTile1);
-        settlementPosition.addTile(mockTile2);
-        settlementPosition.addTile(mockTile3);
-        settlementPosition.addRoad(mockRoad1);
-        settlementPosition.addRoad(mockRoad2);
-        settlementPosition.addRoad(mockRoad3);
+        buildingSite.setCoordinates(10, 20);
+        buildingSite.addTile(mockTile1);
+        buildingSite.addTile(mockTile2);
+        buildingSite.addTile(mockTile3);
+        buildingSite.addRoad(mockRoad1);
+        buildingSite.addRoad(mockRoad2);
+        buildingSite.addRoad(mockRoad3);
 
 
         when(mockTile1.toString()).thenReturn("MockTile1");
@@ -246,8 +246,8 @@ class SettlementPositionTest {
         when(mockRoad2.toString()).thenReturn("MockRoad2");
         when(mockRoad3.toString()).thenReturn("MockRoad3");
 
-        String toString = settlementPosition.toString();
-        String expectedString = "SettlementPosition{ID='42', (10.0; 20.0), tiles=[MockTile1, MockTile2, MockTile3], roads=[MockRoad1, MockRoad2, MockRoad3]}";
+        String toString = buildingSite.toString();
+        String expectedString = "BuildingSite{ID='42', (10.0; 20.0), tiles=[MockTile1, MockTile2, MockTile3], roads=[MockRoad1, MockRoad2, MockRoad3]}";
         assertEquals(expectedString, toString, "String does not match");
     }
 
@@ -257,12 +257,12 @@ class SettlementPositionTest {
         Player mockPlayer = mock(Player.class);
         when(mockPlayer.getUniqueId()).thenReturn(playerId);
         when(mockRoad1.getOwner()).thenReturn(mockPlayer);
-        when(mockRoad1.getNeighbour(any(SettlementPosition.class))).thenReturn(mockNeighbour1);
-        settlementPosition.addRoad(mockRoad1);
+        when(mockRoad1.getNeighbour(any(BuildingSite.class))).thenReturn(mockNeighbour1);
+        buildingSite.addRoad(mockRoad1);
         Settlement settlement = new Settlement(mockPlayer, PlayerColor.BLUE);
-        settlementPosition.setBuilding(settlement);
-        assertEquals(settlement, settlementPosition.building);
-        assertEquals(playerId, settlementPosition.getBuildingOwner().getUniqueId());
+        buildingSite.setBuilding(settlement);
+        assertEquals(settlement, buildingSite.building);
+        assertEquals(playerId, buildingSite.getBuildingOwner().getUniqueId());
     }
 
     @Test
@@ -272,16 +272,16 @@ class SettlementPositionTest {
         when(mockPlayer.getUniqueId()).thenReturn(playerId);
         Settlement settlement1 = new Settlement(mockPlayer, PlayerColor.BLUE);
         when(mockRoad1.getOwner()).thenReturn(mockPlayer);
-        when(mockRoad1.getNeighbour(any(SettlementPosition.class))).thenReturn(mockNeighbour1);
-        settlementPosition.addRoad(mockRoad1);
-        settlementPosition.setBuilding(settlement1);
-        assertEquals(settlement1, settlementPosition.building);
+        when(mockRoad1.getNeighbour(any(BuildingSite.class))).thenReturn(mockNeighbour1);
+        buildingSite.addRoad(mockRoad1);
+        buildingSite.setBuilding(settlement1);
+        assertEquals(settlement1, buildingSite.building);
 
         String secondPlayerId = "Player2";
         Player mockPlayer2 = mock(Player.class);
         when(mockPlayer2.getUniqueId()).thenReturn(secondPlayerId);
         Settlement settlement2 = new Settlement(mockPlayer2, PlayerColor.BLUE);
-        GameException ge = assertThrows(IntersectionOccupiedException.class, () -> settlementPosition.setBuilding(settlement2));
+        GameException ge = assertThrows(IntersectionOccupiedException.class, () -> buildingSite.setBuilding(settlement2));
         assertEquals("Intersection occupied!", ge.getMessage());
     }
 
@@ -291,15 +291,15 @@ class SettlementPositionTest {
         Player mockPlayer = mock(Player.class);
         when(mockPlayer.getUniqueId()).thenReturn(playerId);
         when(mockRoad1.getOwner()).thenReturn(mockPlayer);
-        when(mockRoad1.getNeighbour(any(SettlementPosition.class))).thenReturn(mockNeighbour1);
+        when(mockRoad1.getNeighbour(any(BuildingSite.class))).thenReturn(mockNeighbour1);
         when(mockNeighbour1.getBuildingOwner()).thenReturn(mockPlayer);
-        settlementPosition.addRoad(mockRoad1);
+        buildingSite.addRoad(mockRoad1);
 
         String secondPlayerId = "Player2";
         Player mockPlayer2 = mock(Player.class);
         when(mockPlayer2.getUniqueId()).thenReturn(secondPlayerId);
         Settlement settlement = new Settlement(mockPlayer2, PlayerColor.BLUE);
-        GameException ge = assertThrows(SpacingRuleViolationException.class, () -> settlementPosition.setBuilding(settlement));
+        GameException ge = assertThrows(SpacingRuleViolationException.class, () -> buildingSite.setBuilding(settlement));
         assertEquals("Too close to another settlement or city", ge.getMessage());
     }
 
@@ -309,7 +309,7 @@ class SettlementPositionTest {
         Player mockPlayer = mock(Player.class);
         when(mockPlayer.getUniqueId()).thenReturn(playerId);
         Settlement settlement = new Settlement(mockPlayer, PlayerColor.BLUE);
-        GameException ge = assertThrows(NoAdjacentRoadException.class, () -> settlementPosition.setBuilding(settlement));
+        GameException ge = assertThrows(NoAdjacentRoadException.class, () -> buildingSite.setBuilding(settlement));
         assertEquals("No adjacent roads found", ge.getMessage());
     }
 
@@ -317,14 +317,14 @@ class SettlementPositionTest {
     void setBuildingShouldThrowErrorWhenOnlyAnotherPlayerHasAdjacentRoad() throws GameException {
         var player = new Player("Player1");
         when(mockRoad1.getOwner()).thenReturn(player);
-        when(mockRoad1.getNeighbour(any(SettlementPosition.class))).thenReturn(mockNeighbour1);
-        settlementPosition.addRoad(mockRoad1);
+        when(mockRoad1.getNeighbour(any(BuildingSite.class))).thenReturn(mockNeighbour1);
+        buildingSite.addRoad(mockRoad1);
 
         String secondPlayerId = "Player2";
         Player mockPlayer = mock(Player.class);
         when(mockPlayer.getUniqueId()).thenReturn(secondPlayerId);
         Settlement settlement = new Settlement(mockPlayer, PlayerColor.BLUE);
-        GameException ge = assertThrows(NoAdjacentRoadException.class, () -> settlementPosition.setBuilding(settlement));
+        GameException ge = assertThrows(NoAdjacentRoadException.class, () -> buildingSite.setBuilding(settlement));
         assertEquals("No adjacent roads found", ge.getMessage());
     }
 
@@ -333,22 +333,22 @@ class SettlementPositionTest {
         var player = new Player("Player1");
         var secondPlayer = new Player("Player2");
         when(mockRoad1.getOwner()).thenReturn(player);
-        when(mockRoad1.getNeighbour(any(SettlementPosition.class))).thenReturn(mockNeighbour1);
+        when(mockRoad1.getNeighbour(any(BuildingSite.class))).thenReturn(mockNeighbour1);
         when(mockRoad2.getOwner()).thenReturn(secondPlayer);
-        when(mockRoad2.getNeighbour(any(SettlementPosition.class))).thenReturn(mockNeighbour2);
-        settlementPosition.addRoad(mockRoad1);
-        settlementPosition.addRoad(mockRoad2);
+        when(mockRoad2.getNeighbour(any(BuildingSite.class))).thenReturn(mockNeighbour2);
+        buildingSite.addRoad(mockRoad1);
+        buildingSite.addRoad(mockRoad2);
 
         Settlement settlement = new Settlement(secondPlayer, PlayerColor.BLUE);
-        settlementPosition.setBuilding(settlement);
-        assertEquals(settlement, settlementPosition.building);
-        assertEquals(secondPlayer, settlementPosition.getBuildingOwner());
+        buildingSite.setBuilding(settlement);
+        assertEquals(settlement, buildingSite.building);
+        assertEquals(secondPlayer, buildingSite.getBuildingOwner());
     }
 
     @Test
     void testToJsonInitialState() {
 
-        ObjectNode jsonNode = settlementPosition.toJson();
+        ObjectNode jsonNode = buildingSite.toJson();
 
         assertNotNull(jsonNode, "toJson() should return a non-null ObjectNode");
 
@@ -386,14 +386,14 @@ class SettlementPositionTest {
         // Use a mock Building
         Building mockBuilding = new Settlement(mockPlayer, color);
         when(mockRoad1.getOwner()).thenReturn(mockPlayer);
-        when(mockRoad1.getNeighbour(any(SettlementPosition.class))).thenReturn(mockNeighbour1);
-        settlementPosition.addRoad(mockRoad1);
+        when(mockRoad1.getNeighbour(any(BuildingSite.class))).thenReturn(mockNeighbour1);
+        buildingSite.addRoad(mockRoad1);
 
-        settlementPosition.setCoordinates(expectedX, expectedY);
-        settlementPosition.setBuilding(mockBuilding);
+        buildingSite.setCoordinates(expectedX, expectedY);
+        buildingSite.setBuilding(mockBuilding);
 
 
-        ObjectNode jsonNode = settlementPosition.toJson();
+        ObjectNode jsonNode = buildingSite.toJson();
 
         assertNotNull(jsonNode, "toJson() should return a non-null ObjectNode");
 
@@ -420,36 +420,36 @@ class SettlementPositionTest {
 
     @Test
     void getBuildingOwnerNoBuilding() {
-        assertNull(settlementPosition.getBuildingOwner(), "Building owner should be null when no building is present.");
+        assertNull(buildingSite.getBuildingOwner(), "Building owner should be null when no building is present.");
     }
 
     @Test
     void getNeighboursNoRoads() {
-        List<SettlementPosition> neighbours = settlementPosition.getNeighbours();
+        List<BuildingSite> neighbours = buildingSite.getNeighbours();
         assertTrue(neighbours.isEmpty(), "Neighbours list should be empty when there are no roads.");
     }
 
     @Test
     void getNeighboursWithOneNeighbour() {
-        when(mockRoad1.getNeighbour(settlementPosition)).thenReturn(mockNeighbour1);
-        settlementPosition.addRoad(mockRoad1);
+        when(mockRoad1.getNeighbour(buildingSite)).thenReturn(mockNeighbour1);
+        buildingSite.addRoad(mockRoad1);
 
-        List<SettlementPosition> neighbours = settlementPosition.getNeighbours();
+        List<BuildingSite> neighbours = buildingSite.getNeighbours();
 
         assertEquals(1, neighbours.size(), "Should return 1 neighbour.");
         assertTrue(neighbours.contains(mockNeighbour1), "List should contain the expected mock neighbour.");
-        verify(mockRoad1, times(1)).getNeighbour(settlementPosition);
+        verify(mockRoad1, times(1)).getNeighbour(buildingSite);
     }
 
     @Test
     void update_whenBuildingIsNull_doesNothing() {
-        assertNull(settlementPosition.building, "Building needs tio be null.");
+        assertNull(buildingSite.building, "Building needs tio be null.");
 
-        settlementPosition.update(TileType.WHEAT);
+        buildingSite.update(TileType.WHEAT);
 
-        assertDoesNotThrow(() -> settlementPosition.update(TileType.WHEAT), "Update should not throw an exception when building is null.");
+        assertDoesNotThrow(() -> buildingSite.update(TileType.WHEAT), "Update should not throw an exception when building is null.");
 
-        assertNull(settlementPosition.building, "Building should still be null after update call.");
+        assertNull(buildingSite.building, "Building should still be null after update call.");
     }
 
     @Test
@@ -457,38 +457,38 @@ class SettlementPositionTest {
         String playerId = "test";
         Player player = mock(Player.class);
         when(player.getUniqueId()).thenReturn(playerId);
-        settlementPosition.addRoad(mockRoad1);
+        buildingSite.addRoad(mockRoad1);
         when(mockRoad1.getOwner()).thenReturn(player);
 
-        when(mockRoad1.getNeighbour(settlementPosition)).thenReturn(mockNeighbour1);
+        when(mockRoad1.getNeighbour(buildingSite)).thenReturn(mockNeighbour1);
         when(mockNeighbour1.getBuildingOwner()).thenReturn(null);
 
         Building mockBuilding = mock(Building.class);
         when(mockBuilding.getPlayer()).thenReturn(player); // Building's owner
 
-        settlementPosition.setBuilding(mockBuilding);
-        assertEquals(mockBuilding, settlementPosition.building, "Building should be set correctly.");
+        buildingSite.setBuilding(mockBuilding);
+        assertEquals(mockBuilding, buildingSite.building, "Building should be set correctly.");
 
-        settlementPosition.update(TileType.WHEAT);
+        buildingSite.update(TileType.WHEAT);
 
         verify(mockBuilding, times(1)).distributeResourcesToPlayer(TileType.WHEAT);
     }
 
     @Test
     void getPortInitiallyShouldReturnNull() {
-        assertNull(settlementPosition.getPort(), "Initially, the port should be null.");
+        assertNull(buildingSite.getPort(), "Initially, the port should be null.");
     }
 
     @Test
     void setPortWhenCurrentPortIsNullShouldSetThePort() {
         Port mockPort = mock(Port.class);
 
-        assertNull(settlementPosition.getPort(), "Port should be null before setting.");
+        assertNull(buildingSite.getPort(), "Port should be null before setting.");
 
-        settlementPosition.setPort(mockPort);
+        buildingSite.setPort(mockPort);
 
-        assertNotNull(settlementPosition.getPort(), "Port should not be null after setting.");
-        assertEquals(mockPort, settlementPosition.getPort(), "The retrieved port should be the one that was set.");
+        assertNotNull(buildingSite.getPort(), "Port should not be null after setting.");
+        assertEquals(mockPort, buildingSite.getPort(), "The retrieved port should be the one that was set.");
     }
 
     @Test
@@ -496,27 +496,27 @@ class SettlementPositionTest {
         Port initialMockPort = mock(Port.class);
         Port newMockPort = mock(Port.class);
 
-        settlementPosition.setPort(initialMockPort);
-        assertEquals(initialMockPort, settlementPosition.getPort(), "Initial port should be set correctly.");
+        buildingSite.setPort(initialMockPort);
+        assertEquals(initialMockPort, buildingSite.getPort(), "Initial port should be set correctly.");
 
-        settlementPosition.setPort(newMockPort);
+        buildingSite.setPort(newMockPort);
 
-        assertEquals(initialMockPort, settlementPosition.getPort(), "Port should not have changed after attempting to set a new one when one was already present.");
-        assertNotEquals(newMockPort, settlementPosition.getPort(), "The port should not be the new port instance.");
+        assertEquals(initialMockPort, buildingSite.getPort(), "Port should not have changed after attempting to set a new one when one was already present.");
+        assertNotEquals(newMockPort, buildingSite.getPort(), "The port should not be the new port instance.");
     }
 
     @Test
     void setPortWithNullArgumentShouldNotThrowErrorAndPortRemainsUnchanged() {
-        assertNull(settlementPosition.getPort(), "Port is initially null.");
-        settlementPosition.setPort(null);
-        assertNull(settlementPosition.getPort(), "Port should remain null if set to null when already null.");
+        assertNull(buildingSite.getPort(), "Port is initially null.");
+        buildingSite.setPort(null);
+        assertNull(buildingSite.getPort(), "Port should remain null if set to null when already null.");
 
         Port mockPort = mock(Port.class);
-        settlementPosition.setPort(mockPort);
-        assertNotNull(settlementPosition.getPort());
+        buildingSite.setPort(mockPort);
+        assertNotNull(buildingSite.getPort());
 
-        settlementPosition.setPort(null);
-        assertNotNull(settlementPosition.getPort(), "Port should remain the originally set port, not become null.");
-        assertEquals(mockPort, settlementPosition.getPort(), "Port should be the original mockPort.");
+        buildingSite.setPort(null);
+        assertNotNull(buildingSite.getPort(), "Port should remain the originally set port, not become null.");
+        assertEquals(mockPort, buildingSite.getPort(), "Port should be the original mockPort.");
     }
 }

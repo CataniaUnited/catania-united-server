@@ -29,8 +29,8 @@ import static org.mockito.Mockito.when;
 
 @QuarkusTest
 class RoadTest {
-    static SettlementPosition mockPositionA;
-    static SettlementPosition mockPositionB;
+    static BuildingSite mockPositionA;
+    static BuildingSite mockPositionB;
     private static final int ROAD_ID = 12;
     Road road;
 
@@ -39,8 +39,8 @@ class RoadTest {
         //Ensure that "." is used instead of "," to separate decimals
         Locale.setDefault(Locale.ENGLISH);
 
-        mockPositionA = mock(SettlementPosition.class);
-        mockPositionB = mock(SettlementPosition.class);
+        mockPositionA = mock(BuildingSite.class);
+        mockPositionB = mock(BuildingSite.class);
 
 
         road = new Road(mockPositionA, mockPositionB, ROAD_ID);
@@ -54,8 +54,8 @@ class RoadTest {
 
     @Test
     void getNeighbourReturnsNullWhenGivenUnknownPosition() {
-        SettlementPosition mockPositionC = mock(SettlementPosition.class);
-        SettlementPosition neighbour = road.getNeighbour(mockPositionC);
+        BuildingSite mockPositionC = mock(BuildingSite.class);
+        BuildingSite neighbour = road.getNeighbour(mockPositionC);
         assertNull(neighbour, "getNeighbour should return null If an invalid Position is given");
     }
 
@@ -304,7 +304,7 @@ class RoadTest {
         var expectedOwner = new Player("PlayerX");
         PlayerColor expectedColor = PlayerColor.LAVENDER;
 
-        // Mock getCoordinates from SettlementPosition for calculation
+        // Mock getCoordinates from BuildingSite for calculation
         double[] coordsA = {5.0, -10.0};
         double[] coordsB = {15.0, 10.0};
         when(mockPositionA.getCoordinates()).thenReturn(coordsA);

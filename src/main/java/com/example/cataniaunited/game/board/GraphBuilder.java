@@ -14,13 +14,13 @@ import static java.util.stream.Collectors.toList;
 
 /**
  * Builds the graph structure of the Catan game board, consisting of
- * {@link SettlementPosition} nodes and {@link Road} edges.
+ * {@link BuildingSite} nodes and {@link Road} edges.
  * It uses a list of pre-generated {@link Tile} objects to determine
  * the layout and connections.
  */
 public class GraphBuilder {
     final List<Tile> tileList;
-    List<SettlementPosition> nodeList;
+    List<BuildingSite> nodeList;
     List<Road> roadList;
     List<Port> portList;
     int sizeOfBoard;
@@ -53,20 +53,20 @@ public class GraphBuilder {
         this.sizeOfBoard = sizeOfBoard;
 
         // Initialize node list with expected capacity
-        int totalAmountOfSettlementPositions = calculateTotalSettlementPositions(sizeOfBoard);
-        this.nodeList = new ArrayList<>(totalAmountOfSettlementPositions);
-        this.roadList = new ArrayList<>(totalAmountOfSettlementPositions);
+        int totalAmountOfBuildingSites = calculateTotalBuildingSites(sizeOfBoard);
+        this.nodeList = new ArrayList<>(totalAmountOfBuildingSites);
+        this.roadList = new ArrayList<>(totalAmountOfBuildingSites);
     }
 
     /**
-     * Generates the complete graph of SettlementPositions.
+     * Generates the complete graph of BuildingSites.
      * Orchestrates the building process layer by layer, assigns tiles to nodes,
-     * and calculates coordinates for settlement positions and roads.
+     * and calculates coordinates for building Sites and roads.
      * Additionally, adds Ports and calculates the coordinates of them
      *
-     * @return The generated list of {@link SettlementPosition} nodes.
+     * @return The generated list of {@link BuildingSite} nodes.
      */
-    public List<SettlementPosition> generateGraph(){
+    public List<BuildingSite> generateGraph(){
         for (int level = 1; level <= sizeOfBoard; level++){ // for each level create the subgraph and snd continuously interconnect it with the inner layer
             createLayerStructure(level);
         }
@@ -74,8 +74,8 @@ public class GraphBuilder {
         // Assign remaining tiles to nodes with only two initial tiles
         assignTilesToIncompleteNodes();
 
-        // Calculate coordinates for settlement positions = nodes of the graph
-        calculateSettlementCoordinates();
+        // Calculate coordinates for Building sites = nodes of the graph
+        calculateBuildingCoordinates();
 
 
         // Calculate coordinates and angles for roads
@@ -127,15 +127,15 @@ public class GraphBuilder {
 
         Tile centerTile = tileList.get(0);
 
-        SettlementPosition firstNode = null;
-        SettlementPosition previousNode = null;
+        BuildingSite firstNode = null;
+        BuildingSite previousNode = null;
 
         for (int i = 0; i < nodesInRing; i++) {
-            SettlementPosition currentNode = createAndAddNode();
+            BuildingSite currentNode = createAndAddNode();
             currentNode.addTile(centerTile); // All nodes in layer 1 connect to the center tile
 
             if (previousNode != null) {
-                createRoadBetweenTwoSettlements(previousNode, currentNode);
+                createRoadBetweenTwoBuildingSites(previousNode, currentNode);
             }
             if (i == 0) {
                 firstNode = currentNode;
@@ -145,7 +145,7 @@ public class GraphBuilder {
 
         // Connect last node back to first node
         if (firstNode != null && firstNode != previousNode) {
-            createRoadBetweenTwoSettlements(previousNode, firstNode);
+            createRoadBetweenTwoBuildingSites(previousNode, firstNode);
         }
     }
 
@@ -176,30 +176,30 @@ public class GraphBuilder {
 
         // -------------------------------- SETUP DONE, CREATE FIRST NODE ----------------------------------------
         // create the first node of the Graph of this currentLayer
-        SettlementPosition lastSettlement = createAndAddNode();
+        BuildingSite lastBuildingSite = createAndAddNode();
         // Add all tiles the starting node connects to on the current layer
-        lastSettlement.addTile(tileList.get(currentTileIndex));
-        lastSettlement.addTile(tileList.get(indexOfLastTileOfThisLayer));
+        lastBuildingSite.addTile(tileList.get(currentTileIndex));
+        lastBuildingSite.addTile(tileList.get(indexOfLastTileOfThisLayer));
 
         // Connect first element of new layer, to inner layer and add second Tile
-        SettlementPosition innerSettlement = nodeList.get((nodeId-1) - offsetBetweenIndicesOfHexesToInterConnect);
-        createRoadBetweenTwoSettlements(innerSettlement, lastSettlement);
+        BuildingSite innerBuildingSite = nodeList.get((nodeId-1) - offsetBetweenIndicesOfHexesToInterConnect);
+        createRoadBetweenTwoBuildingSites(innerBuildingSite, lastBuildingSite);
 
-        addTilesToNodeInTheInnerLayer(innerSettlement, lastSettlement); // add the two tiles of the current node to the node in the inner layer
+        addTilesToNodeInTheInnerLayer(innerBuildingSite, lastBuildingSite); // add the two tiles of the current node to the node in the inner layer
         offsetBetweenIndicesOfHexesToInterConnect+=2; // increase offset since a 'corner' follows and there are more nodes on the outher layer than on the inner layer
 
 
         // -------------------------------- CREATE ALL NODES ----------------------------------------
         for(int i = 2;i <= endIndex; i++){ // 'i' represent the ith node of this layer
             // New Node
-            SettlementPosition currentSettlement = createAndAddNode();
-            currentSettlement.addTile(tileList.get(currentTileIndex)); // Add Tile two current Node
+            BuildingSite currentBuildingSite = createAndAddNode();
+            currentBuildingSite.addTile(tileList.get(currentTileIndex)); // Add Tile two current Node
 
             // create connection with previous node of the same layer
-            createRoadBetweenTwoSettlements(lastSettlement, currentSettlement);
+            createRoadBetweenTwoBuildingSites(lastBuildingSite, currentBuildingSite);
 
-            // set previous settlement to this to set up the loop for the next node
-            lastSettlement = currentSettlement;
+            // set previous building site to this to set up the loop for the next node
+            lastBuildingSite = currentBuildingSite;
 
 
             // ---------------------------- Check if you need to connect the current node if the inner layer ---------------------
@@ -207,13 +207,13 @@ public class GraphBuilder {
             if (currentNodesUntilCompletionOfNextHex == ++nodesAfterCompletionOfPreviousHex){
                 // if yes
                 currentTileIndex++; //  Update tileIndex, the previous tile is complete, you are at a new one
-                currentSettlement.addTile(tileList.get(currentTileIndex)); // Add second Tile to current Node
+                currentBuildingSite.addTile(tileList.get(currentTileIndex)); // Add second Tile to current Node
 
                 // create a connection to the inner layer, to divide the old hex and the now hex
                 // and add the 2 tiles to the node in the inner layer
-                innerSettlement = nodeList.get((nodeId-1) - offsetBetweenIndicesOfHexesToInterConnect);
-                createRoadBetweenTwoSettlements(innerSettlement, currentSettlement);
-                addTilesToNodeInTheInnerLayer(innerSettlement, currentSettlement);
+                innerBuildingSite = nodeList.get((nodeId-1) - offsetBetweenIndicesOfHexesToInterConnect);
+                createRoadBetweenTwoBuildingSites(innerBuildingSite, currentBuildingSite);
+                addTilesToNodeInTheInnerLayer(innerBuildingSite, currentBuildingSite);
 
                 // log the connection to predict when the next connection to the inner layer has to be made
                 connectionCount++;
@@ -230,18 +230,18 @@ public class GraphBuilder {
             }
         }
 
-        SettlementPosition firstNodeOfCurrentLayer = nodeList.get((nodeId)-endIndex);
-        SettlementPosition lastPlacedNode = nodeList.get(nodeList.size()-1);
+        BuildingSite firstNodeOfCurrentLayer = nodeList.get((nodeId)-endIndex);
+        BuildingSite lastPlacedNode = nodeList.get(nodeList.size()-1);
 
         // Connect first and last node of current layer
-        createRoadBetweenTwoSettlements(firstNodeOfCurrentLayer, lastPlacedNode);
+        createRoadBetweenTwoBuildingSites(firstNodeOfCurrentLayer, lastPlacedNode);
         // No Tile Adding since it's added when creating the node
 
     }
 
     /**
      * Post-processing step after initial layer creation by {@link #createLayerStructure(int)}.
-     * This method iterates through the "inner" settlement positions (those not on the absolute
+     * This method iterates through the "inner" building sites (those not on the absolute
      * outermost layer of the board) to ensure each is associated with exactly three tiles.
      * <br>
      * During {@link #createSubsequentLayerRing(int)}, some inner nodes might initially be
@@ -256,8 +256,8 @@ public class GraphBuilder {
      * very edge of the board map.
      */
     private void assignTilesToIncompleteNodes() {
-        SettlementPosition currentNode;
-        List<SettlementPosition> neighbours;
+        BuildingSite currentNode;
+        List<BuildingSite> neighbours;
         List<Tile> currentTiles;
 
         // Only inner nodes can be added, because outer ones might not have 3 neighbours
@@ -268,9 +268,9 @@ public class GraphBuilder {
             currentNode = nodeList.get(i);
             currentTiles = currentNode.getTiles(); // get amount of tiles of this node
 
-            // If the current settlement position is already associated with 3 tiles,
+            // If the current building site is already associated with 3 tiles,
             // it's considered complete for the purpose of this method.
-            // No further action is needed, so skip to the next settlement position.
+            // No further action is needed, so skip to the next building site.
             if (currentTiles.size() == 3) {
                 continue;
             }
@@ -282,7 +282,7 @@ public class GraphBuilder {
 
             // add the tile that is connected to two of the three nodes but node to you.
             List<Tile> neighbourTiles = new ArrayList<>();
-            for (SettlementPosition neighbour : neighbours) {
+            for (BuildingSite neighbour : neighbours) {
                 neighbourTiles.addAll(neighbour.getTiles()); // Add all tiles from all neighbours. Duplicates are expected.
             }
 
@@ -306,23 +306,23 @@ public class GraphBuilder {
      * Adds the tiles associated with an outer layer node to an adjacent inner layer node.
      * This helps ensure inner nodes are correctly associated with all three surrounding tiles.
      *
-     * @param innerNode The {@link SettlementPosition} in the inner layer.
-     * @param outerNode The {@link SettlementPosition} in the outer layer, connected to the innerNode.
+     * @param innerNode The {@link BuildingSite} in the inner layer.
+     * @param outerNode The {@link BuildingSite} in the outer layer, connected to the innerNode.
      */
-    private void addTilesToNodeInTheInnerLayer(SettlementPosition innerNode, SettlementPosition outerNode){
+    private void addTilesToNodeInTheInnerLayer(BuildingSite innerNode, BuildingSite outerNode){
         for (Tile tile: outerNode.getTiles()){
             innerNode.addTile(tile);
         }
     }
 
     /**
-     * Creates a new {@link Road} (edge) in the graph, connecting two {@link SettlementPosition} nodes.
-     * Adds the road to both settlement positions and to the main road list.
+     * Creates a new {@link Road} (edge) in the graph, connecting two {@link BuildingSite} nodes.
+     * Adds the road to both building sites and to the main road list.
      *
-     * @param a The first {@link SettlementPosition}.
-     * @param b The second {@link SettlementPosition}.
+     * @param a The first {@link BuildingSite}.
+     * @param b The second {@link BuildingSite}.
      */
-    private void createRoadBetweenTwoSettlements(SettlementPosition a, SettlementPosition b){
+    private void createRoadBetweenTwoBuildingSites(BuildingSite a, BuildingSite b){
         Road roadToAdd = new Road(a, b, roadList.size()+1);
         a.addRoad(roadToAdd);
         b.addRoad(roadToAdd);
@@ -333,19 +333,19 @@ public class GraphBuilder {
     private void addPorts() {
         // We are only talking about the Outermost nodes
         int startingIndex = (int) (6 * Math.pow((sizeOfBoard - 1), 2));
-        int numberOfCoastalSettlements = nodeList.size() - startingIndex;
+        int numberOfCoastalBuildingSites = nodeList.size() - startingIndex;
 
         int currentIndex = startingIndex;
         int currentPortIndex = 0;
         int portCount;
         int rhythm;
 
-        List<Port> ports = getPortsToPlace(numberOfCoastalSettlements);
+        List<Port> ports = getPortsToPlace(numberOfCoastalBuildingSites);
         Collections.shuffle(ports);
         portCount = ports.size();
 
         // assign ports
-        rhythm = Math.max(2, numberOfCoastalSettlements / portCount);
+        rhythm = Math.max(2, numberOfCoastalBuildingSites / portCount);
 
         while (currentPortIndex < portCount) {
             if (currentIndex + 1 >= nodeList.size()) {
@@ -356,7 +356,7 @@ public class GraphBuilder {
             Port currentPort = ports.get(currentPortIndex);
             nodeList.get(currentIndex).setPort(currentPort);
             nodeList.get(currentIndex + 1).setPort(currentPort);
-            currentPort.setAssociatedSettlements(nodeList.get(currentIndex), nodeList.get(currentIndex+1));
+            currentPort.setAssociatedBuildingSites(nodeList.get(currentIndex), nodeList.get(currentIndex+1));
             currentPort.calculatePosition();
 
             currentIndex += rhythm;
@@ -368,19 +368,19 @@ public class GraphBuilder {
 
     /**
      * Determines and creates the list of {@link Port} instances to be placed on the board
-     * based on the number of coastal settlement locations.
+     * based on the number of coastal building sites.
      *
-     * @param numberOfCoastalSettlements The total number of settlement positions available on the coast.
+     * @param numberOfCoastalBuildingSites The total number of building sites available on the coast.
      * @return A list of {@link Port} objects, with types and distribution determined by board size.
      */
-    private List<Port> getPortsToPlace(int numberOfCoastalSettlements) {
+    private List<Port> getPortsToPlace(int numberOfCoastalBuildingSites) {
         List<Port> ports = new ArrayList<>();
 
         // 1. Get available resource types for specific ports and shuffle them for variety
         List<TileType> availableResourceTypesForPorts = getShuffledResourceTypesForPorts();
 
         // 2. Calculate the total number of ports needed for this board size
-        int totalPortCount = calculateTargetPortCount(numberOfCoastalSettlements);
+        int totalPortCount = calculateTargetPortCount(numberOfCoastalBuildingSites);
 
         // 3. Determine the mix of general and specific ports
         PortDistribution distribution = determinePortDistribution(totalPortCount);
@@ -478,7 +478,7 @@ public class GraphBuilder {
         }
     }
 
-    private int calculateTargetPortCount(int numberOfCoastalSettlements) {
+    private int calculateTargetPortCount(int numberOfCoastalBuildingSites) {
         int targetPortCount;
         int basePortsForLargeBoards = 11;
         int maximumPositionsPerPortForLargeBoards = 5;
@@ -486,7 +486,7 @@ public class GraphBuilder {
         // --- Determine Target Port Count ---
         // Magic Numbers Determined by Playtesting
         switch (sizeOfBoard) {
-            case 2: // 7 tiles, 18 coastal settlements
+            case 2: // 7 tiles, 18 coastal building sites
                 targetPortCount = 5;
                 break;
             case 3: // Standard 3-4 player board (19 tiles, 30 coastal)
@@ -498,8 +498,8 @@ public class GraphBuilder {
             default:  // massive boards -> slower scaling (sqrt bases)
                 int additionalPorts = (sizeOfBoard - 4) / 2; // Add 1 port for every 2 rings
                 targetPortCount = basePortsForLargeBoards + additionalPorts;
-                // Ensure growth is not too slow at least one port every few settlements
-                int densityBasedMin = numberOfCoastalSettlements / maximumPositionsPerPortForLargeBoards;
+                // Ensure growth is not too slow at least one port every few building sites
+                int densityBasedMin = numberOfCoastalBuildingSites / maximumPositionsPerPortForLargeBoards;
                 targetPortCount = Math.max(targetPortCount, Math.max(11, densityBasedMin));
                 break;
         }
@@ -513,10 +513,10 @@ public class GraphBuilder {
 // ------------------- Coordinate Calculation ------------------------
     /**
      * Calculates and sets the coordinates and rotation angle for all roads in the road list.
-     * This is done after settlement positions have their coordinates calculated.
+     * This is done after building sites have their coordinates calculated.
      */
     private void calculateRoadCoordinates(){
-        for (SettlementPosition currentNode : nodeList) {
+        for (BuildingSite currentNode : nodeList) {
             for (Road road : currentNode.getRoads()) {
                 road.setCoordinatesAndRotationAngle();
             }
@@ -524,16 +524,16 @@ public class GraphBuilder {
     }
 
     /**
-     * Calculates and sets the 2D coordinates for all {@link SettlementPosition} nodes.
+     * Calculates and sets the 2D coordinates for all {@link BuildingSite} nodes.
      * Distinguishes between inner nodes (surrounded by 3 tiles) and outer nodes.
      */
-    private void calculateSettlementCoordinates(){
+    private void calculateBuildingCoordinates(){
         addCoordinatesToInnerNodes();
         addCoordinatesToOuterNodes();
     }
 
     /**
-     * Calculates and sets coordinates for inner settlement positions.
+     * Calculates and sets coordinates for inner building sites.
      * These nodes are at the intersection of three tiles, and their
      * coordinates are the average of the coordinates of these three tiles.
      */
@@ -542,7 +542,7 @@ public class GraphBuilder {
         int lastNodeWith3Neighbors = (int) (6*Math.pow((sizeOfBoard-1), 2));
 
         for(int i = 0; i < lastNodeWith3Neighbors; i++){
-            SettlementPosition currentNode = nodeList.get(i);
+            BuildingSite currentNode = nodeList.get(i);
             // get Positions of Tiles
             List<Tile> nodeTiles = currentNode.getTiles();
 
@@ -563,16 +563,16 @@ public class GraphBuilder {
     }
 
     /**
-     * Calculates and sets coordinates for settlement positions on the outermost layer of the board.
+     * Calculates and sets coordinates for building sites on the outermost layer of the board.
      * Nodes handled by {@link #addCoordinatesToInnerNodes()} (typically those at the intersection of 3 tiles)
      * are skipped as their coordinates are already determined.
      * <br>
      * This method iterates through the outermost nodes and applies different strategies
      * to calculate their coordinates based on the number of tiles they are directly
-     * associated with and the status of their neighboring settlement positions.
+     * associated with and the status of their neighboring building sites.
      * <br>
      * The general principle is to find three reference points (either from associated tiles
-     * or already-positioned neighboring settlements) to triangulate or determine the
+     * or already-positioned neighboring building sites) to triangulate or determine the
      * current node's position.
      */
     private void addCoordinatesToOuterNodes() {
@@ -582,7 +582,7 @@ public class GraphBuilder {
         int startingIndex = (int) (6 * Math.pow((sizeOfBoard - 1), 2));
 
         for (int i = startingIndex; i < nodeList.size(); i++) {
-            SettlementPosition currentNode = nodeList.get(i);
+            BuildingSite currentNode = nodeList.get(i);
 
             int associatedTilesCount = currentNode.getTiles().size();
 
@@ -599,7 +599,7 @@ public class GraphBuilder {
                 // The logic here tries to ensure neighbors are positioned first if possible.
 
                 boolean isLastNodeInCurrentLayerProcessing = (i + 1 == nodeList.size());
-                SettlementPosition nextNodeInProcessingOrder = null;
+                BuildingSite nextNodeInProcessingOrder = null;
                 boolean nextNodeExists = (i + 1 < nodeList.size());
 
                 if (nextNodeExists) {
@@ -642,13 +642,13 @@ public class GraphBuilder {
      * whose coordinates are already known. The node's position is determined by reflecting
      * the known neighbor across the midpoint of the two associated tiles.
      *
-     * @param node The {@link SettlementPosition} whose coordinates are to be calculated.
+     * @param node The {@link BuildingSite} whose coordinates are to be calculated.
      */
-    private void addCoordinatesToNodeWith2TilesAnd1Neighbor(SettlementPosition node){
+    private void addCoordinatesToNodeWith2TilesAnd1Neighbor(BuildingSite node){
         List<Tile> tilesOfNodeList = node.getTiles();
-        List<SettlementPosition> neighbors = node.getNeighbours();
+        List<BuildingSite> neighbors = node.getNeighbours();
 
-        SettlementPosition minNode = Collections.min(neighbors, Comparator.comparingInt(SettlementPosition::getId));
+        BuildingSite minNode = Collections.min(neighbors, Comparator.comparingInt(BuildingSite::getId));
 
         double[] coordinates = calculateCoordinatesThruReflectingAPointAcrossTheMidpointOfTwoOtherPoints(tilesOfNodeList.get(0), tilesOfNodeList.get(1), minNode);
 
@@ -660,10 +660,10 @@ public class GraphBuilder {
      * whose coordinates are already known. The node's position is determined by reflecting
      * the associated tile across the midpoint of the two known neighbors.
      *
-     * @param node The {@link SettlementPosition} whose coordinates are to be calculated.
+     * @param node The {@link BuildingSite} whose coordinates are to be calculated.
      */
-    private void addCoordinatesToNodeWith1TilesAnd2NeighborsWithCoordinates(SettlementPosition node){
-        List<SettlementPosition> neighbours = node.getNeighbours();
+    private void addCoordinatesToNodeWith1TilesAnd2NeighborsWithCoordinates(BuildingSite node){
+        List<BuildingSite> neighbours = node.getNeighbours();
 
         Tile tile = node.getTiles().get(0);
 
@@ -678,16 +678,16 @@ public class GraphBuilder {
      * reference point for triangulation. The node's position is determined by reflecting the
      * "neighbor-of-a-neighbor" across the midpoint of the direct neighbor and the associated tile.
      *
-     * @param node The {@link SettlementPosition} whose coordinates are to be calculated.
+     * @param node The {@link BuildingSite} whose coordinates are to be calculated.
      */
-    private void addCoordinatesToNodeWith1Tiles1NeighbourAnd1NodeAsNeighbourFromPreviousNode(SettlementPosition node){
-        List<SettlementPosition> neighbours = node.getNeighbours();
+    private void addCoordinatesToNodeWith1Tiles1NeighbourAnd1NodeAsNeighbourFromPreviousNode(BuildingSite node){
+        List<BuildingSite> neighbours = node.getNeighbours();
 
-        SettlementPosition neighbour = Collections.min(neighbours, Comparator.comparingInt(SettlementPosition::getId));
+        BuildingSite neighbour = Collections.min(neighbours, Comparator.comparingInt(BuildingSite::getId));
 
-        List<SettlementPosition> distance2Connection = neighbour.getNeighbours();
+        List<BuildingSite> distance2Connection = neighbour.getNeighbours();
 
-        SettlementPosition reflectionNode = Collections.min(distance2Connection, Comparator.comparingInt(SettlementPosition::getId));
+        BuildingSite reflectionNode = Collections.min(distance2Connection, Comparator.comparingInt(BuildingSite::getId));
 
 
         Tile tile = node.getTiles().get(0);
@@ -729,23 +729,23 @@ public class GraphBuilder {
     }
 
     /**
-     * Calculates the total number of settlement positions on a board of a given size.
+     * Calculates the total number of building sites on a board of a given size.
      * The formula is 6 * (sizeOfBoard)^2.
      *
      * @param sizeOfBoard The size of the board (number of rings/layers).
-     * @return The total number of settlement positions.
+     * @return The total number of building sites.
      */
-    public static int calculateTotalSettlementPositions(int sizeOfBoard){
+    public static int calculateTotalBuildingSites(int sizeOfBoard){
         return (int) (6*Math.pow(sizeOfBoard, 2));
     }
 
     /**
-     * Creates a new {@link SettlementPosition} with a unique ID and adds it to the nodeList.
+     * Creates a new {@link BuildingSite} with a unique ID and adds it to the nodeList.
      *
-     * @return The newly created {@link SettlementPosition}.
+     * @return The newly created {@link BuildingSite}.
      */
-    private SettlementPosition createAndAddNode(){
-        SettlementPosition currentNode = new SettlementPosition(++nodeId);
+    private BuildingSite createAndAddNode(){
+        BuildingSite currentNode = new BuildingSite(++nodeId);
         nodeList.add(currentNode);
         return currentNode;
     }
@@ -762,11 +762,11 @@ public class GraphBuilder {
     }
 
     /**
-     * Calculates the number of new settlement positions *in* a specific ring (layer) of the board.
+     * Calculates the number of new building sites *in* a specific ring (layer) of the board.
      * The formula is 6 * (2 * layer - 1).
      *
      * @param layer The layer number (1-based).
-     * @return The number of settlement positions in that specific ring.
+     * @return The number of building sites in that specific ring.
      */
     private static int calculateNodesInRing(int layer) {
         return 6 * (2 * layer - 1);
