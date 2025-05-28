@@ -1,4 +1,4 @@
-package com.example.cataniaunited.game.board.ports;
+package com.example.cataniaunited.game.board;
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;

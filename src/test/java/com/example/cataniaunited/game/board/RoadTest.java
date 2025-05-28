@@ -90,8 +90,8 @@ class RoadTest {
         double angleY = coordsA[1] - coordsB[1]; // 20 - 60 = -40
         double expectedAngle = StrictMath.atan2(angleY, angleX); // atan2(-40, -20)
 
-        assertArrayEquals(expectedCoords, road.getCoordinates(), 0.001, "Calculated coordinates are incorrect");
-        assertEquals(expectedAngle, road.getRotationAngle(), 0.001, "Calculated angle is incorrect");
+        assertArrayEquals(expectedCoords, road.transform.getCoordinatesArray(), 0.001, "Calculated coordinates are incorrect");
+        assertEquals(expectedAngle, road.transform.rotation(), 0.001, "Calculated angle is incorrect");
     }
 
     @Test

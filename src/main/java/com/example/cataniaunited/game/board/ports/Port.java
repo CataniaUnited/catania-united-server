@@ -2,6 +2,7 @@ package com.example.cataniaunited.game.board.ports;
 
 import com.example.cataniaunited.game.board.Placable;
 import com.example.cataniaunited.game.board.SettlementPosition;
+import com.example.cataniaunited.game.board.Transform;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.example.cataniaunited.util.Util;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;

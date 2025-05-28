@@ -24,8 +24,7 @@ public class Road implements Placable, Buildable {
     final SettlementPosition positionB;
     final int id;
 
-    double[] coordinates = new double[2]; // Midpoint of the road
-    double rotationAngle; // Angle for graphical representation
+    Transform transform = Transform.ORIGIN;
 
     /**
      * Constructs a new Road between two settlement positions.
@@ -79,7 +78,7 @@ public class Road implements Placable, Buildable {
      * @return A clone of the double array representing the [x, y] coordinates.
      */
     public double[] getCoordinates() {
-        return coordinates.clone();
+        return transform.getCoordinatesArray().clone();
     }
 
     /**
@@ -88,7 +87,7 @@ public class Road implements Placable, Buildable {
      * @return The rotation angle in radians.
      */
     public double getRotationAngle() {
-        return rotationAngle;
+        return transform.rotation();
     }
 
     /**
@@ -107,11 +106,10 @@ public class Road implements Placable, Buildable {
      * if both connected settlement positions have their coordinates set.
      */
     public void setCoordinatesAndRotationAngle() {
-        if (!Arrays.equals(coordinates, new double[]{0, 0})) {
+        if (transform != Transform.ORIGIN) {
             return; // position has already been set
         }
 
-        // fixme reuse transform / position struct
         double xMax;
         double yMax;
         double xMin;
@@ -136,9 +134,7 @@ public class Road implements Placable, Buildable {
         if (coordinatesOfPositions[0] == 0 && coordinatesOfPositions[1] == 0) {  // position of Settlement B is not yet set
             return;
         }
-
-        this.coordinates = new double[]{xMax / 2, yMax / 2};
-        this.rotationAngle = StrictMath.atan2(yMin, xMin); // No need to assert that since no Road will be placed on 0,0
+        transform = new Transform(xMax / 2, yMax / 2, StrictMath.atan2(yMin, xMin));
     }
 
     /**
@@ -175,7 +171,7 @@ public class Road implements Placable, Buildable {
     @Override
     public String toString() {
         return "Road:{owner: %s; (%s, %s); position: (%s); angle: %f}"
-                .formatted(owner, positionA.getId(), positionB.getId(), Arrays.toString(coordinates), rotationAngle);
+                .formatted(owner, positionA.getId(), positionB.getId(), Arrays.toString(transform.getCoordinatesArray()), transform.rotation());
     }
 
     /**
@@ -203,10 +199,10 @@ public class Road implements Placable, Buildable {
         }
 
         ArrayNode coordsNode = mapper.createArrayNode();
-        coordsNode.add(this.coordinates[0]); // Add x
-        coordsNode.add(this.coordinates[1]); // Add y
+        coordsNode.add(transform.x()); // Add x
+        coordsNode.add(transform.y()); // Add y
         roadNode.set("coordinates", coordsNode);
-        roadNode.put("rotationAngle", this.rotationAngle);
+        roadNode.put("rotationAngle", transform.rotation());
         return roadNode;
     }
 

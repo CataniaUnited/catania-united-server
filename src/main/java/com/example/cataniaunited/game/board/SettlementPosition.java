@@ -18,8 +18,6 @@ import org.jboss.logging.Logger;
 import java.util.ArrayList;
 import java.util.List;
 
-// fixme the name position is misleading for what this class handles (everything regarding settlements eg., including resource drops)
-// TODO: rename to "BuildingSite"
 /**
  * Represents a potential location for a settlement or city on the Catan game board.
  * It is an intersection point connected to tiles and roads.
