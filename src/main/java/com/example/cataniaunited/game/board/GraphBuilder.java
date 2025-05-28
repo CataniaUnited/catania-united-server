@@ -10,6 +10,8 @@ import com.example.cataniaunited.util.CatanBoardUtils;
 
 import java.util.*;
 
+import static java.util.stream.Collectors.toList;
+
 // fixme many magic constants
 /**
  * Builds the graph structure of the Catan game board, consisting of
@@ -148,7 +150,7 @@ public class GraphBuilder {
         }
     }
 
-    // fixme way too long and implicit-knowledge method
+
     /**
      * Creates a subsequent layer (ring of nodes) on the game board.
      * This method connects the new nodes to each other within the layer,
@@ -365,47 +367,127 @@ public class GraphBuilder {
         portList = ports;
     }
 
-    // fixme long hard-to-read method
+    /**
+     * Determines and creates the list of {@link Port} instances to be placed on the board
+     * based on the number of coastal settlement locations.
+     *
+     * @param numberOfCoastalSettlements The total number of settlement positions available on the coast.
+     * @return A list of {@link Port} objects, with types and distribution determined by board size.
+     */
     private List<Port> getPortsToPlace(int numberOfCoastalSettlements) {
         List<Port> ports = new ArrayList<>();
-        TileType[] resourceTypes = Arrays.stream(TileType.values()).filter(type -> type != TileType.WASTE).toArray(TileType[]::new);
 
-        List<TileType> shuffledList = new ArrayList<>(Arrays.asList(resourceTypes));
-        Collections.shuffle(shuffledList);
+        // 1. Get available resource types for specific ports and shuffle them for variety
+        List<TileType> availableResourceTypesForPorts = getShuffledResourceTypesForPorts();
 
-        resourceTypes = shuffledList.toArray(new TileType[0]);
+        // 2. Calculate the total number of ports needed for this board size
+        int totalPortCount = calculateTargetPortCount(numberOfCoastalSettlements);
+        if (totalPortCount == 0) {
+            return ports; // No ports to place
+        }
 
-        int targetPortCount = calculateTargetPortCount(numberOfCoastalSettlements);
+        // 3. Determine the mix of general and specific ports
+        PortDistribution distribution = determinePortDistribution(totalPortCount);
 
-        // --- Distribute Port Types ---
+        // 4. Create and add general ports
+        addGeneralPorts(ports, distribution.generalPortCount());
+
+        // 5. Create and add specific ports, cycling through the shuffled resource types
+        addSpecificPorts(ports, distribution.specificPortCount(), availableResourceTypesForPorts);
+
+        return ports;
+    }
+
+    /**
+     * Retrieves a shuffled list of resource types that can be used for specific resource ports.
+     * Excludes {@link TileType#WASTE}.
+     *
+     * @return A shuffled list of {@link TileType}s.
+     */
+    private List<TileType> getShuffledResourceTypesForPorts() {
+        List<TileType> resourceTypes = Arrays.stream(TileType.values())
+                .filter(type -> type != TileType.WASTE)
+                .collect(toList());
+        Collections.shuffle(resourceTypes);
+        return resourceTypes;
+    }
+
+    /**
+     * Record to hold the count of general and specific ports.
+     */
+    private record PortDistribution(int generalPortCount, int specificPortCount) {}
+
+    /**
+     * Determines the number of general and specific ports to create based on the total target count.
+     * The logic aims to prioritize specific ports for smaller counts and then follows
+     * classic Catan distribution, adjusting for very large boards.
+     *
+     * @param totalPortCount The total number of ports to distribute.
+     * @return A {@link PortDistribution} record containing the counts for general and specific ports.
+     */
+    private PortDistribution determinePortDistribution(int totalPortCount) {
         int specificPortCount;
         int generalPortCount;
 
-        if (targetPortCount <= 5) { // prioritize specific ports if few
-            specificPortCount = targetPortCount;
+        final int MAX_SPECIFIC_PORTS_CLASSIC = 5; // Standard Catan boards have 5 specific resource types.
+        final double GENERAL_PORT_RATIO_LARGE_BOARDS = 0.45; // Target ~45% general ports for large boards.
+
+        if (totalPortCount <= MAX_SPECIFIC_PORTS_CLASSIC) {
+            // Prioritize specific ports if the total count is small (e.g., up to 5)
+            specificPortCount = totalPortCount;
             generalPortCount = 0;
-        } else if (targetPortCount <= 11) { // Classic Boards: 5 specific, rest general
-            specificPortCount = 5;
-            generalPortCount = targetPortCount - specificPortCount;
-        } else { // More than 11 ports (very large boards)
-            // Maintain ratio from classic boards~45% general.
-            generalPortCount = (int) Math.round(targetPortCount * 0.45);
-            specificPortCount = targetPortCount - generalPortCount;
+        } else if (totalPortCount <= 11) { // Covers typical "classic" board sizes (e.g., 9 or 11 ports)
+            // Aim for 5 specific ports, the rest are general.
+            specificPortCount = MAX_SPECIFIC_PORTS_CLASSIC;
+            generalPortCount = totalPortCount - specificPortCount;
+        } else { // For very large boards (more than 11 ports)
+            // Maintain a ratio similar to classic boards for general ports.
+            // The number of specific ports will also grow, but we ensure a good base of general ports.
+            generalPortCount = (int) Math.round(totalPortCount * GENERAL_PORT_RATIO_LARGE_BOARDS);
+            specificPortCount = totalPortCount - generalPortCount;
+            // Optional: Could add a cap here if we don't want too many specific ports even on huge boards,
+            // or ensure at least MAX_SPECIFIC_PORTS_CLASSIC are present if specificPortCount becomes too low due to rounding.
+            // For now, this direct calculation is kept.
+        }
+        return new PortDistribution(generalPortCount, specificPortCount);
+    }
+
+    /**
+     * Adds the specified number of {@link GeneralPort} instances to the provided list.
+     *
+     * @param portsToAddToList The list to which general ports will be added.
+     * @param count            The number of general ports to create.
+     */
+    private void addGeneralPorts(List<Port> portsToAddToList, int count) {
+        for (int i = 0; i < count; i++) {
+            portsToAddToList.add(new GeneralPort());
+        }
+    }
+
+    /**
+     * Adds the specified number of {@link SpecificResourcePort} instances to the provided list,
+     * cycling through the available resource types.
+     *
+     * @param portsToAddToList     The list to which specific resource ports will be added.
+     * @param count                The number of specific resource ports to create.
+     * @param availableResourceTypes A list of {@link TileType}s to assign to the specific ports.
+     *                               Should not be empty if count > 0.
+     */
+    private void addSpecificPorts(List<Port> portsToAddToList, int count, List<TileType> availableResourceTypes) {
+        if (count > 0 && (availableResourceTypes == null || availableResourceTypes.isEmpty())) {
+            // This should not happen if getShuffledResourceTypesForPorts() works correctly
+            // and TileType enum has non-WASTE types.
+            System.err.println("Error: Cannot create specific ports without available resource types.");
+            // Or throw an IllegalStateException
+            return;
         }
 
-
-        // Add general ports
-        for (int i = 0; i < generalPortCount; i++) {
-            ports.add(new GeneralPort());
+        for (int i = 0; i < count; i++) {
+            // Cycle through the shuffled resource types for port assignment.
+            // E.g., if specificPortCount is 7 and 5 resource types: WOOD,CLAY,SHEEP,WHEAT,ORE,WOOD,CLAY
+            TileType portResourceType = availableResourceTypes.get(i % availableResourceTypes.size());
+            portsToAddToList.add(new SpecificResourcePort(portResourceType));
         }
-
-        // Add specific ports, cycling through types to distribute them
-        for (int i = 0; i < specificPortCount; i++) {
-            ports.add(new SpecificResourcePort(resourceTypes[i % resourceTypes.length]));
-        }
-        // This ensures that if specificPortCount is 7, you get WOOD,CLAY,SHEEP,WHEAT,ORE,WOOD,CLAY
-
-        return ports;
     }
 
     private int calculateTargetPortCount(int numberOfCoastalSettlements) {
