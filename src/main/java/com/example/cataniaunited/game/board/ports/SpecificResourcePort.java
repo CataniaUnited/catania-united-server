@@ -21,7 +21,7 @@ public class SpecificResourcePort extends Port {
      *
      * @param tradeAbleResource The specific {@link TileType} this port trades (e.g., WOOD, SHEEP).
      *                          Cannot be null or {@link TileType#WASTE}.
-     * @throws IllegalArgumentException if tradeAbleResource is null or {@link TileType#WASTE}..
+     * @throws IllegalArgumentException if tradeAbleResource is null or {@link TileType#WASTE}.
      */
     public SpecificResourcePort(TileType tradeAbleResource) {
         super(2); // Resource Ports are 2:1
@@ -32,34 +32,24 @@ public class SpecificResourcePort extends Port {
     }
 
     /**
-     * Determines if a proposed trade is valid for this specific resource port.
-     * Validates:
-     * <ol>
-     *     <li>Basic trade ratios (total amounts offered vs. desired).</li>
-     *     <li>That all offered resources are of the port's specific {@link #tradeAbleResource} type.</li>
-     *     <li>That the player is not trying to trade for resources they are also offering.</li>
-     * </ol>
+     * Validates port-specific rules for a Specific Resource Port.
+     * For this type of port, it means checking if all offered resources
+     * are of the port's specific {@link #tradeAbleResource} type.
      *
      * @param offeredResources A list of {@link TileType} representing the resources the player is offering.
-     * @param desiredResources A list of {@link TileType} representing the resources the player wishes to receive.
-     * @return {@code true} if the trade is valid, {@code false} otherwise.
+     * @param desiredResources A list of {@link TileType} representing the resources the player wishes to receive (not used by this specific check).
+     * @return {@code true} if all offered resources match the port's {@code tradeAbleResource}, {@code false} otherwise.
      */
     @Override
-    public boolean canTrade(List<TileType> offeredResources, List<TileType> desiredResources) {
-        // trade ratio must be valid
-        if (tradeRatioIsInvalid(offeredResources, desiredResources)) {
-            return false;
-        }
-
-        // For specific ports, all offered resources must be of the tradeAble type.
+    public boolean arePortSpecificRulesSatisfied(List<TileType> offeredResources, List<TileType> desiredResources) {
+        // For specific ports, all offered resources must be of the tradeAbleResource type.
         for (TileType offered : offeredResources) {
             if (offered != this.tradeAbleResource) {
-                return false; // Wrong type offered
+                return false; // Found an offered resource that is not the port's specific tradeable type
             }
         }
-
-        // Check if player is trying to trade for resources they are offering
-        return isNotTradingForOfferedResources(offeredResources, desiredResources);
+        // All offered resources are of the correct type
+        return true;
     }
 
     /**

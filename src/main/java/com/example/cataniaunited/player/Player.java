@@ -1,6 +1,5 @@
 package com.example.cataniaunited.player;
 
-import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.exception.ui.InsufficientResourcesException;
 import com.example.cataniaunited.game.board.ports.Port;
@@ -9,10 +8,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.websockets.next.WebSocketConnection;
-import io.smallrye.mutiny.Uni;
 import org.jboss.logging.Logger;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Random;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * Represents a player in the Catan game.
@@ -20,8 +24,6 @@ import java.util.*;
  * victory points, and resources.
  */
 public class Player {
-
-    private static final Logger LOG = Logger.getLogger(Player.class);
 
     private String username;
     private final String uniqueId;
@@ -113,8 +115,8 @@ public class Player {
         return victoryPoints;
     }
 
-    public void addPort(Port port){
-        if (port == null){
+    public void addPort(Port port) {
+        if (port == null) {
             throw new IllegalArgumentException("Port can't be null");
         }
 
@@ -133,25 +135,6 @@ public class Player {
 
     public WebSocketConnection getConnection() {
         return connection;
-    }
-
-
-    /**
-     * Sends a {@link MessageDTO} to this player via their WebSocket connection.
-     * If the player has no active connection, a warning is logged and the message is dropped.
-     *
-     * @param dto The {@link MessageDTO} to send.
-     */
-    public synchronized Uni<Void> sendMessage(MessageDTO dto) {
-        if (connection == null || connection.isClosed()) {
-            LOG.warnf("No web socket connection for player %s – message dropped!", uniqueId);
-            return Uni.createFrom().voidItem();
-        }
-
-        logger.debugf("Sending message to player: playerId=%s, message=%s", uniqueId, dto);
-        return connection.sendText(dto)
-                .onItem().invoke(v -> LOG.debugf("Message sent: player=%s message=%s", uniqueId, dto))
-                .onFailure().invoke(err -> LOG.errorf(err, "Failed to send message: player=%s", uniqueId));
     }
 
     /**

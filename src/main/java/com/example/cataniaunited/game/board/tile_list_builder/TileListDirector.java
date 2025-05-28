@@ -1,5 +1,7 @@
 package com.example.cataniaunited.game.board.tile_list_builder;
 
+import java.util.List;
+
 /**
  * Director class in the Builder pattern for constructing a list of Catan game tiles
  * using a {@link TileListBuilder}.
@@ -40,7 +42,7 @@ public class TileListDirector {
      * @param sizeOfHex   The size of a single hexagon tile.
      * @param flipYAxis   Whether to flip the Y-axis for coordinate calculations.
      */
-    public void constructStandardTileList(int sizeOfBoard, int sizeOfHex, boolean flipYAxis) {
+    public List<Tile> constructStandardTileList(int sizeOfBoard, int sizeOfHex, boolean flipYAxis) {
         builder.reset();
         builder.setConfiguration(sizeOfBoard, sizeOfHex, flipYAxis);
         builder.buildTiles();
@@ -48,5 +50,6 @@ public class TileListDirector {
         builder.shuffleTiles();
         builder.assignTileIds();
         builder.calculateTilePositions();
+        return builder.getTileList();
     }
 }

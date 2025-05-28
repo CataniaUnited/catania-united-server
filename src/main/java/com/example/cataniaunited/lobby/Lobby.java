@@ -12,7 +12,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CopyOnWriteArraySet;
 
-
 /**
  * Represents a game lobby where players can gather before starting a Catan game.
  * This class manages the list of players in the lobby, their assigned colors,
@@ -171,7 +170,7 @@ public class Lobby {
     public PlayerColor assignAvailableColor() {
         if (availableColors.isEmpty()) return null;
         Collections.shuffle(availableColors);
-        return availableColors.removeFirst();
+        return availableColors.remove(0);
     }
 
     /**
@@ -236,7 +235,7 @@ public class Lobby {
     public synchronized void startGame() {
         setPlayerOrder(players.stream().toList());
         Collections.shuffle(playerOrder);
-        activePlayer = playerOrder.getFirst();
+        activePlayer = playerOrder.get(0);
         gameStarted = true;
     }
 

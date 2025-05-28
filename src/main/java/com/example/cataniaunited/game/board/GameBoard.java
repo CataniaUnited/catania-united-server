@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Represents the Catan game board, including its tiles, settlement positions, and roads.
+ * Represents the Catan game board, including its tiles, building sites, and roads.
  * Manages the generation of the board layout and handles actions like placing buildings and roads.
  */
 public class GameBoard {
@@ -34,14 +34,14 @@ public class GameBoard {
     final int sizeOfBoard; // Number of rings/layers of tiles from the center
     private final DiceRoller diceRoller;
 
-    List<SettlementPosition> settlementPositionGraph;
+    List<BuildingSite> buildingSiteGraph;
     List<Tile> tileList;
     List<Road> roadList;
     List<Port> portList;
 
     /**
      * Constructs a new GameBoard based on the number of players.
-     * Initializes tiles, settlement positions, roads, and the dice roller.
+     * Initializes tiles, building sites, roads, and the dice roller.
      *
      * @param playerCount The number of players in the game.
      * @throws IllegalArgumentException if playerCount is less than or equal to 1.
@@ -65,7 +65,7 @@ public class GameBoard {
         long endtime = System.nanoTime();
 
         // Something went wrong
-        if (this.tileList == null || this.settlementPositionGraph == null || this.roadList == null) {
+        if (this.tileList == null || this.buildingSiteGraph == null || this.roadList == null || this.portList == null) {
             logger.errorf("Board generation failed for %d players.", playerCount);
             throw new IllegalStateException("Board generation resulted in null lists.");
         }
@@ -94,12 +94,11 @@ public class GameBoard {
     void generateTileList() {
         TileListBuilder tileBuilder = new StandardTileListBuilder();
         TileListDirector director = new TileListDirector(tileBuilder);
-        director.constructStandardTileList(sizeOfBoard, SIZE_OF_HEX, true);
-        tileList = tileBuilder.getTileList();
+        tileList = director.constructStandardTileList(sizeOfBoard, SIZE_OF_HEX, true);
     }
 
     /**
-     * Generates the graph structure of settlement positions and roads for the game board.
+     * Generates the graph structure of building sites and roads for the game board.
      * This method relies on the tile list having been generated first.
      *
      * @throws IllegalStateException if the tile list has not been generated.
@@ -110,17 +109,17 @@ public class GameBoard {
         }
 
         GraphBuilder graphBuilder = new GraphBuilder(tileList, sizeOfBoard);
-        settlementPositionGraph = graphBuilder.generateGraph();
+        buildingSiteGraph = graphBuilder.generateGraph();
         roadList = graphBuilder.getRoadList();
         portList = graphBuilder.getPortList();
     }
 
     /**
-     * Places a settlement for a player at the specified position on the board.
+     * Places a building site for a player at the specified position on the board.
      *
      * @param player     The {@link Player} placing the settlement.
      * @param color      The {@link PlayerColor} of the settlement.
-     * @param positionId The ID of the {@link SettlementPosition} to place the settlement on.
+     * @param positionId The ID of the {@link BuildingSite} to place the settlement on.
      * @throws GameException if the placement is invalid (e.g., position occupied, rules violated).
      */
     public void placeSettlement(Player player, PlayerColor color, int positionId) throws GameException {
@@ -132,7 +131,7 @@ public class GameBoard {
      *
      * @param player     The {@link Player} placing the city.
      * @param color      The {@link PlayerColor} of the city.
-     * @param positionId The ID of the {@link SettlementPosition} to place the city on.
+     * @param positionId The ID of the {@link BuildingSite} to place the city on.
      * @throws GameException if the placement is invalid (e.g., no settlement to upgrade, rules violated).
      */
     public void placeCity(Player player, PlayerColor color, int positionId) throws GameException {
@@ -141,9 +140,9 @@ public class GameBoard {
 
     /**
      * Internal helper method to place a generic building (settlement or city) on the board.
-     * Checks for required resources and updates the settlement position.
+     * Checks for required resources and updates the building site.
      *
-     * @param positionId The ID of the settlement position.
+     * @param positionId The ID of the building site.
      * @param building   The {@link Building} to be placed.
      * @throws GameException if resources are insufficient, position is invalid, or other rules are violated.
      */
@@ -151,8 +150,8 @@ public class GameBoard {
         try {
             checkRequiredResources(building.getPlayer(), building);
             logger.debugf("Placing building: playerId = %s, positionId = %s, type = %s", building.getPlayer().getUniqueId(), positionId, building.getClass().getSimpleName());
-            SettlementPosition settlementPosition = settlementPositionGraph.get(positionId - 1);
-            settlementPosition.setBuilding(building);
+            BuildingSite buildingSite = buildingSiteGraph.get(positionId - 1);
+            buildingSite.setBuilding(building);
             removeRequiredResources(building.getPlayer(), building);
         } catch (IndexOutOfBoundsException e) {
             throw new GameException("Settlement position not found: id = %s", positionId);
@@ -189,10 +188,6 @@ public class GameBoard {
      * @throws InsufficientResourcesException if the player does not have enough resources.
      */
     private void removeRequiredResources(Player player, Buildable buildable) throws GameException {
-        if (player == null) {
-            throw new GameException("Player must not be null");
-        }
-
         for (Map.Entry<TileType, Integer> entry : buildable.getRequiredResources().entrySet()) {
             TileType tileType = entry.getKey();
             Integer amount = entry.getValue();
@@ -225,12 +220,12 @@ public class GameBoard {
     }
 
     /**
-     * Gets the list of all settlement positions on the game board.
+     * Gets the list of all building sites on the game board.
      *
-     * @return A list of {@link SettlementPosition} objects.
+     * @return A list of {@link BuildingSite} objects.
      */
-    public List<SettlementPosition> getSettlementPositionGraph() {
-        return settlementPositionGraph;
+    public List<BuildingSite> getBuildingSitePositionGraph() {
+        return buildingSiteGraph;
     }
 
     /**
@@ -251,13 +246,13 @@ public class GameBoard {
         return roadList;
     }
 
-    public Port getPortOfSettlement(int settlementPositionId){
-        return settlementPositionGraph.get(settlementPositionId).getPort();
+    public Port getPortOfBuildingSite(int buildingSitePositionId){
+        return buildingSiteGraph.get(buildingSitePositionId).getPort();
     }
 
     /**
      * Generates a JSON representation of the current game board state.
-     * Includes information about tiles, settlement positions, roads, ports,
+     * Includes information about tiles, building sites, roads, ports,
      * board size, and hex size.
      *
      * @return An {@link ObjectNode} containing the game board's JSON structure.
@@ -277,8 +272,8 @@ public class GameBoard {
             tilesNode.add(tile.toJson());
         }
 
-        // Add Settlement positions
-        for (SettlementPosition position : this.settlementPositionGraph) {
+        // Add building sites
+        for (BuildingSite position : this.buildingSiteGraph) {
             positionsNode.add(position.toJson());
         }
 

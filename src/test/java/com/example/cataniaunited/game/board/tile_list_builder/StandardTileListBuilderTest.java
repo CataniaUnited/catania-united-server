@@ -137,6 +137,13 @@ class StandardTileListBuilderTest {
     }
 
     @Test
+    void buildTilesThrowsExceptionIfNotConfiguredAndTileListIsSetToNull() {
+        builder.reset();
+        builder.tileList = null;
+        assertThrows(IllegalStateException.class, () -> builder.buildTiles(), "buildTiles should throw Exception if not configured");
+    }
+
+    @Test
     void shuffleTilesDoesNotChangeListContentOrSize() {
         builder.buildTiles();
         // Create copy *directly* from internal list
@@ -295,7 +302,7 @@ class StandardTileListBuilderTest {
         builder.buildTiles();
         assertEquals(19, builder.tileList.size());
 
-
+        builder.assignTileIds();
         builder.calculateTilePositions();
 
         assertArrayEquals(new double[]{0.0, 0.0}, builder.tileList.get(0).getCoordinates(), 0.001, "coordinates for index 0 are incorrect");
@@ -332,6 +339,14 @@ class StandardTileListBuilderTest {
     }
 
     @Test
+    void calculateTilePositionsThrowsExceptionIfIdsNotBuilt() {
+        builder.buildTiles();
+        builder.addValues();
+        builder.shuffleTiles();
+        assertThrows(IllegalStateException.class, () -> builder.calculateTilePositions(), "should throw exception if tiles are not build");
+    }
+
+    @Test
     void getTileListReturnsInternalListInstance() {
         builder.buildTiles();
         builder.shuffleTiles();
@@ -354,31 +369,4 @@ class StandardTileListBuilderTest {
         builder.buildTiles();
         assertDoesNotThrow(() -> builder.getTileList(), "Should succeed after buildTiles");
     }
-
-
-    @Test
-    void calculateAmountOfTilesForLayerKReturnsCorrectValues() {
-        assertEquals(0, StandardTileListBuilder.calculateAmountOfTilesForLayerK(0));
-        assertEquals(1, StandardTileListBuilder.calculateAmountOfTilesForLayerK(1));
-        assertEquals(7, StandardTileListBuilder.calculateAmountOfTilesForLayerK(2));
-        assertEquals(19, StandardTileListBuilder.calculateAmountOfTilesForLayerK(3));
-        assertEquals(37, StandardTileListBuilder.calculateAmountOfTilesForLayerK(4));
-    }
-
-
-    @Test
-    void polarToCartesianConvertsCorrectly() {
-        double r = 10.0;
-        assertArrayEquals(new double[]{10.0, 0.0}, StandardTileListBuilder.polarToCartesian(r, 0, false), 0.001);
-        assertArrayEquals(new double[]{10.0, -0.0}, StandardTileListBuilder.polarToCartesian(r, 0, true), 0.001);
-        assertArrayEquals(new double[]{0.0, 10.0}, StandardTileListBuilder.polarToCartesian(r, Math.PI/2, false), 0.001);
-        assertArrayEquals(new double[]{0.0, -10.0}, StandardTileListBuilder.polarToCartesian(r, Math.PI/2, true), 0.001);
-        assertArrayEquals(new double[]{-10.0, 0.0}, StandardTileListBuilder.polarToCartesian(r, Math.PI, false), 0.001);
-        assertArrayEquals(new double[]{-10.0, -0.0}, StandardTileListBuilder.polarToCartesian(r, Math.PI, true), 0.001);
-        assertArrayEquals(new double[]{0.0, -10.0}, StandardTileListBuilder.polarToCartesian(r, 3*Math.PI/2, false), 0.001);
-        assertArrayEquals(new double[]{0.0, 10.0}, StandardTileListBuilder.polarToCartesian(r, 3*Math.PI/2, true), 0.001);
-    }
-
-
-
 }

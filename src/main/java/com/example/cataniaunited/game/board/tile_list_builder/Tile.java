@@ -2,8 +2,8 @@ package com.example.cataniaunited.game.board.tile_list_builder;
 
 import com.example.cataniaunited.Publisher;
 import com.example.cataniaunited.Subscriber;
+import com.example.cataniaunited.game.board.BuildingSite;
 import com.example.cataniaunited.game.board.Placable;
-import com.example.cataniaunited.game.board.SettlementPosition;
 import com.example.cataniaunited.game.dice.DiceRoller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -16,10 +16,10 @@ import java.util.List;
  * A hexagonal tile on the Catan game board.
  * Each tile has a type (resource or waste), a production value (dice roll number),
  * coordinates, and an ID. It also acts as a {@link Publisher} to notify
- * adjacent {@link SettlementPosition}s about resource production when Notified via
+ * adjacent {@link BuildingSite}s about resource production when Notified via
  * The DiceRoller to which it acts as a {@link Subscriber}.
  */
-public class Tile implements Placable, Publisher<SettlementPosition, TileType>, Subscriber<Integer> {
+public class Tile implements Placable, Publisher<BuildingSite, TileType>, Subscriber<Integer> {
     final TileType type;
     int value = 0; // Production number (dice roll), 0 for WASTE or if not yet set
 
@@ -27,7 +27,7 @@ public class Tile implements Placable, Publisher<SettlementPosition, TileType>, 
 
     int id;
 
-    List<SettlementPosition> settlementsOfTile = new ArrayList<>(6);
+    List<BuildingSite> buildingSitesOfTile = new ArrayList<>(6);
 
     /**
      * Constructs a new Tile with a specified type.
@@ -147,49 +147,54 @@ public class Tile implements Placable, Publisher<SettlementPosition, TileType>, 
     }
 
     /**
-     * Adds a {@link SettlementPosition} as a subscriber to this tile.
-     * Subscribers (settlement positions) will be notified when this tile produces resources.
+     * Adds a {@link BuildingSite} as a subscriber to this tile.
+     * Subscribers (building sites) will be notified via their
+     * {@link BuildingSite#update(TileType)} method when this tile produces its resource.
      *
-     * @param subscriber The {@link SettlementPosition} to add.
+     * @param subscriber The {@link BuildingSite} to add, which must implement {@link Subscriber}{@code <TileType>}.
      */
     @Override
-    public void addSubscriber(SettlementPosition subscriber){
-        settlementsOfTile.add(subscriber);
+    public void addSubscriber(BuildingSite subscriber){
+        buildingSitesOfTile.add(subscriber);
     }
 
     /**
-     * Removes a {@link SettlementPosition} from this tile's list of subscribers.
+     * Removes a {@link BuildingSite} from this tile's list of subscribers.
      *
-     * @param subscriber The {@link SettlementPosition} to remove.
+     * @param subscriber The {@link BuildingSite} to remove.
      */
     @Override
-    public void removeSubscriber(SettlementPosition subscriber){
-        settlementsOfTile.remove(subscriber);
+    public void removeSubscriber(BuildingSite subscriber){
+        buildingSitesOfTile.remove(subscriber);
     }
 
     /**
-     * Notifies all subscribed {@link SettlementPosition}s that this tile has produced resources.
-     * The notification includes the type of resource produced.
+     * Notifies all subscribed {@link BuildingSite}s that this tile has produced its resource.
+     * The notification includes the {@link TileType} of the resource produced.
+     * This typically occurs when a dice roll matches this tile's production value.
      *
-     * @param notification The {@link TileType} of the resource produced.
+     * @param resourceProduced The {@link TileType} of the resource this tile produces and is notifying about.
      */
     @Override
-    public void notifySubscribers(TileType notification) {
-        for (SettlementPosition subscriber: settlementsOfTile){
-            subscriber.update(notification);
+    public void notifySubscribers(TileType resourceProduced) {
+        for (BuildingSite subscriber: buildingSitesOfTile){
+            subscriber.update(resourceProduced);
         }
     }
 
     /**
-     * Handles an update notification, from a {@link DiceRoller}, indicating a dice roll total.
-     * If the tile's production value matches the dice roll total, it notifies its subscribers
-     * (settlement positions) about resource production.
+     * Handles an update notification from a {@link com.example.cataniaunited.game.dice.DiceRoller},
+     * indicating a dice roll total.
+     * If this tile's production {@link #getValue() value} matches the {@code diceRollTotal}
+     * and this tile is not a {@link TileType#WASTE} tile, it will
+     * {@link #notifySubscribers(TileType) notify its subscribers} (building sites)
+     * about the production of its specific {@link #getType() resource type}.
      *
-     * @param notification The integer value of the total dice roll.
+     * @param diceRollTotal The integer value of the total dice roll.
      */
     @Override
-    public void update(Integer notification) {
-        if (value == notification)
+    public void update(Integer diceRollTotal) {
+        if (value == diceRollTotal)
             notifySubscribers(type);
     }
 
@@ -205,11 +210,11 @@ public class Tile implements Placable, Publisher<SettlementPosition, TileType>, 
 
 
     /**
-     * Gets the list of {@link SettlementPosition SettlementPositions} that are adjacent to this tile.
+     * Gets the list of {@link BuildingSite BuildingSites} that are adjacent to this tile.
      *
-     * @return A list of {@link SettlementPosition} objects.
+     * @return A list of {@link BuildingSite} objects.
      */
-    public List<SettlementPosition> getSettlementsOfTile() {
-        return settlementsOfTile;
+    public List<BuildingSite> getBuildingSitesOfTile() {
+        return buildingSitesOfTile;
     }
 }

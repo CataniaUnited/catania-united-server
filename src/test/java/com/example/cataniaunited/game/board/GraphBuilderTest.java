@@ -8,6 +8,7 @@ import com.example.cataniaunited.game.board.tile_list_builder.Tile;
 import com.example.cataniaunited.game.board.tile_list_builder.TileListBuilder;
 import com.example.cataniaunited.game.board.tile_list_builder.TileListDirector;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
+import com.example.cataniaunited.util.CatanBoardUtils;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,7 +37,7 @@ class GraphBuilderTest {
     @BeforeEach
     void setUp() {
         validSizeOfBoard = 3;
-        int expectedTileCount = StandardTileListBuilder.calculateAmountOfTilesForLayerK(validSizeOfBoard);
+        int expectedTileCount = CatanBoardUtils.calculateAmountOfTilesForLayerK(validSizeOfBoard);
         validTileList = new ArrayList<>();
         for (int i = 0; i < expectedTileCount; i++) {
             validTileList.add(new Tile(TileType.WASTE));
@@ -128,11 +129,11 @@ class GraphBuilderTest {
 
 
         GraphBuilder graphBuilder = new GraphBuilder(tileList, size);
-        List<SettlementPosition> graph = graphBuilder.generateGraph();
+        List<BuildingSite> graph = graphBuilder.generateGraph();
 
-        assertEquals(GraphBuilder.calculateTotalSettlementPositions(size), graph.size(), "size doesn't match");
+        assertEquals(GraphBuilder.calculateTotalBuildingSites(size), graph.size(), "size doesn't match");
 
-        for (SettlementPosition node : graph) {
+        for (BuildingSite node : graph) {
             assertNotEquals(new double[]{0.0}, node.getCoordinates(), " coordinates have not been set");
             assertTrue(node.getNeighbours().size() >= 2, "Each node has at least 2 neighbours");
             assertFalse(node.getTiles().isEmpty(), "Each node is at least connected to one tile");
@@ -143,14 +144,14 @@ class GraphBuilderTest {
                 assertEquals(sizeOfHex, calculateDistance(coordinates, tileCoordinates), 0.001, "position is wrong");
             }
 
-            for (SettlementPosition neighbour : node.getNeighbours()) {
+            for (BuildingSite neighbour : node.getNeighbours()) {
                 double[] neighbourCoordinates = neighbour.getCoordinates();
                 assertEquals(sizeOfHex, calculateDistance(coordinates, neighbourCoordinates), 0.001, "position is wrong");
             }
         }
 
-        for (int i = 0; i < GraphBuilder.calculateTotalSettlementPositions(size - 1); i++) {
-            SettlementPosition node = graph.get(i);
+        for (int i = 0; i < GraphBuilder.calculateTotalBuildingSites(size - 1); i++) {
+            BuildingSite node = graph.get(i);
             assertEquals(3, node.getTiles().size(), "Inner nodes should be connected to three tiles");
             assertEquals(3, node.getNeighbours().size(), "Inner nodes should be connected to three neighbours");
         }
@@ -231,7 +232,7 @@ class GraphBuilderTest {
     @Test
     void portTypesAndCountsShouldBeCorrectForBoardSize2() {
         int boardSize = 2;
-        int expectedTileCount = StandardTileListBuilder.calculateAmountOfTilesForLayerK(boardSize);
+        int expectedTileCount = CatanBoardUtils.calculateAmountOfTilesForLayerK(boardSize);
         List<Tile> tiles = new ArrayList<>();
         for (int i = 0; i < expectedTileCount; i++) {
             tiles.add(new Tile(TileType.WOOD));
@@ -248,7 +249,7 @@ class GraphBuilderTest {
     @Test
     void portTypesAndCountsShouldBeCorrectForBoardSize4() {
         int boardSize = 4;
-        int expectedTileCount = StandardTileListBuilder.calculateAmountOfTilesForLayerK(boardSize);
+        int expectedTileCount = CatanBoardUtils.calculateAmountOfTilesForLayerK(boardSize);
         List<Tile> tiles = new ArrayList<>();
         for (int i = 0; i < expectedTileCount; i++) {
             tiles.add(new Tile(TileType.ORE));
@@ -288,7 +289,7 @@ class GraphBuilderTest {
     @Test
     void checkPortPlacementRhythmDoesNotGoOutOfBounds() {
         int boardSize = 2;
-        int expectedTileCount = StandardTileListBuilder.calculateAmountOfTilesForLayerK(boardSize);
+        int expectedTileCount = CatanBoardUtils.calculateAmountOfTilesForLayerK(boardSize);
         List<Tile> tiles = new ArrayList<>();
         for (int i = 0; i < expectedTileCount; i++) {
             tiles.add(new Tile(TileType.CLAY));
@@ -301,8 +302,8 @@ class GraphBuilderTest {
         List<Port> ports = graphBuilder.getPortList();
         assertEquals(5, ports.size());
         for(Port p : ports) {
-            assertNotNull(p.getSettlementPositions().get(0));
-            assertNotNull(p.getSettlementPositions().get(1));
+            assertNotNull(p.getBuildingSites().get(0));
+            assertNotNull(p.getBuildingSites().get(1));
         }
     }
 
@@ -310,7 +311,7 @@ class GraphBuilderTest {
     void portDistributionForVeryLargeBoardSize() {
         int boardSize = 7;
 
-        int expectedTileCount = StandardTileListBuilder.calculateAmountOfTilesForLayerK(boardSize);
+        int expectedTileCount = CatanBoardUtils.calculateAmountOfTilesForLayerK(boardSize);
         List<Tile> tiles = new ArrayList<>();
         for (int i = 0; i < expectedTileCount; i++) {
             tiles.add(new Tile(TileType.SHEEP));

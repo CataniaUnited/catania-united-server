@@ -1,6 +1,6 @@
 package com.example.cataniaunited.game.board.tile_list_builder;
 
-import com.example.cataniaunited.game.board.SettlementPosition;
+import com.example.cataniaunited.game.board.BuildingSite;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.test.junit.QuarkusTest;
@@ -188,55 +188,55 @@ class TileTest {
 
     @Test
     void addSubscriberAddsSettlementPositionToList() {
-        SettlementPosition mockSettlement1 = mock(SettlementPosition.class);
-        SettlementPosition mockSettlement2 = mock(SettlementPosition.class);
+        BuildingSite mockSettlement1 = mock(BuildingSite.class);
+        BuildingSite mockSettlement2 = mock(BuildingSite.class);
 
         tile.addSubscriber(mockSettlement1);
-        assertTrue(tile.settlementsOfTile.contains(mockSettlement1), "Subscriber list should contain added settlement 1.");
-        assertEquals(1, tile.settlementsOfTile.size(), "Subscriber list size should be 1.");
+        assertTrue(tile.buildingSitesOfTile.contains(mockSettlement1), "Subscriber list should contain added settlement 1.");
+        assertEquals(1, tile.buildingSitesOfTile.size(), "Subscriber list size should be 1.");
 
         tile.addSubscriber(mockSettlement2);
-        assertTrue(tile.settlementsOfTile.contains(mockSettlement2), "Subscriber list should contain added settlement 2.");
-        assertEquals(2, tile.settlementsOfTile.size(), "Subscriber list size should be 2.");
+        assertTrue(tile.buildingSitesOfTile.contains(mockSettlement2), "Subscriber list should contain added settlement 2.");
+        assertEquals(2, tile.buildingSitesOfTile.size(), "Subscriber list size should be 2.");
     }
 
     @Test
     void removeSubscriberRemovesSettlementPositionFromList() {
-        SettlementPosition mockSettlement1 = mock(SettlementPosition.class);
-        SettlementPosition mockSettlement2 = mock(SettlementPosition.class);
+        BuildingSite mockSettlement1 = mock(BuildingSite.class);
+        BuildingSite mockSettlement2 = mock(BuildingSite.class);
 
         tile.addSubscriber(mockSettlement1);
         tile.addSubscriber(mockSettlement2);
-        assertEquals(2, tile.settlementsOfTile.size(), "Subscriber list size should be 2.");
+        assertEquals(2, tile.buildingSitesOfTile.size(), "Subscriber list size should be 2.");
 
         tile.removeSubscriber(mockSettlement1);
-        assertFalse(tile.settlementsOfTile.contains(mockSettlement1), "Subscriber list should not contain removed settlement 1.");
-        assertTrue(tile.settlementsOfTile.contains(mockSettlement2), "Subscriber list should still contain settlement 2.");
-        assertEquals(1, tile.settlementsOfTile.size(), "Subscriber list size should be 1 after removal.");
+        assertFalse(tile.buildingSitesOfTile.contains(mockSettlement1), "Subscriber list should not contain removed settlement 1.");
+        assertTrue(tile.buildingSitesOfTile.contains(mockSettlement2), "Subscriber list should still contain settlement 2.");
+        assertEquals(1, tile.buildingSitesOfTile.size(), "Subscriber list size should be 1 after removal.");
 
         tile.removeSubscriber(mockSettlement2);
-        assertFalse(tile.settlementsOfTile.contains(mockSettlement2), "Subscriber list should not contain removed settlement 2.");
-        assertTrue(tile.settlementsOfTile.isEmpty(), "Subscriber list should be empty after removing all subscribers.");
+        assertFalse(tile.buildingSitesOfTile.contains(mockSettlement2), "Subscriber list should not contain removed settlement 2.");
+        assertTrue(tile.buildingSitesOfTile.isEmpty(), "Subscriber list should be empty after removing all subscribers.");
     }
 
     @Test
     void removeSubscriberDoesNothingIfSubscriberNotInList() {
-        SettlementPosition mockSettlement1 = mock(SettlementPosition.class);
-        SettlementPosition mockSettlementNotInList = mock(SettlementPosition.class);
+        BuildingSite mockSettlement1 = mock(BuildingSite.class);
+        BuildingSite mockSettlementNotInList = mock(BuildingSite.class);
 
         tile.addSubscriber(mockSettlement1);
-        assertEquals(1, tile.settlementsOfTile.size());
+        assertEquals(1, tile.buildingSitesOfTile.size());
 
         assertDoesNotThrow(() -> tile.removeSubscriber(mockSettlementNotInList));
-        assertEquals(1, tile.settlementsOfTile.size(), "List size should not change when removing a non-existent subscriber.");
-        assertTrue(tile.settlementsOfTile.contains(mockSettlement1), "Original subscriber should still be in the list.");
+        assertEquals(1, tile.buildingSitesOfTile.size(), "List size should not change when removing a non-existent subscriber.");
+        assertTrue(tile.buildingSitesOfTile.contains(mockSettlement1), "Original subscriber should still be in the list.");
     }
 
 
     @Test
     void notifySubscribersCallsUpdateOnAllSubscribedSettlements() {
-        SettlementPosition mockSettlement1 = mock(SettlementPosition.class);
-        SettlementPosition mockSettlement2 = mock(SettlementPosition.class);
+        BuildingSite mockSettlement1 = mock(BuildingSite.class);
+        BuildingSite mockSettlement2 = mock(BuildingSite.class);
 
         tile.addSubscriber(mockSettlement1);
         tile.addSubscriber(mockSettlement2);
@@ -261,7 +261,7 @@ class TileTest {
         int tileValue = 9;
         tile.setValue(tileValue);
 
-        SettlementPosition mockSettlement = mock(SettlementPosition.class);
+        BuildingSite mockSettlement = mock(BuildingSite.class);
         tile.addSubscriber(mockSettlement);
 
         tile.update(tileValue);
@@ -276,7 +276,7 @@ class TileTest {
         int nonMatchingNotificationValue = 8;
         tile.setValue(tileValue);
 
-        SettlementPosition mockSettlement = mock(SettlementPosition.class);
+        BuildingSite mockSettlement = mock(BuildingSite.class);
         tile.addSubscriber(mockSettlement);
 
         tile.update(nonMatchingNotificationValue);

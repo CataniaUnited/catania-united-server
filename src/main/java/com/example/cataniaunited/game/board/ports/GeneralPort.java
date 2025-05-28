@@ -23,32 +23,21 @@ public class GeneralPort extends Port {
     }
 
     /**
-     * Determines if a proposed trade is valid for this general port.
-     * Validates:
-     * <ol>
-     *     <li>Basic trade ratios (total amounts offered vs. desired).</li>
-     *     <li>Correct bundling of each offered resource type (e.g., must offer 3 of Wood, not 2 Wood and 1 Sheep for a bundle).</li>
-     *     <li>That the player is not trying to trade for resources they are also offering.</li>
-     * </ol>
+     * Validates port-specific rules for a General Port.
+     * For a general port, this means checking if each type of offered resource
+     * is provided in quantities that are multiples of this port's {@link #inputResourceAmount}.
+     * For example, if the port is 3:1, a player must offer 3 Wood or 3 Sheep, etc.,
+     * not a mix like 2 Wood and 1 Sheep to make up a bundle of 3.
      *
      * @param offeredResources A list of {@link TileType} representing the resources the player is offering.
-     * @param desiredResources A list of {@link TileType} representing the resources the player wishes to receive.
-     * @return {@code true} if the trade is valid, {@code false} otherwise.
+     * @param desiredResources A list of {@link TileType} representing the resources the player wishes to receive (not used by this specific check).
+     * @return {@code true} if all offered resource types are bundled correctly according to the port's ratio, {@code false} otherwise.
      */
     @Override
-    public boolean canTrade(List<TileType> offeredResources, List<TileType> desiredResources) {
-        // trade ratio must be valid
-        if (tradeRatioIsInvalid(offeredResources, desiredResources)) {
-            return false;
-        }
-
-        // For generic ports, each offered resource type must be bundled correctly.
-        if (!offeredResourcesComeInValidBundles(offeredResources)) {
-            return false;
-        }
-
-        // Check if player is trying to trade for resources they are offering
-        return isNotTradingForOfferedResources(offeredResources, desiredResources);
+    public boolean arePortSpecificRulesSatisfied(List<TileType> offeredResources, List<TileType> desiredResources) {
+        // The offeredResourcesComeInValidBundles method already checks the core logic for GeneralPort.
+        // It returns true if bundles are valid, false otherwise. This matches the expected output.
+        return offeredResourcesComeInValidBundles(offeredResources);
     }
 
     /**
@@ -56,18 +45,22 @@ public class GeneralPort extends Port {
      * multiples of this port's {@link #inputResourceAmount}.
      *
      * @param offeredResources The list of resources being offered.
-     * @return {@code true} if all offered resource types are offered in a correct distribution.
+     * @return {@code true} if all offered resource types are offered in a correct distribution (valid bundles).
      */
     private boolean offeredResourcesComeInValidBundles(List<TileType> offeredResources) {
-        Map<TileType, Long> offeredResourceMap = offeredResources.stream().collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
+        // Group offered resources by type and count them
+        Map<TileType, Long> offeredResourceMap = offeredResources.stream()
+                .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
 
+        // For each type of resource offered, check if its count is a multiple of the port's inputResourceAmount
         for (Map.Entry<TileType, Long> entry : offeredResourceMap.entrySet()) {
             long countOfEntryType = entry.getValue();
             if (countOfEntryType % this.inputResourceAmount != 0) {
-                return false; // This specific resource type is not bundled correctly (i.e. can't trade 1 sheep + 2 wheat for one Ore)
+                // This specific resource type is not bundled correctly (e.g., offering 2 WOOD at a 3:1 port)
+                return false;
             }
         }
-
+        // All offered resource types are in valid bundle sizes
         return true;
     }
 

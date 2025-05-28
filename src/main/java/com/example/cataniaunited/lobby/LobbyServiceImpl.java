@@ -5,7 +5,6 @@ import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.exception.ui.DiceRollException;
 import com.example.cataniaunited.exception.ui.InvalidTurnException;
 import com.example.cataniaunited.fi.LobbyAction;
-import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerColor;
 import com.example.cataniaunited.player.PlayerService;
 import io.smallrye.mutiny.Uni;
@@ -224,15 +223,10 @@ public class LobbyServiceImpl implements LobbyService {
         try {
             logger.debugf("Notifying players in lobby: lobbyId=%s, message=%s", lobbyId, dto);
             Lobby lobby = getLobbyById(lobbyId);
-            List<Uni<Void>> sendUnis = new ArrayList<>();
-            for (String pid : lobby.getPlayers()) {
-                Player player = playerService.getPlayerById(pid);
-                if (player != null) {
-                    sendUnis.add(player.sendMessage(dto));
-                } else {
-                    logger.warnf("Player not found in lobby for notify: playerId = %s, lobbyId = %s", pid, lobbyId);
-                }
-            }
+            List<Uni<Void>> sendUnis = lobby.getPlayers()
+                    .stream()
+                    .map(playerId -> playerService.sendMessageToPlayer(playerId, dto))
+                    .toList();
 
             return Uni.join().all(sendUnis)
                     .andFailFast()

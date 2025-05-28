@@ -4,8 +4,8 @@ import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.GameService;
+import com.example.cataniaunited.game.board.BuildingSite;
 import com.example.cataniaunited.game.board.GameBoard;
-import com.example.cataniaunited.game.board.SettlementPosition;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.example.cataniaunited.game.buildings.City;
 import com.example.cataniaunited.game.buildings.Settlement;
@@ -518,12 +518,12 @@ public class GameWebSocketTest {
         lobbyService.joinLobbyByCode(lobbyId, player2Id);
 
         GameBoard board = gameService.createGameboard(lobbyId);
-        int settlementId = board.getSettlementPositionGraph().get(0).getId();
+        int settlementId = board.getBuildingSitePositionGraph().get(0).getId();
         var playerMock = mock(Player.class);
         when(playerMock.getUsername()).thenReturn("Player 1");
         when(playerMock.getUniqueId()).thenReturn(player1Id);
         when(playerMock.getResourceCount(any(TileType.class))).thenReturn(10);
-        board.getSettlementPositionGraph().get(0).getRoads().get(0).setOwner(playerMock);
+        board.getBuildingSitePositionGraph().get(0).getRoads().get(0).setOwner(playerMock);
         lobbyService.getLobbyById(lobbyId).setActivePlayer(player1Id);
 
         doReturn(playerMock).when(playerService).getPlayerById(player1Id);
@@ -590,10 +590,10 @@ public class GameWebSocketTest {
         Lobby lobby = lobbyService.getLobbyById(lobbyId);
         lobby.setActivePlayer(player1);
         GameBoard gameBoard = gameService.getGameboardByLobbyId(lobbyId);
-        SettlementPosition settlementPosition = gameBoard.getSettlementPositionGraph().get(0);
-        settlementPosition.getRoads().get(0).setOwner(mockPlayer1);
+        BuildingSite buildingSite = gameBoard.getBuildingSitePositionGraph().get(0);
+        buildingSite.getRoads().get(0).setOwner(mockPlayer1);
 
-        int positionId = settlementPosition.getId();
+        int positionId = buildingSite.getId();
         ObjectNode placeSettlementMessageNode = objectMapper.createObjectNode().put("settlementPositionId", positionId);
         var placeSettlementMessageDTO = new MessageDTO(MessageType.PLACE_SETTLEMENT, player1, lobbyId, placeSettlementMessageNode);
 
@@ -645,11 +645,11 @@ public class GameWebSocketTest {
         Lobby lobby = lobbyService.getLobbyById(lobbyId);
         lobby.setActivePlayer(playerId);
         GameBoard gameBoard = gameService.createGameboard(lobbyId);
-        SettlementPosition settlementPosition = gameBoard.getSettlementPositionGraph().get(0);
-        settlementPosition.getRoads().get(0).setOwner(player);
-        settlementPosition.setBuilding(new Settlement(player, lobby.getPlayerColor(playerId)));
+        BuildingSite buildingSite = gameBoard.getBuildingSitePositionGraph().get(0);
+        buildingSite.getRoads().get(0).setOwner(player);
+        buildingSite.setBuilding(new Settlement(player, lobby.getPlayerColor(playerId)));
 
-        int positionId = settlementPosition.getId();
+        int positionId = buildingSite.getId();
         ObjectNode placeSettlementMessageNode = objectMapper.createObjectNode().put("settlementPositionId", positionId);
         var upgradeSettlementMessageDTO = new MessageDTO(MessageType.UPGRADE_SETTLEMENT, playerId, lobbyId, placeSettlementMessageNode);
 
@@ -694,9 +694,9 @@ public class GameWebSocketTest {
         assertEquals(lobbyId, responseMessage.getLobbyId());
 
         var building = gameService.getGameboardByLobbyId(lobbyId).getJson().get("settlementPositions").get(0).get("building");
-        assertEquals(player, settlementPosition.getBuildingOwner());
+        assertEquals(player, buildingSite.getBuildingOwner());
         assertEquals(City.class.getSimpleName(), building.get("type").asText());
-        verify(gameService).upgradeSettlement(lobbyId, playerId, settlementPosition.getId());
+        verify(gameService).upgradeSettlement(lobbyId, playerId, buildingSite.getId());
     }
 
 
@@ -783,7 +783,7 @@ public class GameWebSocketTest {
         assertEquals(mockPlayer2, actualRoad.getOwner());
 
         verify(gameService).placeRoad(lobbyId, player2, roadId);
-        verify(playerService, times(3)).getPlayerById(player2);
+        verify(playerService, times(2)).getPlayerById(player2);
         verify(gameMessageHandler).createGameBoardWithPlayers(lobbyId);
         verify(gameService, times(2)).getGameboardByLobbyId(lobbyId);
     }
