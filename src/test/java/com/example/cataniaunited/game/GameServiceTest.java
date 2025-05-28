@@ -26,7 +26,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -91,8 +93,8 @@ class GameServiceTest {
         assertFalse(dto.getMessageNode("playerOrder").isArray());
         assertTrue(dto.getMessageNode("board").isObject());
 
-        verify(host).sendMessage(dto);
-        verify(p2).sendMessage(dto);
+        verify(playerService).sendMessageToPlayer(hostId, dto);
+        verify(playerService).sendMessageToPlayer("p2", dto);
         verifyNoMoreInteractions(host, p2);
     }
 

@@ -26,6 +26,7 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 // fixme - good class for the main game logic
+
 /**
  * Service class for managing game logic, including game board creation,
  * player actions (placing settlements, roads, cities), dice rolling,
@@ -151,9 +152,8 @@ public class GameService {
                 MessageType.GAME_STARTED, null, lobbyId, payload);
 
         order.stream()
-                .map(playerService::getPlayerById)
                 .filter(Objects::nonNull)
-                .forEach(p -> p.sendMessage(dto));
+                .forEach(playerId -> playerService.sendMessageToPlayer(playerId, dto));
 
         logger.infof("Game started in lobby: lobbyId=%s, order=%s", lobbyId, order);
         return dto;

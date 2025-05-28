@@ -1,7 +1,10 @@
 package com.example.cataniaunited.player;
 
+import com.example.cataniaunited.dto.MessageDTO;
 import io.quarkus.websockets.next.WebSocketConnection;
+import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
+import org.jboss.logging.Logger;
 
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -18,6 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @ApplicationScoped
 public class PlayerService {
 
+    private static final Logger logger = Logger.getLogger(PlayerService.class);
     private static final ConcurrentHashMap<String, Player> playersByConnectionId = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, Player> playersById = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, WebSocketConnection> connectionsByPlayerId = new ConcurrentHashMap<>();
@@ -54,7 +58,9 @@ public class PlayerService {
      * @param id The unique ID of the player.
      * @return The {@link Player} with the given ID, or null if not found.
      */
-    public Player getPlayerById(String id){return playersById.get(id);}
+    public Player getPlayerById(String id) {
+        return playersById.get(id);
+    }
 
     /**
      * Gets a list of all currently managed players.
@@ -122,13 +128,27 @@ public class PlayerService {
      */
     public WebSocketConnection getConnectionByPlayerId(String playerId) {
         if (playerId == null) {
+            logger.warnf("Cannot retrieve web socket connection of player, id is null");
             return null;
         }
 
         WebSocketConnection conn = connectionsByPlayerId.get(playerId);
         if (conn != null && !conn.isOpen()) {
+            logger.warnf("Web socket connection of player not open: playerId = %s", playerId);
             return null;
         }
         return conn;
+    }
+
+    public Uni<Void> sendMessageToPlayer(String playerId, MessageDTO message) {
+        WebSocketConnection connection = getConnectionByPlayerId(playerId);
+        if (connection == null) {
+            logger.warnf("No web socket connection for player %s – message dropped!", playerId);
+            return Uni.createFrom().voidItem();
+        }
+        logger.debugf("Sending message to player: playerId=%s, message=%s", playerId, message);
+        return connection.sendText(message)
+                .onItem().invoke(v -> logger.debugf("Message sent: player=%s message=%s", playerId, message))
+                .onFailure().invoke(err -> logger.errorf(err, "Failed to send message: player=%s", playerId));
     }
 }

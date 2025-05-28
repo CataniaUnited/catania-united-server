@@ -1,15 +1,34 @@
 package com.example.cataniaunited.player;
 
+import com.example.cataniaunited.dto.MessageDTO;
+import com.example.cataniaunited.dto.MessageType;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.websockets.next.WebSocketConnection;
+import io.smallrye.mutiny.Uni;
+import io.smallrye.mutiny.helpers.test.UniAssertSubscriber;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @QuarkusTest
 class PlayerServiceTest {
@@ -142,7 +161,7 @@ class PlayerServiceTest {
     }
 
     @Test
-    void removePlayerNonExistingConnection(){
+    void removePlayerNonExistingConnection() {
         Player player = playerService.addPlayer(mockConnection1);
         playerService.removePlayerByConnectionId(mockConnection1);
 
@@ -241,5 +260,54 @@ class PlayerServiceTest {
         assertEquals(initialPlayerCount, playerService.getAllPlayers().size(),
                 "Player count should remain unchanged after attempting to add VP to non-existent player.");
     }
+
+    @Test
+    void sendMessageToPlayerShouldNotThrowExceptionIfSendTextFails() {
+        WebSocketConnection mockConnection = mock(WebSocketConnection.class);
+        RuntimeException simulatedException = new RuntimeException("Simulated network error during send");
+        MessageDTO testMessage = new MessageDTO(MessageType.DICE_RESULT, JsonNodeFactory.instance.objectNode());
+
+        when(mockConnection.isOpen()).thenReturn(true);
+        when(mockConnection.id()).thenReturn(UUID.randomUUID().toString());
+        when(mockConnection.sendText(any(MessageDTO.class)))
+                .thenReturn(Uni.createFrom().failure(simulatedException));
+
+        Player newPlayer = playerService.addPlayer(mockConnection);
+        Uni<Void> sendUni = playerService.sendMessageToPlayer(newPlayer.getUniqueId(), testMessage);
+        sendUni.subscribe().withSubscriber(UniAssertSubscriber.create())
+                .assertFailedWith(RuntimeException.class, "Simulated network error during send")
+                .assertSubscribed()
+                .assertTerminated();
+
+        verify(mockConnection).sendText(testMessage);
+    }
+
+    @Test
+    void sendMessageToPlayerShouldNotThrowExceptionIfConnectionIsClosed() {
+        WebSocketConnection mockConnection = mock(WebSocketConnection.class);
+        RuntimeException simulatedException = new RuntimeException("Simulated network error during send");
+        MessageDTO testMessage = new MessageDTO(MessageType.DICE_RESULT, JsonNodeFactory.instance.objectNode());
+
+        when(mockConnection.isOpen()).thenReturn(false);
+        when(mockConnection.id()).thenReturn(UUID.randomUUID().toString());
+        when(mockConnection.sendText(any(MessageDTO.class)))
+                .thenReturn(Uni.createFrom().failure(simulatedException));
+
+        Player newPlayer = playerService.addPlayer(mockConnection);
+        playerService.sendMessageToPlayer(newPlayer.getUniqueId(), testMessage);
+
+        verify(mockConnection, never()).sendText(testMessage);
+    }
+
+    @Test
+    void sendMessageToPlayerShouldNotThrowExceptionForEmptyPlayerId() {
+        WebSocketConnection mockConnection = mock(WebSocketConnection.class);
+        MessageDTO testMessage = new MessageDTO(MessageType.DICE_RESULT, JsonNodeFactory.instance.objectNode());
+
+        playerService.sendMessageToPlayer(null, testMessage);
+
+        verify(mockConnection, never()).sendText(testMessage);
+    }
+
 }
 

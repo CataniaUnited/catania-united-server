@@ -499,7 +499,7 @@ public class GameWebSocket {
         );
 
         logger.infof("Sending player resources: lobbyId = %s, playerId = %s, resources = %s", lobbyId, playerId, resourcesPayload.toString());
-        return player.sendMessage(resourceMsg);
+        return playerService.sendMessageToPlayer(playerId, resourceMsg);
     }
 
 }

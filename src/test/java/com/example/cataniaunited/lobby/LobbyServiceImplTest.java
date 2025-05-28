@@ -27,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -223,15 +224,16 @@ class LobbyServiceImplTest {
     @Test
     void notifyPlayers_sendsMessageToEveryPlayerInTheLobby() {
         String hostId = "host";
+        String player2 = "p2";
         String lobbyId = lobbyService.createLobby(hostId);
-        lobbyService.joinLobbyByCode(lobbyId, "p2");
+        lobbyService.joinLobbyByCode(lobbyId, player2);
 
         // mock the Player objects returned by PlayerService
         Player host = mock(Player.class);
         Player p2 = mock(Player.class);
 
         when(playerService.getPlayerById(hostId)).thenReturn(host);
-        when(playerService.getPlayerById("p2")).thenReturn(p2);
+        when(playerService.getPlayerById(player2)).thenReturn(p2);
 
         MessageDTO dto = new MessageDTO(MessageType.ERROR, (ObjectNode) null);
 
@@ -239,8 +241,8 @@ class LobbyServiceImplTest {
         lobbyService.notifyPlayers(lobbyId, dto);
 
 
-        verify(host).sendMessage(dto);
-        verify(p2).sendMessage(dto);
+        verify(playerService).sendMessageToPlayer(hostId, dto);
+        verify(playerService).sendMessageToPlayer(player2, dto);
         verifyNoMoreInteractions(host, p2);
     }
 
@@ -259,7 +261,7 @@ class LobbyServiceImplTest {
         var exception = new RuntimeException("Test exception");
         String lobbyId = lobbyService.createLobby("HostPlayer");
         Player player = spy(new Player(("Player1")));
-        when(player.sendMessage(any(MessageDTO.class))).thenReturn(Uni.createFrom().failure(exception));
+        when(playerService.sendMessageToPlayer(eq(player.getUniqueId()), any(MessageDTO.class))).thenReturn(Uni.createFrom().failure(exception));
         when(playerService.getPlayerById(player.getUniqueId())).thenReturn(player);
         lobbyService.joinLobbyByCode(lobbyId, player.getUniqueId());
 
