@@ -1,9 +1,9 @@
 package com.example.cataniaunited.game;
 
 import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.game.board.BuildingSite;
 import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.game.board.Road;
-import com.example.cataniaunited.game.board.BuildingSite;
 import com.example.cataniaunited.game.board.tile_list_builder.Tile;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.example.cataniaunited.game.dice.Dice;
@@ -14,18 +14,27 @@ import com.example.cataniaunited.lobby.LobbyServiceImpl;
 import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerColor;
 import com.example.cataniaunited.player.PlayerService;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.mockito.InjectSpy;
 import io.quarkus.websockets.next.WebSocketConnection;
 import jakarta.inject.Inject;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.mockito.Mockito;
 
 import java.lang.reflect.Field;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @QuarkusTest
@@ -88,22 +97,22 @@ class ResourceDistributionIntegrationTest {
     @Test
     @Order(1)
     void selectTargetTile() {
-        targetTile = gameBoard.getTileList().stream()
+        targetTile = assertDoesNotThrow(() -> gameBoard.getTileList().stream()
                 .filter(t -> t.getType() == TileType.WHEAT)
                 .findFirst()
-                .orElseThrow(() -> new AssertionError("Test requires at least one WHEAT tile. Adjust board generation or test."));
+                .orElseThrow(() -> new AssertionError("Test requires at least one WHEAT tile. Adjust board generation or test.")));
 
         mockDiceRollTotal = targetTile.getValue(); // We want the dice to roll this sum
     }
 
     @Test
     @Order(2)
-    void findSettlementPositionOfTile(){
-        targetBuildingSite = targetTile.getBuildingSitesOfTile().stream()
+    void findSettlementPositionOfTile() {
+        targetBuildingSite = assertDoesNotThrow(() -> targetTile.getBuildingSitesOfTile().stream()
                 .findFirst()
                 .orElseThrow(() -> new AssertionError(
                         "Target tile (ID: " + targetTile.getId() + ", Type: " + targetTile.getType() +
-                                ") has no associated settlement positions. Check GameBoard setup and BuildingSite.addTile fix."));
+                                ") has no associated settlement positions. Check GameBoard setup and BuildingSite.addTile fix.")));
     }
 
     @Test
@@ -152,12 +161,16 @@ class ResourceDistributionIntegrationTest {
         Field d2FieldInRoller = DiceRoller.class.getDeclaredField("dice2");
         d2FieldInRoller.setAccessible(true);
         d2FieldInRoller.set(actualDiceRoller, mockDice2);
+
+        assertEquals(mockDice1, d1FieldInRoller.get(actualDiceRoller));
+        assertEquals(mockDice2, d2FieldInRoller.get(actualDiceRoller));
     }
 
     @Test
     @Order(5)
-    void getWheatAmountBeforeTargetRoll(){
+    void getWheatAmountBeforeTargetRoll() {
         wheatAmountBeforeTargetRoll = testPlayer.getResourceCount(TileType.WHEAT);
+        assertEquals(0, wheatAmountAfterTargetRoll);
     }
 
     @Test
@@ -168,18 +181,25 @@ class ResourceDistributionIntegrationTest {
         System.out.printf("Test: Player %s has settlement at %d. Initial %s: %d%n",
                 testPlayer.getUniqueId(), targetBuildingSite.getId(), TileType.WHEAT, wheatAmountBeforeTargetRoll);
 
-        gameService.rollDice(lobbyId, testPlayer.getUniqueId());
+        ObjectNode result = gameService.rollDice(lobbyId, testPlayer.getUniqueId());
+
+        assertEquals(mockDiceRollTotal, result.get("total").asInt());
+        assertEquals(d1Value, result.get("dice1").asInt());
+        assertEquals(d2Value, result.get("dice2").asInt());
+
+        verify(lobbyService).checkPlayerDiceRoll(lobbyId, testPlayer.getUniqueId());
+        verify(lobbyService).updateLatestDiceRoll(lobbyId, testPlayer.getUniqueId());
     }
-    
+
     @Test
     @Order(7)
-    void assertThatPlayerRecivedRessources(){
+    void assertThatPlayerRecievedResources() {
         wheatAmountAfterTargetRoll = testPlayer.getResourceCount(TileType.WHEAT);
         assertEquals(wheatAmountBeforeTargetRoll + 1, wheatAmountAfterTargetRoll,
                 String.format("Player should have received 1 %s. Rolled %d (target tile value %d). Initial: %d, Final: %d",
                         TileType.WHEAT, mockDiceRollTotal, targetTile.getValue(), wheatAmountBeforeTargetRoll, wheatAmountAfterTargetRoll));
     }
-    
+
     @Test
     @Order(8)
     void differentRollsDoNotDistributeResources() throws GameException {

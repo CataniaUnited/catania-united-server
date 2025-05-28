@@ -112,7 +112,7 @@ public class StandardTileListBuilder implements TileListBuilder {
         tileList.add(new Tile(TileType.WASTE));
 
         // Add the remaining tiles as resource-producing tiles
-        // The loop runs for (amountOfTilesOnBoard - 1) times because one tile is already added as WASTE.
+        // The loop runs for one times less than the total number of tiles because one tile is already added as WASTE.
         for (int i = 0; i < amountOfTilesOnBoard - 1; i++) {
             // Cycle through the resourceProducingTypes
             TileType currentTileType = resourceProducingTypes.get(i % resourceProducingTypes.size());
