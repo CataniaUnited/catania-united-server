@@ -1,8 +1,7 @@
 package com.example.cataniaunited.game;
 
-import com.example.cataniaunited.dto.MessageDTO;
-import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.exception.ui.InvalidTurnException;
 import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.game.board.ports.Port;
 import com.example.cataniaunited.lobby.Lobby;
@@ -14,15 +13,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.mockito.InjectSpy;
-import io.smallrye.mutiny.Uni;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -36,7 +36,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 
@@ -66,36 +65,63 @@ class GameServiceTest {
     }
 
     @Test
-    void startGame_setsFlagsBroadcastsAndReturnsDto() throws GameException {
+    void startGame_setsFlags() throws GameException {
         String hostId = "host";
         String lobbyId = lobbyService.createLobby(hostId);
 
-
         Lobby lobbySpy = spy(lobbyService.getLobbyById(lobbyId));
         lobbySpy.getPlayers().add("p2");
-        doReturn(lobbySpy).when(lobbyService).getLobbyById(lobbyId);
-
-
-        doReturn(gameboardMock).when(gameService).createGameboard(lobbyId);
-        ObjectNode dummyBoardJson = new ObjectMapper().createObjectNode();
-        when(gameboardMock.getJson()).thenReturn(dummyBoardJson);
 
         Player host = mock(Player.class);
         Player p2 = mock(Player.class);
         when(playerService.getPlayerById(hostId)).thenReturn(host);
         when(playerService.getPlayerById("p2")).thenReturn(p2);
 
-        MessageDTO dto = gameService.startGame(lobbyId);
-        assertNotNull(dto);
-        assertEquals(MessageType.GAME_STARTED, dto.getType());
-        assertEquals(lobbyId, dto.getLobbyId());
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+        assertFalse(lobby.isGameStarted());
+        assertTrue(lobby.getPlayerOrder().isEmpty());
+        assertNull(lobby.getActivePlayer());
 
-        assertFalse(dto.getMessageNode("playerOrder").isArray());
-        assertTrue(dto.getMessageNode("board").isObject());
+        gameService.startGame(lobbyId, hostId);
 
-        verify(playerService).sendMessageToPlayer(hostId, dto);
-        verify(playerService).sendMessageToPlayer("p2", dto);
-        verifyNoMoreInteractions(host, p2);
+        assertTrue(lobby.isGameStarted());
+        assertFalse(lobby.getPlayerOrder().isEmpty());
+        assertTrue(lobby.getPlayerOrder().containsAll(List.of(hostId, "p2")));
+        assertNotNull(lobby.getActivePlayer());
+        assertNotNull(gameService.getGameboardByLobbyId(lobbyId));
+    }
+
+    @Test
+    void startGameShouldThrowExceptionIfGameIsAlreadyStarted() throws GameException {
+        String playerId = "player";
+        String lobbyId = lobbyService.createLobby(playerId);
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+        lobby.setGameStarted(true);
+        lobby.addPlayer(playerId);
+        lobby.addPlayer("Player2");
+        GameException ge = assertThrows(GameException.class, () -> gameService.startGame(lobbyId, playerId));
+        assertEquals("Starting of game failed", ge.getMessage());
+    }
+
+    @Test
+    void startGameShouldThrowExceptionIfPlayerCountIsSmallerThanTwo() {
+        String playerId = "player";
+        String lobbyId = lobbyService.createLobby(playerId);
+        GameException ge = assertThrows(GameException.class, () -> gameService.startGame(lobbyId, "Player1"));
+        assertEquals("Starting of game failed", ge.getMessage());
+    }
+
+    @Test
+    void startGameShouldThrowExceptionIfRequestingPlayerIsNotHost() throws GameException {
+        String playerId = "player";
+        String notHostPlayerId = "notHostPlayer";
+        String lobbyId = lobbyService.createLobby(playerId);
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+        lobby.setGameStarted(false);
+        lobby.addPlayer(playerId);
+        lobby.addPlayer(notHostPlayerId);
+        GameException ge = assertThrows(GameException.class, () -> gameService.startGame(lobbyId, notHostPlayerId));
+        assertEquals("Starting of game failed", ge.getMessage());
     }
 
     @Test
@@ -155,8 +181,8 @@ class GameServiceTest {
         String lobbyId = lobbyMock.getLobbyId();
         doReturn(lobbyMock).when(lobbyService).getLobbyById(lobbyId);
         doReturn(false).when(lobbyMock).isPlayerTurn(playerId);
-        GameException ge = assertThrows(GameException.class, () -> gameService.placeSettlement(lobbyId, playerId, 1));
-        assertEquals("It is not the players turn: playerId=%s, lobbyId=%s".formatted(playerId, lobbyId), ge.getMessage());
+        InvalidTurnException ite = assertThrows(InvalidTurnException.class, () -> gameService.placeSettlement(lobbyId, playerId, 1));
+        assertEquals("It is not your turn!", ite.getMessage());
         verify(gameService, never()).getGameboardByLobbyId(lobbyId);
     }
 
@@ -166,8 +192,8 @@ class GameServiceTest {
         String lobbyId = lobbyMock.getLobbyId();
         doReturn(lobbyMock).when(lobbyService).getLobbyById(lobbyId);
         doReturn(false).when(lobbyMock).isPlayerTurn(playerId);
-        GameException ge = assertThrows(GameException.class, () -> gameService.placeRoad(lobbyId, playerId, 1));
-        assertEquals("It is not the players turn: playerId=%s, lobbyId=%s".formatted(playerId, lobbyId), ge.getMessage());
+        InvalidTurnException ite = assertThrows(InvalidTurnException.class, () -> gameService.placeRoad(lobbyId, playerId, 1));
+        assertEquals("It is not your turn!", ite.getMessage());
         verify(gameService, never()).getGameboardByLobbyId(lobbyId);
     }
 
@@ -243,29 +269,6 @@ class GameServiceTest {
         GameException exception = assertThrows(GameException.class, () -> gameService.getGameboardJsonByLobbyId(invalidLobbyId), "Should throw GameException when gameboard is not found");
         assertEquals(expectedErrorMessage, exception.getMessage());
         verify(gameService).getGameboardByLobbyId(invalidLobbyId);
-    }
-
-    @Test
-    void broadcastWinShouldSendCorrectGameWonMessage() throws GameException {
-        String lobbyId = "lobby123";
-        String winnerPlayerId = "playerABC";
-        String winnerUsername = "ChickenNugget";
-
-        Player mockPlayer = mock(Player.class);
-        when(mockPlayer.getUsername()).thenReturn(winnerUsername);
-        doReturn(mockPlayer).when(playerService).getPlayerById(winnerPlayerId);
-        doReturn(new Lobby(lobbyId, winnerPlayerId)).when(lobbyService).getLobbyById(lobbyId);
-
-        Uni<MessageDTO> resultUni = gameService.broadcastWin(lobbyId, winnerPlayerId);
-        MessageDTO result = resultUni.await().indefinitely();
-
-        assertNotNull(result);
-        assertEquals(MessageType.GAME_WON, result.getType());
-        assertEquals(lobbyId, result.getLobbyId());
-        assertEquals(winnerPlayerId, result.getPlayer());
-        assertEquals(winnerUsername, result.getMessageNode("winner").asText());
-
-        verify(lobbyService).notifyPlayers(lobbyId, result);
     }
 
     @Test

@@ -49,7 +49,7 @@ public interface LobbyService {
      * @param lobbyId The ID of the lobby.
      * @param player  The ID of the player to remove.
      */
-    void removePlayerFromLobby(String lobbyId, String player);
+    void removePlayerFromLobby(String lobbyId, String player) throws GameException;
 
     /**
      * Retrieves a lobby by its unique ID.
@@ -70,10 +70,13 @@ public interface LobbyService {
      *
      * @param lobbyId  The ID of the lobby.
      * @param playerId The ID of the player.
-     * @return true if it is the player's turn, false otherwise.
-     * @throws GameException if the lobby or player is not found.
+     * @throws GameException if it is not the player's turn or if the lobby/player is not found.
      */
-    boolean isPlayerTurn(String lobbyId, String playerId) throws GameException;
+    void checkPlayerTurn(String lobbyId, String playerId) throws GameException;
+
+    void checkPlayerDiceRoll(String lobbyId, String playerId) throws GameException;
+
+    void updateLatestDiceRoll(String lobbyId, String playerId) throws GameException;
 
     /**
      * Gets the color assigned to a specific player in a given lobby.
@@ -93,5 +96,7 @@ public interface LobbyService {
      * @return The {@link Uni} containing the sent message
      */
     Uni<MessageDTO> notifyPlayers(String lobbyId, MessageDTO dto);
+
+    String nextTurn(String lobbyId, String playerId) throws GameException;
 
 }

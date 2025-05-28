@@ -15,6 +15,7 @@ import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerColor;
 import com.example.cataniaunited.player.PlayerService;
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.junit.mockito.InjectSpy;
 import io.quarkus.websockets.next.WebSocketConnection;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.*;
@@ -24,6 +25,7 @@ import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 
 @QuarkusTest
@@ -34,7 +36,7 @@ class ResourceDistributionIntegrationTest {
     @Inject
     GameService gameService;
 
-    @Inject
+    @InjectSpy
     LobbyService lobbyService;
 
     @Inject
@@ -67,6 +69,7 @@ class ResourceDistributionIntegrationTest {
         lobbyService.joinLobbyByCode(lobbyId, testPlayer2.getUniqueId());
         Lobby lobby = lobbyService.getLobbyById(lobbyId);
         lobby.setActivePlayer(testPlayer.getUniqueId());
+        doNothing().when(lobbyService).checkPlayerDiceRoll(lobbyId, testPlayer.getUniqueId());
 
         gameBoard = gameService.createGameboard(lobbyId);
     }
@@ -165,7 +168,7 @@ class ResourceDistributionIntegrationTest {
         System.out.printf("Test: Player %s has settlement at %d. Initial %s: %d%n",
                 testPlayer.getUniqueId(), targetSettlementPosition.getId(), TileType.WHEAT, wheatAmountBeforeTargetRoll);
 
-        gameService.rollDice(lobbyId);
+        gameService.rollDice(lobbyId, testPlayer.getUniqueId());
     }
     
     @Test
@@ -188,7 +191,7 @@ class ResourceDistributionIntegrationTest {
             when(mockDice2.roll()).thenReturn(2);
         }
 
-        gameService.rollDice(lobbyId);
+        gameService.rollDice(lobbyId, testPlayer.getUniqueId());
         int wheatAmountAfterWrongRoll = testPlayer.getResourceCount(TileType.WHEAT);
         assertEquals(wheatAmountAfterTargetRoll, wheatAmountAfterWrongRoll,
                 "Player should not receive additional resources on a non-matching roll.");
