@@ -171,21 +171,21 @@ class SpecificResourcePortTest {
         assertTrue(jsonNode.has("inputResourceAmount"), "JSON should contain 'inputResourceAmount' from superclass.");
         assertEquals(2, jsonNode.get("inputResourceAmount").asInt(), "'inputResourceAmount' should be 2 for a SpecificResourcePort.");
 
-        assertTrue(jsonNode.has("portStructure"), "JSON should contain 'portStructure' node from superclass.");
-        JsonNode portStructureNode = jsonNode.get("portStructure");
+        assertTrue(jsonNode.has("portVisuals"), "JSON should contain 'portStructure' node from superclass.");
+        JsonNode portStructureNode = jsonNode.get("portVisuals");
 
-        assertTrue(portStructureNode.has("port"), "'portStructure' should contain a 'port' object.");
-        JsonNode portSubNode = portStructureNode.get("port");
+        assertTrue(portStructureNode.has("portTransform"), "'portStructure' should contain a 'port' object.");
+        JsonNode portSubNode = portStructureNode.get("portTransform");
         assertEquals(0.0, portSubNode.get("x").asDouble(), 0.001, "Default port x-coordinate should be 0.0.");
         assertEquals(0.0, portSubNode.get("y").asDouble(), 0.001, "Default port y-coordinate should be 0.0.");
         assertEquals(0.0, portSubNode.get("rotation").asDouble(), 0.001, "Default port rotation should be 0.0.");
 
-        assertTrue(portStructureNode.has("bridge1"), "'portStructure' should contain a 'bridge1' object.");
-        JsonNode bridge1Node = portStructureNode.get("bridge1");
+        assertTrue(portStructureNode.has("bridge1Transform"), "'portStructure' should contain a 'bridge1' object.");
+        JsonNode bridge1Node = portStructureNode.get("bridge1Transform");
         assertEquals(0.0, bridge1Node.get("x").asDouble(), 0.001);
 
-        assertTrue(portStructureNode.has("bridge2"), "'portStructure' should contain a 'bridge2' object.");
-        JsonNode bridge2Node = portStructureNode.get("bridge2");
+        assertTrue(portStructureNode.has("bridge2Transform"), "'portStructure' should contain a 'bridge2' object.");
+        JsonNode bridge2Node = portStructureNode.get("bridge2Transform");
         assertEquals(0.0, bridge2Node.get("x").asDouble(), 0.001);
 
         assertFalse(portStructureNode.has("settlementPosition1Id"), "Should not have settlementPosition1Id when settlements are not set.");
