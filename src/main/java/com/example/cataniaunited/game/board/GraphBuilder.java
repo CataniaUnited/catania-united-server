@@ -480,44 +480,78 @@ public class GraphBuilder {
         }
     }
 
-    // fixme unclear whats happening here, e.g., what is the "previous" method?
     /**
-     * Calculates and sets coordinates for outer settlement positions.
-     * The method of calculation depends on how many tiles the node is associated with
-     * and the available coordinate information from its neighbors or associated tiles.
+     * Calculates and sets coordinates for settlement positions on the outermost layer of the board.
+     * Nodes handled by {@link #addCoordinatesToInnerNodes()} (typically those at the intersection of 3 tiles)
+     * are skipped as their coordinates are already determined.
+     * <br>
+     * This method iterates through the outermost nodes and applies different strategies
+     * to calculate their coordinates based on the number of tiles they are directly
+     * associated with and the status of their neighboring settlement positions.
+     * <br>
+     * The general principle is to find three reference points (either from associated tiles
+     * or already-positioned neighboring settlements) to triangulate or determine the
+     * current node's position.
      */
-    private void addCoordinatesToOuterNodes(){
-        int startingIndex = (int) (6*Math.pow((sizeOfBoard-1), 2));
+    private void addCoordinatesToOuterNodes() {
+        // startingIndex marks the first node of the outermost layer.
+        // Nodes before this index are considered "inner" and are expected to have been
+        // processed by addCoordinatesToInnerNodes().
+        int startingIndex = (int) (6 * Math.pow((sizeOfBoard - 1), 2));
 
-        for (int i = startingIndex; i < nodeList.size(); i++){
+        for (int i = startingIndex; i < nodeList.size(); i++) {
             SettlementPosition currentNode = nodeList.get(i);
 
-            // To specify the point on the plane where our node needs to be placed we need 3 reference coordinates.
-            // There are 3 Scenarios.
-            // a) 3 Tiles (already completed in previous method)
-            // b) 2 Tiles + one Neighbor with coordinates
-            if (currentNode.getTiles().size() == 2){
+            int associatedTilesCount = currentNode.getTiles().size();
+
+            // Scenario A: Node is associate with 3 Tiles
+            // Node is an inner Node, and the calculation is handled by addCoordinatesToInnerNodes()
+            if (associatedTilesCount == 2) {
+                // Scenario B: Node is associated with 2 tiles.
+                // It needs one more reference point, typically an already-positioned neighbor.
                 addCoordinatesToNodeWith2TilesAnd1Neighbor(currentNode);
-            } else { // c) 1 Tile + 2 Neighbors with coordinates
-                // We don't have two neighbours -> shit
-                // c.1) check if next node has two neighbours and create them first
-                if (i+1 < nodeList.size() && nodeList.get(i+1).getTiles().size() == 2){
-                    addCoordinatesToNodeWith2TilesAnd1Neighbor(nodeList.get(i+1));
-                    addCoordinatesToNodeWith1TilesAnd2NeighborsWithCoordinates(currentNode);
-                    i++;
-                } else if (i + 1 == nodeList.size()) {
-                    // c.1.b this is the last node and the first node of this layer already got its coordinates
-                    // therefore this node is the only one that already has 2 neighbors
-                    addCoordinatesToNodeWith1TilesAnd2NeighborsWithCoordinates(currentNode);
-                } else {
-                    // c.2) previous node has two tiles do some fancy triangulation to
-                    //
-                    addCoordinatesToNodeWith1Tiles1NeighbourAnd1NodeAsNeighbourFromPreviousNode(currentNode);
+
+            } else if (associatedTilesCount == 1) {
+                // Scenario C: Node is associated with 1 tile.
+                // It needs two more reference points, typically two already-positioned neighbors.
+                // The logic here tries to ensure neighbors are positioned first if possible.
+
+                boolean isLastNodeInCurrentLayerProcessing = (i + 1 == nodeList.size());
+                SettlementPosition nextNodeInProcessingOrder = null;
+                boolean nextNodeExists = (i + 1 < nodeList.size());
+
+                if (nextNodeExists) {
+                    nextNodeInProcessingOrder = nodeList.get(i + 1);
                 }
 
+                // C.1: Lookahead strategy: If the *next* node to be processed has 2 tiles,
+                // it's easier to calculate its position first. Once the next node is positioned,
+                // the current node (with 1 tile) will have a newly reliable neighbor.
+                if (nextNodeExists && nextNodeInProcessingOrder.getTiles().size() == 2) {
+                    // Position the 'nextNodeInProcessingOrder' first.
+                    addCoordinatesToNodeWith2TilesAnd1Neighbor(nextNodeInProcessingOrder);
 
+                    // Now, 'currentNode' can use 'nextNodeInProcessingOrder' as one of its
+                    // two required positioned neighbors.
+                    addCoordinatesToNodeWith1TilesAnd2NeighborsWithCoordinates(currentNode);
+
+                    // We've processed the 'nextNodeInProcessingOrder' in this iteration,
+                    // so advance the loop counter to skip it in the next iteration.
+                    i++;
+                } else if (isLastNodeInCurrentLayerProcessing) {
+                    // C.1.b: This is the very last node of the outermost layer being processed.
+                    // It's assumed that by this point, its neighbors (including the first node
+                    // of this layer due to the circular nature of the board) have already had
+                    // their coordinates set.
+                    addCoordinatesToNodeWith1TilesAnd2NeighborsWithCoordinates(currentNode);
+                } else {
+                    // C.2: Fallback strategy if the lookahead didn't apply or it's not the last node.
+                    // This node has 1 tile, and its immediate next neighbor (in processing order)
+                    // doesn't have 2 tiles (or there's no next neighbor before the end).
+                    // This implies a more complex situation for finding two reference neighbors.
+                    addCoordinatesToNodeWith1Tiles1NeighbourAnd1NodeAsNeighbourFromPreviousNode(currentNode);
+                }
             }
-
         }
     }
 
