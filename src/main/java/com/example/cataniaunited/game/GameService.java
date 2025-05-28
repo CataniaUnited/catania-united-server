@@ -15,8 +15,6 @@ import org.jboss.logging.Logger;
 
 import java.util.concurrent.ConcurrentHashMap;
 
-// fixme - good class for the main game logic
-
 /**
  * Service class for managing game logic, including game board creation,
  * player actions (placing settlements, roads, cities), dice rolling,

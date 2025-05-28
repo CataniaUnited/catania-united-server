@@ -92,11 +92,9 @@ public class GameBoard {
      * Generates the list of tiles for the game board using a {@link TileListDirector} and a {@link StandardTileListBuilder}.
      */
     void generateTileList() {
-        // fixme again, this shows the interdependency (constructed via director, queried from the builder directly)
         TileListBuilder tileBuilder = new StandardTileListBuilder();
         TileListDirector director = new TileListDirector(tileBuilder);
-        director.constructStandardTileList(sizeOfBoard, SIZE_OF_HEX, true);
-        tileList = tileBuilder.getTileList();
+        tileList = director.constructStandardTileList(sizeOfBoard, SIZE_OF_HEX, true);
     }
 
     /**
@@ -172,7 +170,7 @@ public class GameBoard {
     public void placeRoad(Player player, PlayerColor color, int roadId) throws GameException {
         try {
             Road road = roadList.get(roadId - 1);
-            checkRequiredResources(player, road); // fixme dont use exceptions for regular program flows (checks which are handled as part of regular functionality)
+            checkRequiredResources(player, road);
             logger.debugf("Placing road: playerId = %s, roadId = %s", player.getUniqueId(), roadId);
             road.setOwner(player);
             road.setColor(color);
@@ -221,7 +219,6 @@ public class GameBoard {
             TileType tileType = entry.getKey();
             Integer amount = entry.getValue();
             if (player.getResourceCount(tileType) < amount) {
-                // fixme this check should not throw an exception as this is the core funcitonality of the method and not exceptional behavior
                 throw new InsufficientResourcesException();
             }
         }
