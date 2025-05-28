@@ -22,19 +22,10 @@ public abstract class Port implements Placable {
     protected SettlementPosition settlementPosition1;
     protected SettlementPosition settlementPosition2;
     private static final double PORT_DISTANCE = 10.0;
+    protected Transform portStructureTransform;
 
-    // fixme introduce data structure for the transform / placement information (x,y,rot)
-    protected double portCenterX;
-    protected double portCenterY;
-    protected double portRotation;
-
-    protected double bridgeX1;
-    protected double bridgeY1;
-    protected double bridge1Rotation;
-
-    protected double bridgeX2;
-    protected double bridgeY2;
-    protected double bridge2Rotation;
+    protected Transform bridge1Transform;
+    protected Transform bridge2Transform;
 
     /**
      * Constructs a Port with a specified trade-in ratio.
@@ -49,15 +40,51 @@ public abstract class Port implements Placable {
         this.inputResourceAmount = inputResourceAmount;
     }
 
-    // fixme add generic trade checks to this class (1st and 3rd in the javadocs)
     /**
-     * Determines if a proposed trade is valid according to this port's specific rules.
+     * Determines if a proposed trade is valid for this port, considering both general
+     * trading rules and rules specific to the port type (e.g., general vs. specific resource).
+     * <p>
+     * This method validates:
+     * <ol>
+     *     <li>Basic trade ratios:</li>
+     *     <li>Port-specific rules: Handled by the {@link #arePortSpecificRulesSatisfied(List, List)} method,
+     *         which varies between {@link GeneralPort} and {@link SpecificResourcePort}. This includes checks like:
+     *     </li>
+     *     <li>No self-trading: The player is not trying to trade for resource types they are also offering.</li>
+     * </ol>
      *
      * @param offeredResources A list of {@link TileType} representing the resources the player is offering.
      * @param desiredResources A list of {@link TileType} representing the resources the player wishes to receive.
-     * @return {@code true} if the trade is valid according to this port's rules, {@code false} otherwise.
+     * @return {@code true} if the trade is valid according to all rules, {@code false} otherwise.
      */
-    public abstract boolean canTrade(List<TileType> offeredResources, List<TileType> desiredResources);
+    public boolean canTrade(List<TileType> offeredResources, List<TileType> desiredResources) {
+        // 1. Basic trade ratios (includes check for empty lists)
+        if (tradeRatioIsInvalid(offeredResources, desiredResources)) {
+            return false;
+        }
+
+        // 2. Port-specific rules
+        if (!arePortSpecificRulesSatisfied(offeredResources, desiredResources)) {
+            return false;
+        }
+
+        // 3. No self-trading (offering and desiring the same resource type)
+        return isNotTradingForOfferedResources(offeredResources, desiredResources);
+    }
+
+    /**
+     * Abstract method to be implemented by subclasses ({@link GeneralPort}, {@link SpecificResourcePort})
+     * to validate trade rules that are specific to that type of port.
+     * <br>
+     * This method is called by {@link #canTrade(List, List)} after general ratio checks
+     * but before checking for self-trading.
+     *
+     * @param offeredResources A list of {@link TileType} representing the resources the player is offering.
+     * @param desiredResources A list of {@link TileType} representing the resources the player wishes to receive
+     *                         (often not directly used by this specific check but provided for consistency).
+     * @return {@code true} if the port-specific rules are satisfied for the given trade, {@code false} otherwise.
+     */
+    public abstract boolean arePortSpecificRulesSatisfied(List<TileType> offeredResources, List<TileType> desiredResources);
 
     /**
      * Checks if the fundamental trade ratios of a proposed trade are invalid.
@@ -83,18 +110,15 @@ public abstract class Port implements Placable {
         return (offeredResources.size() / this.inputResourceAmount) != desiredResources.size();
     }
 
-    // fixme why are trading checks part of the port? and why is the description focused on players not part of the impl
-    //  extract trading logic into trades and dont focus on players if they are not part of the concepts here
-    //  eg, "checks if the offered and desired resources share the same type which makes a trade invalid"
-    //  avoid negation in checks for readability, generally improve the naming of trading checks
     /**
-     * Checks if the player is attempting to acquire any resource types that they are also offering.
-     * A player cannot trade a resource for the same type of resource at a port.
+     * Checks if any of the desired resource types are also present in the offered resources.
+     * A trade is generally invalid if an entity attempts to exchange a resource for the same type of resource
+     * through a port (e.g., offering Wood to receive Wood).
      *
      * @param offeredResources The list of resources being offered.
      * @param desiredResources The list of resources being desired.
-     * @return {@code true} if the player is not trying to obtain a resource type they are also offering,
-     * {@code false} otherwise.
+     * @return {@code true} if there is no overlap between offered and desired resource types (i.e., not trading for offered resources),
+     * {@code false} if an overlap exists (attempting to trade a resource for itself) or if either list is empty.
      */
     protected boolean isNotTradingForOfferedResources(List<TileType> offeredResources, List<TileType> desiredResources) {
         if (Util.isEmpty(offeredResources) || Util.isEmpty(desiredResources)) {
@@ -118,61 +142,82 @@ public abstract class Port implements Placable {
             return;
         }
 
-        double[] sp1Coords = settlementPosition1.getCoordinates();
-        double[] settlementPosition2Coords = settlementPosition2.getCoordinates();
-        // fixme reuse custom transform data types here
-        //  consider https://commons.apache.org/proper/commons-math/javadocs/api-3.6.1/org/apache/commons/math3/geometry/euclidean/twod/Vector2D.html
-        //  for your computations
-        double x1 = sp1Coords[0];
-        double y1 = sp1Coords[1];
-        double x2 = settlementPosition2Coords[0];
-        double y2 = settlementPosition2Coords[1];
+        // It's good practice to check if positions have valid coordinates.
+        double[] sp1CoordsArray = settlementPosition1.getCoordinates();
+        double[] sp2CoordsArray = settlementPosition2.getCoordinates();
 
-        // Step 1: Midpoint
-        double midX = (x1 + x2) / 2;
-        double midY = (y1 + y2) / 2;
+        // --- Existing Coordinate Extraction ---
+        double x1 = sp1CoordsArray[0];
+        double y1 = sp1CoordsArray[1];
+        double x2 = sp2CoordsArray[0];
+        double y2 = sp2CoordsArray[1];
 
-        // Step 2: Coastline Vector
+        // --- Step 1: Midpoint of the two settlement positions ---
+        double midX = (x1 + x2) / 2.0;
+        double midY = (y1 + y2) / 2.0;
+
+        // --- Step 2: Vector representing the coastline segment between settlements ---
         double coastVecX = x2 - x1;
         double coastVecY = y2 - y1;
 
-        // Step 3: Port Rotation
-        this.portRotation = Math.atan2(coastVecY, coastVecX);
+        // --- Step 3: Port Structure Rotation ---
+        // The port structure itself (e.g., the dock building) aligns with the coastline.
+        double calculatedPortRotation = Math.atan2(coastVecY, coastVecX);
 
-        // Step 4 & 5: Outward Normal Vector
-        double normalX = -coastVecY; // Initial perpendicular
+        // --- Step 4 & 5: Outward Normal Vector ---
+        // This vector points perpendicularly outwards from the coastline,
+        // determining the direction in which the port structure extends from the coast.
+        double normalX = -coastVecY; // Initial perpendicular vector (rotated 90 degrees counter-clockwise)
         double normalY = coastVecX;
 
-        if ((normalX * midX + normalY * midY) < 0) { // Dot product
-            normalX = -normalX; // Flip if pointing inward
+        // Ensure the normal vector points "outward" from the general center of the board. (0, 0)
+        if ((normalX * midX + normalY * midY) < 0) { // Dot product of normal with midpoint's position vector
+            normalX = -normalX; // Flip normal if it points inward towards the origin
             normalY = -normalY;
         }
 
+        // Normalize the outward normal vector
         double lengthNormal = Math.sqrt(normalX * normalX + normalY * normalY);
         double unitNormalX = 0;
         double unitNormalY = 0;
-        if (lengthNormal > 0.0001) {
+        if (lengthNormal > 0.0001) { // Avoid division by zero for very short (or zero length) coastlines
             unitNormalX = normalX / lengthNormal;
             unitNormalY = normalY / lengthNormal;
         }
 
-        // Step 6: Port Structure Position
-        this.portCenterX = midX + unitNormalX * PORT_DISTANCE;
-        this.portCenterY = midY + unitNormalY * PORT_DISTANCE;
+        // --- Step 6: Port Structure Position (Center of the port building) ---
+        // Position the port structure along the unit normal vector, at PORT_DISTANCE from the midpoint.
+        double currentPortCenterX = midX + unitNormalX * PORT_DISTANCE;
+        double currentPortCenterY = midY + unitNormalY * PORT_DISTANCE;
 
-        // Step 7: Bridge 1 (from settlementPosition1 to portCenter)
-        double vecSp1ToPortX = this.portCenterX - x1;
-        double vecSp1ToPortY = this.portCenterY - y1;
-        this.bridge1Rotation = Math.atan2(vecSp1ToPortY, vecSp1ToPortX);
-        this.bridgeX1 = (x1 + this.portCenterX) / 2;
-        this.bridgeY1 = (y1 + this.portCenterY) / 2;
+        // Assign the calculated transform to the port structure
+        this.portStructureTransform = new Transform(currentPortCenterX, currentPortCenterY, calculatedPortRotation);
 
-        // Step 7: Bridge 2 (from settlementPosition2 to portCenter)
-        double vecSettlementPosition2ToPortX = this.portCenterX - x2;
-        double vecSettlementPosition2ToPortY = this.portCenterY - y2;
-        this.bridge2Rotation = Math.atan2(vecSettlementPosition2ToPortY, vecSettlementPosition2ToPortX);
-        this.bridgeX2 = (x2 + this.portCenterX) / 2;
-        this.bridgeY2 = (y2 + this.portCenterY) / 2;
+        // --- Step 7: Bridge 1 Transform (Connecting settlementPosition1 to port structure) ---
+        // Vector from settlement 1 to the port structure's center
+        double vecSp1ToPortX = currentPortCenterX - x1;
+        double vecSp1ToPortY = currentPortCenterY - y1;
+        // Rotation of bridge 1 aligns with this vector
+        double calculatedBridge1Rotation = Math.atan2(vecSp1ToPortY, vecSp1ToPortX);
+        // Midpoint of bridge 1
+        double currentBridge1X = (x1 + currentPortCenterX) / 2.0;
+        double currentBridge1Y = (y1 + currentPortCenterY) / 2.0;
+
+        // Assign the calculated transform to bridge 1
+        this.bridge1Transform = new Transform(currentBridge1X, currentBridge1Y, calculatedBridge1Rotation);
+
+        // --- Step 8: Bridge 2 Transform (Connecting settlementPosition2 to port structure) ---
+        // Vector from settlement 2 to the port structure's center
+        double vecSp2ToPortX = currentPortCenterX - x2;
+        double vecSp2ToPortY = currentPortCenterY - y2;
+        // Rotation of bridge 2 aligns with this vector
+        double calculatedBridge2Rotation = Math.atan2(vecSp2ToPortY, vecSp2ToPortX);
+        // Midpoint of bridge 2
+        double currentBridge2X = (x2 + currentPortCenterX) / 2.0;
+        double currentBridge2Y = (y2 + currentPortCenterY) / 2.0;
+
+        // Assign the calculated transform to bridge 2
+        this.bridge2Transform = new Transform(currentBridge2X, currentBridge2Y, calculatedBridge2Rotation);
     }
 
     /**
@@ -182,10 +227,9 @@ public abstract class Port implements Placable {
      */
     @Override
     public double[] getCoordinates() {
-        return new double[]{portCenterX, portCenterY};
+        return portStructureTransform.getCoordinatesArray();
     }
 
-    // fixme the port game object shouldnt know about how to serialize itself
     /**
      * Converts this port's state to a JSON representation.
      * Needs to be called by subClasses to add specific Information
@@ -194,34 +238,42 @@ public abstract class Port implements Placable {
      */
     @Override
     public ObjectNode toJson() {
+        JsonNodeFactory factory = JsonNodeFactory.instance;
         ObjectNode node = JsonNodeFactory.instance.objectNode();
         node.put("inputResourceAmount", this.inputResourceAmount); // e.g. 3 for 3:1
 
+        // Create a parent node for all visual/transformational aspects of the port
+        ObjectNode portNode = node.putObject("portVisuals");
 
-        ObjectNode portNode = node.putObject("portStructure");
-        portNode.putObject("port")
-                .put("x", this.portCenterX)
-                .put("y", this.portCenterY)
-                .put("rotation", this.portRotation);
-        portNode.putObject("bridge1")
-                .put("x", this.bridgeX1)
-                .put("y", this.bridgeY1)
-                .put("rotation", this.bridge1Rotation);
-        portNode.putObject("bridge2")
-                .put("x", this.bridgeX2)
-                .put("y", this.bridgeY2)
-                .put("rotation", this.bridge2Rotation);
+        // Add the transform for the main port structure
+        // The toJson method in the Transform record will handle its own serialization
+        portNode.set("portTransform", this.portStructureTransform.toJson(factory));
 
-        
+        // Add the transform for the first bridge
+        portNode.set("bridge1Transform", this.bridge1Transform.toJson(factory));
+
+        // Add the transform for the second bridge
+        portNode.set("bridge2Transform", this.bridge2Transform.toJson(factory));
+
+        // Include IDs of associated settlement positions if they exist
         if (settlementPosition1 != null && settlementPosition2 != null) {
             portNode.put("settlementPosition1Id", settlementPosition1.getId());
             portNode.put("settlementPosition2Id", settlementPosition2.getId());
         }
-        
+
+
+        if (settlementPosition1 != null && settlementPosition2 != null) {
+            portNode.put("settlementPosition1Id", settlementPosition1.getId());
+            portNode.put("settlementPosition2Id", settlementPosition2.getId());
+        }
+
         return node;
     }
 
     public List<SettlementPosition> getSettlementPositions() {
+        if (settlementPosition1 == null || settlementPosition2 == null) {
+            return List.of(); // Or throw an exception if they should always be set
+        }
         return List.of(settlementPosition1, settlementPosition2);
     }
 }
