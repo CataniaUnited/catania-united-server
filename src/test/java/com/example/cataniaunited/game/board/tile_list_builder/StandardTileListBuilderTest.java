@@ -137,6 +137,13 @@ class StandardTileListBuilderTest {
     }
 
     @Test
+    void buildTilesThrowsExceptionIfNotConfiguredAndTileListIsSetToNull() {
+        builder.reset();
+        builder.tileList = null;
+        assertThrows(IllegalStateException.class, () -> builder.buildTiles(), "buildTiles should throw Exception if not configured");
+    }
+
+    @Test
     void shuffleTilesDoesNotChangeListContentOrSize() {
         builder.buildTiles();
         // Create copy *directly* from internal list
@@ -329,6 +336,14 @@ class StandardTileListBuilderTest {
     void calculateTilePositionsThrowsExceptionIfNotConfigured() {
         builder.reset();
         assertThrows(IllegalStateException.class, () -> builder.calculateTilePositions(), "should throw exception if the builder is not configured");
+    }
+
+    @Test
+    void calculateTilePositionsThrowsExceptionIfIdsNotBuilt() {
+        builder.buildTiles();
+        builder.addValues();
+        builder.shuffleTiles();
+        assertThrows(IllegalStateException.class, () -> builder.calculateTilePositions(), "should throw exception if tiles are not build");
     }
 
     @Test

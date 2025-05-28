@@ -273,7 +273,7 @@ public abstract class Port implements Placable {
 
     public List<SettlementPosition> getSettlementPositions() {
         if (settlementPosition1 == null || settlementPosition2 == null) {
-            return List.of(); // Or throw an exception if they should always be set
+            return List.of();
         }
         return List.of(settlementPosition1, settlementPosition2);
     }

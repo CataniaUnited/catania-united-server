@@ -108,10 +108,6 @@ public class StandardTileListBuilder implements TileListBuilder {
                 .filter(type -> type != TileType.WASTE)
                 .toList();
 
-        if (resourceProducingTypes.isEmpty()) {
-            throw new IllegalStateException("Requires at least one non-WASTE tile type to be defined in TileType enum.");
-        }
-
         // Add one WASTE tile (Desert)
         tileList.add(new Tile(TileType.WASTE));
 
@@ -164,7 +160,7 @@ public class StandardTileListBuilder implements TileListBuilder {
      */
     @Override
     public void shuffleTiles() {
-        if (this.tileList == null || this.tileList.isEmpty()) {
+        if (Util.isEmpty(tileList)) {
             throw new IllegalStateException("Tiles must be built before shuffling.");
         }
 
@@ -179,7 +175,7 @@ public class StandardTileListBuilder implements TileListBuilder {
      */
     @Override
     public void assignTileIds() {
-        if (this.tileList == null || this.tileList.isEmpty()) {
+        if (Util.isEmpty(tileList)) {
             throw new IllegalStateException("Tiles must be built before assigning IDs.");
         }
 
@@ -215,10 +211,6 @@ public class StandardTileListBuilder implements TileListBuilder {
         // Set coordinates of the center tile (index 0)
         tileList.get(0).setCoordinates(0, 0);
 
-        if (this.tileList.size() == 1) { // If the board has only one tile
-            return;
-        }
-
         // Initialize coordinates for the first few tiles in the "middle rows" of the first ring (layer 2 conceptually)
         // These serve as anchors for subsequent calculations.
         // Arguments: (startingLayerForSubRoutine, startingTileIndex (anchor), irregularTileIndex (tile to position),
@@ -252,7 +244,7 @@ public class StandardTileListBuilder implements TileListBuilder {
      */
     @Override
     public List<Tile> getTileList() {
-        if (this.tileList == null || this.tileList.isEmpty()) {
+        if (Util.isEmpty(tileList)) {
             throw new IllegalStateException("Tiles must be built before returning coordinates.");
         }
 
@@ -267,9 +259,6 @@ public class StandardTileListBuilder implements TileListBuilder {
      * @return A list of integers representing the production numbers, ready to be shuffled and assigned.
      */
     private List<Integer> generateShuffledProductionValues(int numberOfValuesToGenerate) {
-        if (numberOfValuesToGenerate <= 0) {
-            return new ArrayList<>(); // Return empty if no values are needed
-        }
 
         // Calculate how many times each distinct production number (2-6, 8-12) should appear at a minimum.
         // There are 10 such distinct numbers.

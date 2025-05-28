@@ -149,6 +149,29 @@ class PortTest {
     }
 
     @Test
+    void getSettlementPositionShouldReturnEmptyListIfNoneOfTheSettlementPositionsAreSet(){
+        assertEquals(List.of(), port.getSettlementPositions(), "getSettlementPosition should return empty list if not both settlements are set");
+    }
+
+    @Test
+    void getSettlementPositionShouldReturnEmptyListIfOneOfTheSettlementPositionsIsNotSet(){
+        port.setAssociatedSettlements(mockSettlement1, null);
+        assertEquals(List.of(), port.getSettlementPositions(), "getSettlementPosition should return empty list if not both settlements are set");
+    }
+
+    @Test
+    void getSettlementPositionShouldReturnEmptyListIfTheSecondOneOfTheSettlementPositionsIsNotSet(){
+        port.setAssociatedSettlements(null, mockSettlement2);
+        assertEquals(List.of(), port.getSettlementPositions(), "getSettlementPosition should return empty list if not both settlements are set");
+    }
+
+    @Test
+    void getSettlementPositionShouldReturnCorrectListIfAllSettlementsAreSet(){
+        port.setAssociatedSettlements(mockSettlement1, mockSettlement2);
+        assertEquals(List.of(mockSettlement1, mockSettlement2), port.getSettlementPositions(), "getSettlementPosition should return correct list");
+    }
+
+    @Test
     void getCoordinatesShouldReturnCoordinatesFromManuallySetTransform() {
         port.portStructureTransform = new Transform(12.3, 45.6, 0.0);
         assertArrayEquals(new double[]{12.3, 45.6}, port.getCoordinates(), "getCoordinates did not return the set port center.");

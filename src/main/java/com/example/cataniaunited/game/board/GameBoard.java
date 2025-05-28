@@ -65,7 +65,7 @@ public class GameBoard {
         long endtime = System.nanoTime();
 
         // Something went wrong
-        if (this.tileList == null || this.settlementPositionGraph == null || this.roadList == null) {
+        if (this.tileList == null || this.settlementPositionGraph == null || this.roadList == null || this.portList == null) {
             logger.errorf("Board generation failed for %d players.", playerCount);
             throw new IllegalStateException("Board generation resulted in null lists.");
         }
@@ -189,10 +189,6 @@ public class GameBoard {
      * @throws InsufficientResourcesException if the player does not have enough resources.
      */
     private void removeRequiredResources(Player player, Buildable buildable) throws GameException {
-        if (player == null) {
-            throw new GameException("Player must not be null");
-        }
-
         for (Map.Entry<TileType, Integer> entry : buildable.getRequiredResources().entrySet()) {
             TileType tileType = entry.getKey();
             Integer amount = entry.getValue();

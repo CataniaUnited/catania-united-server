@@ -3,7 +3,6 @@ package com.example.cataniaunited.game.board;
 import com.example.cataniaunited.game.board.ports.GeneralPort;
 import com.example.cataniaunited.game.board.ports.Port;
 import com.example.cataniaunited.game.board.ports.SpecificResourcePort;
-import com.example.cataniaunited.game.board.tile_list_builder.StandardTileListBuilder;
 import com.example.cataniaunited.game.board.tile_list_builder.Tile;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.example.cataniaunited.util.CatanBoardUtils;
@@ -125,7 +124,7 @@ public class GraphBuilder {
      */
     private void createFirstLayerRing() {
         int nodesInRing = calculateNodesInRing(1); // Should be 6
-        if (tileList.isEmpty()) throw new IllegalStateException("Tile list is empty, cannot create layer 1.");
+
         Tile centerTile = tileList.get(0);
 
         SettlementPosition firstNode = null;
@@ -382,9 +381,6 @@ public class GraphBuilder {
 
         // 2. Calculate the total number of ports needed for this board size
         int totalPortCount = calculateTargetPortCount(numberOfCoastalSettlements);
-        if (totalPortCount == 0) {
-            return ports; // No ports to place
-        }
 
         // 3. Determine the mix of general and specific ports
         PortDistribution distribution = determinePortDistribution(totalPortCount);
@@ -474,14 +470,6 @@ public class GraphBuilder {
      *                               Should not be empty if count > 0.
      */
     private void addSpecificPorts(List<Port> portsToAddToList, int count, List<TileType> availableResourceTypes) {
-        if (count > 0 && (availableResourceTypes == null || availableResourceTypes.isEmpty())) {
-            // This should not happen if getShuffledResourceTypesForPorts() works correctly
-            // and TileType enum has non-WASTE types.
-            System.err.println("Error: Cannot create specific ports without available resource types.");
-            // Or throw an IllegalStateException
-            return;
-        }
-
         for (int i = 0; i < count; i++) {
             // Cycle through the shuffled resource types for port assignment.
             // E.g., if specificPortCount is 7 and 5 resource types: WOOD,CLAY,SHEEP,WHEAT,ORE,WOOD,CLAY
@@ -496,9 +484,8 @@ public class GraphBuilder {
         int maximumPositionsPerPortForLargeBoards = 5;
 
         // --- Determine Target Port Count ---
+        // Magic Numbers Determined by Playtesting
         switch (sizeOfBoard) {
-            case 1:
-                return 0;
             case 2: // 7 tiles, 18 coastal settlements
                 targetPortCount = 5;
                 break;
@@ -606,7 +593,7 @@ public class GraphBuilder {
                 // It needs one more reference point, typically an already-positioned neighbor.
                 addCoordinatesToNodeWith2TilesAnd1Neighbor(currentNode);
 
-            } else if (associatedTilesCount == 1) {
+            } else { // associatedTilesCount == 1
                 // Scenario C: Node is associated with 1 tile.
                 // It needs two more reference points, typically two already-positioned neighbors.
                 // The logic here tries to ensure neighbors are positioned first if possible.
@@ -767,10 +754,9 @@ public class GraphBuilder {
      * Calculates the total number of tiles on the board up to and including a specified layer.
      *
      * @param layer The layer number (1-based, where 1 is the center tile only).
-     * @return The total number of tiles up to and including that layer. Returns 0 if layer is non-positive.
+     * @return The total number of tiles up to and including that layer.
      */
     private static int calculateTilesInBoardUpToLayer(int layer) {
-        if (layer <= 0) return 0;
         int n = layer - 1; // n = number of rings around center (0-based)
         return 3 * n * (n + 1) + 1;
     }
@@ -780,10 +766,9 @@ public class GraphBuilder {
      * The formula is 6 * (2 * layer - 1).
      *
      * @param layer The layer number (1-based).
-     * @return The number of settlement positions in that specific ring. Returns 0 if layer is non-positive.
+     * @return The number of settlement positions in that specific ring.
      */
     private static int calculateNodesInRing(int layer) {
-        if (layer <= 0) return 0;
         return 6 * (2 * layer - 1);
     }
 
