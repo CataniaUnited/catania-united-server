@@ -2,6 +2,9 @@ package com.example.cataniaunited.lobby;
 
 import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.exception.ui.DiceRollException;
+import com.example.cataniaunited.exception.ui.InvalidTurnException;
+import com.example.cataniaunited.fi.LobbyAction;
 import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerColor;
 import com.example.cataniaunited.player.PlayerService;
@@ -96,18 +99,16 @@ public class LobbyServiceImpl implements LobbyService {
      */
     @Override
     public boolean joinLobbyByCode(String lobbyId, String player) {
-        try{
+        try {
             Lobby lobby = getLobbyById(lobbyId);
-            if (lobby != null) {
-                PlayerColor assignedColor = setPlayerColor(lobby, player);
-                if (assignedColor == null) {
-                    return false;
-                }
-                lobby.addPlayer(player);
-                logger.infof("Player %s joined lobby %s with color %s", player, lobbyId, assignedColor);
-                return true;
+            PlayerColor assignedColor = setPlayerColor(lobby, player);
+            if (assignedColor == null) {
+                return false;
             }
-        } catch (GameException ge){
+            lobby.addPlayer(player);
+            logger.infof("Player %s joined lobby %s with color %s", player, lobbyId, assignedColor);
+            return true;
+        } catch (GameException ge) {
             logger.errorf(ge, "Invalid or expired lobby ID: %s", lobbyId);
         }
         return false;
@@ -135,20 +136,16 @@ public class LobbyServiceImpl implements LobbyService {
      * Restores the player's color to the available pool if they had one.
      */
     @Override
-    public void removePlayerFromLobby(String lobbyId, String player) {
-        Lobby lobby = lobbies.get(lobbyId);
-        if (lobby != null) {
-            PlayerColor color = lobby.getPlayerColor(player);
-            if (color != null) {
-                lobby.restoreColor(color);
-                logger.infof("Color %s returned to pool from player %s", color, player);
-            }
-            lobby.removePlayer(player);
-            lobby.removePlayerColor(player);
-            logger.infof("Player %s removed from lobby %s", player, lobbyId);
-        } else {
-            logger.warnf("Attempted to remove player from non-existing lobby: %s", lobbyId);
+    public void removePlayerFromLobby(String lobbyId, String player) throws GameException {
+        Lobby lobby = getLobbyById(lobbyId);
+        PlayerColor color = lobby.getPlayerColor(player);
+        if (color != null) {
+            lobby.restoreColor(color);
+            logger.infof("Color %s returned to pool from player %s", color, player);
         }
+        lobby.removePlayer(player);
+        lobby.removePlayerColor(player);
+        logger.infof("Player %s removed from lobby %s", player, lobbyId);
     }
 
     /**
@@ -164,15 +161,42 @@ public class LobbyServiceImpl implements LobbyService {
         return lobby;
     }
 
+    private void executeLobbyCheck(String lobbyId, LobbyAction action) throws GameException {
+        Lobby lobby = getLobbyById(lobbyId);
+        action.execute(lobby);
+    }
+
     /**
      * {@inheritDoc}
      *
-     * @throws GameException if the lobby is not found.
+     * @throws GameException if the lobby is not found or it is not the players turn.
      */
     @Override
-    public boolean isPlayerTurn(String lobbyId, String playerId) throws GameException {
+    public void checkPlayerTurn(String lobbyId, String playerId) throws GameException {
+        executeLobbyCheck(lobbyId, lobby -> checkPlayerTurn(lobby, playerId));
+    }
+
+    private void checkPlayerTurn(Lobby lobby, String playerId) throws GameException {
+        if (!lobby.isPlayerTurn(playerId)) {
+            logger.errorf("It is not the players turn: playerId=%s, lobbyId=%s", playerId, lobby.getLobbyId());
+            throw new InvalidTurnException();
+        }
+    }
+
+    @Override
+    public void checkPlayerDiceRoll(String lobbyId, String playerId) throws GameException {
+        executeLobbyCheck(lobbyId, lobby -> {
+            checkPlayerTurn(lobby, playerId);
+            if (!lobby.mayRollDice(playerId)) {
+                throw new DiceRollException();
+            }
+        });
+    }
+
+    @Override
+    public void updateLatestDiceRoll(String lobbyId, String playerId) throws GameException {
         Lobby lobby = getLobbyById(lobbyId);
-        return lobby.isPlayerTurn(playerId);
+        lobby.updateLatestDiceRollOfPlayer(playerId);
     }
 
     /**
@@ -219,6 +243,13 @@ public class LobbyServiceImpl implements LobbyService {
             logger.errorf(ge, "Error notifying players: lobbyId = %s, error = %s", lobbyId, ge.getMessage());
             return Uni.createFrom().failure(ge);
         }
+    }
+
+    @Override
+    public String nextTurn(String lobbyId, String playerId) throws GameException {
+        Lobby lobby = getLobbyById(lobbyId);
+        lobby.nextPlayerTurn();
+        return lobby.getActivePlayer();
     }
 
 

@@ -1,7 +1,5 @@
 package com.example.cataniaunited.game;
 
-import com.example.cataniaunited.dto.MessageDTO;
-import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.game.board.ports.Port;
@@ -10,19 +8,11 @@ import com.example.cataniaunited.lobby.LobbyService;
 import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerColor;
 import com.example.cataniaunited.player.PlayerService;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -72,7 +62,7 @@ public class GameService {
      *                       or other game rules are violated.
      */
     public void placeSettlement(String lobbyId, String playerId, int settlementPositionId) throws GameException {
-        checkPlayerTurn(lobbyId, playerId);
+        lobbyService.checkPlayerTurn(lobbyId, playerId);
         GameBoard gameboard = getGameboardByLobbyId(lobbyId);
         PlayerColor color = lobbyService.getPlayerColor(lobbyId, playerId);
         gameboard.placeSettlement(playerService.getPlayerById(playerId), color, settlementPositionId);
@@ -95,7 +85,7 @@ public class GameService {
      *                       no settlement exists, or other game rules are violated.
      */
     public void upgradeSettlement(String lobbyId, String playerId, int settlementPositionId) throws GameException {
-        checkPlayerTurn(lobbyId, playerId);
+        lobbyService.checkPlayerTurn(lobbyId, playerId);
         GameBoard gameboard = getGameboardByLobbyId(lobbyId);
         PlayerColor color = lobbyService.getPlayerColor(lobbyId, playerId);
         gameboard.placeCity(playerService.getPlayerById(playerId), color, settlementPositionId);
@@ -112,7 +102,7 @@ public class GameService {
      *                       or other game rules are violated.
      */
     public void placeRoad(String lobbyId, String playerId, int roadId) throws GameException {
-        checkPlayerTurn(lobbyId, playerId);
+        lobbyService.checkPlayerTurn(lobbyId, playerId);
         GameBoard gameboard = getGameboardByLobbyId(lobbyId);
         PlayerColor color = lobbyService.getPlayerColor(lobbyId, playerId);
         gameboard.placeRoad(playerService.getPlayerById(playerId), color, roadId);
@@ -123,39 +113,16 @@ public class GameService {
      * This involves creating a game board, setting player order, and notifying players.
      *
      * @param lobbyId The ID of the lobby where the game is to be started.
-     * @return A {@link MessageDTO} of type GAME_STARTED containing initial game state (player order, game board).
      * @throws GameException if the game cannot be started (e.g., already started, not enough players).
      */
-    public MessageDTO startGame(String lobbyId) throws GameException {
+    public void startGame(String lobbyId, String playerId) throws GameException {
         Lobby lobby = lobbyService.getLobbyById(lobbyId);
-
-        if (lobby.isGameStarted())
-            throw new GameException("Game already started");
-        if (lobby.getPlayers().size() < 2)
-            throw new GameException("Need at least 2 players");
-
-        GameBoard board = createGameboard(lobbyId);
-
-        List<String> order = new ArrayList<>(lobby.getPlayers());
-        Collections.shuffle(order);
-        lobby.setPlayerOrder(order);
-        lobby.setActivePlayer(order.get(0));
-        lobby.setGameStarted(true);
-
-        ObjectNode payload = JsonNodeFactory.instance.objectNode();
-        payload.putPOJO("playerOrder", order);
-        payload.set("gameboard", board.getJson());
-
-        MessageDTO dto = new MessageDTO(
-                MessageType.GAME_STARTED, null, lobbyId, payload);
-
-        order.stream()
-                .map(playerService::getPlayerById)
-                .filter(Objects::nonNull)
-                .forEach(p -> p.sendMessage(dto));
-
-        logger.infof("Game started in lobby: lobbyId=%s, order=%s", lobbyId, order);
-        return dto;
+        if (!lobby.canStartGame(playerId)) {
+            throw new GameException("Starting of game failed");
+        }
+        createGameboard(lobbyId);
+        lobby.startGame();
+        logger.infof("Game started in lobby: lobbyId=%s, order=%s", lobbyId, lobby.getPlayerOrder());
     }
 
     /**
@@ -187,19 +154,6 @@ public class GameService {
     }
 
     /**
-     * Checks if it is currently the specified player's turn in the given lobby.
-     *
-     * @param lobbyId  The ID of the lobby.
-     * @param playerId The ID of the player.
-     * @throws GameException if it is not the player's turn or if the lobby/player is not found.
-     */
-    private void checkPlayerTurn(String lobbyId, String playerId) throws GameException {
-        if (!lobbyService.isPlayerTurn(lobbyId, playerId)) {
-            throw new GameException("It is not the players turn: playerId=%s, lobbyId=%s", playerId, lobbyId);
-        }
-    }
-
-    /**
      * Adds a game board to the internal map, associating it with a lobby ID.
      *
      * @param lobbyId   The ID of the lobby.
@@ -218,43 +172,12 @@ public class GameService {
      * @return An {@link ObjectNode} containing the results of the two dice and their total.
      * @throws GameException if the game board for the lobby is not found.
      */
-    public ObjectNode rollDice(String lobbyId) throws GameException {
-        return getGameboardByLobbyId(lobbyId).rollDice();
-    }
-
-    /**
-     * Broadcasts a game win message to all players in the lobby.
-     * The message includes the winner's username and a leaderboard.
-     *
-     * @param lobbyId        The ID of the lobby where the game was won.
-     * @param winnerPlayerId The ID of the player who won the game.
-     * @return A Uni emitting a {@link MessageDTO} of type GAME_WON.
-     */
-    public Uni<MessageDTO> broadcastWin(String lobbyId, String winnerPlayerId) {
-        ObjectNode message = JsonNodeFactory.instance.objectNode();
-        Player winner = playerService.getPlayerById(winnerPlayerId);
-        message.put("winner", winner.getUsername());
-
-        ArrayNode leaderboard = message.putArray("leaderboard");
-        try {
-            lobbyService.getLobbyById(lobbyId).getPlayers().stream()
-                    .map(playerService::getPlayerById)
-                    .filter(Objects::nonNull)
-                    .sorted(Comparator.comparingInt(Player::getVictoryPoints).reversed())
-                    .forEach(p -> {
-                        ObjectNode entry = leaderboard.addObject();
-                        entry.put("username", p.getUsername());
-                        entry.put("vp", p.getVictoryPoints());
-                    });
-        } catch (GameException e) {
-            logger.errorf("Failed to fetch players for lobby %s: %s", lobbyId, e.getMessage());
-            message.put("error", "Failed to build leaderboard");
-        }
-
-        MessageDTO messageDTO = new MessageDTO(MessageType.GAME_WON, winnerPlayerId, lobbyId, message);
-        logger.infof("Player %s has won the game in lobby %s", winnerPlayerId, lobbyId);
-        return lobbyService.notifyPlayers(lobbyId, messageDTO);
-
+    public ObjectNode rollDice(String lobbyId, String playerId) throws GameException {
+        lobbyService.checkPlayerDiceRoll(lobbyId, playerId);
+        GameBoard gameboard = getGameboardByLobbyId(lobbyId);
+        ObjectNode result = gameboard.rollDice();
+        lobbyService.updateLatestDiceRoll(lobbyId, playerId);
+        return result;
     }
 
     /**
