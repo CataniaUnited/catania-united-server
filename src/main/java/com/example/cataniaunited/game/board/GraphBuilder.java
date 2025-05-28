@@ -239,14 +239,22 @@ public class GraphBuilder {
     }
 
     /**
-     * Post-processing step after initial layer creation.
-     * Finds {@link SettlementPosition} nodes that are associated with only two tiles
-     * (typically inner nodes bordering an outer layer) and assigns them a third tile.
-     * The third tile is determined by finding a common tile among the node's neighbors
+     * Post-processing step after initial layer creation by {@link #createLayerStructure(int)}.
+     * This method iterates through the "inner" settlement positions (those not on the absolute
+     * outermost layer of the board) to ensure each is associated with exactly three tiles.
+     * <br>
+     * During {@link #createSubsequentLayerRing(int)}, some inner nodes might initially be
+     * associated with only two tiles (e.g., those bordering a newly added outer layer tile).
+     * This method finds such "incomplete" nodes and assigns them their missing third tile.
+     * The third tile is determined by identifying a common tile among the node's neighbors
      * that the node itself is not yet associated with.
+     * <br>
+     * Nodes on the absolute outermost layer are not processed by this method, as their
+     * tile associations are finalized during their creation or coordinate calculation,
+     * and they might naturally have fewer than 3 associated tiles if they are on the
+     * very edge of the board map.
      */
     private void assignTilesToIncompleteNodes() {
-        // Since we insert tiles of the outer layer into nodes of the inner layers, we don't need to check the last layer
         SettlementPosition currentNode;
         List<SettlementPosition> neighbours;
         List<Tile> currentTiles;
@@ -259,33 +267,38 @@ public class GraphBuilder {
             currentNode = nodeList.get(i);
             currentTiles = currentNode.getTiles(); // get amount of tiles of this node
 
-            if (currentTiles.size() == 3){
-                continue; // if == 3 continue // fixme why, also this comment does not add any information
+            // If the current settlement position is already associated with 3 tiles,
+            // it's considered complete for the purpose of this method.
+            // No further action is needed, so skip to the next settlement position.
+            if (currentTiles.size() == 3) {
+                continue;
             }
 
-            // else < 3
-
-            // get tiles of All Connected Nodes (3) if 2 outer layer or something went wrong -> exception
+            // If currentTiles.size() < 3, the node is "incomplete" and needs its third tile.
+            // The logic below attempts to find and assign this missing tile.
 
             neighbours = currentNode.getNeighbours();
 
             // add the tile that is connected to two of the three nodes but node to you.
             List<Tile> neighbourTiles = new ArrayList<>();
-            for(SettlementPosition neighbour: neighbours){
-                neighbourTiles.addAll(neighbour.getTiles()); // add all Possible Tiles !!!including duplicates!!!
+            for (SettlementPosition neighbour : neighbours) {
+                neighbourTiles.addAll(neighbour.getTiles()); // Add all tiles from all neighbours. Duplicates are expected.
             }
 
-            neighbourTiles.removeAll(currentTiles); // remove Tiles already appended to this node
+            // Remove tiles that are already associated with the current node.
+            // The remaining tiles in 'neighbourTiles' are candidates for the missing third tile.
+            neighbourTiles.removeAll(currentTiles);
 
-            //get duplicated element left
+            // The missing third tile should be a tile that is common to (at least) two of
+            // the current node's neighbors but not yet to the current node itself.
+            // This means it should appear as a duplicate in the filtered 'neighbourTiles' list.
+
             Tile tileToAdd = findDuplicateTile(neighbourTiles);
 
             currentNode.addTile(tileToAdd);
 
             neighbourTiles.clear();
-
         }
-
     }
 
     /**
