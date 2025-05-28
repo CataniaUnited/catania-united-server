@@ -62,12 +62,8 @@ public class BuildingSite implements Placable, Subscriber<TileType> {
      */
     @Override
     public String toString() {
-        return String.format("BuildingSite{" +
-                "ID='" + id + '\'' +
-                ", (%s; %s)" +
-                ", tiles=" + tiles +
-                ", roads=" + roads +
-                '}', this.coordinates[0], this.coordinates[1]);
+        return String.format("BuildingSite{ID='%s', (%s; %s), tiles=%s, roads=%s}",
+                id, this.coordinates[0], this.coordinates[1], tiles, roads);
     }
 
     /**

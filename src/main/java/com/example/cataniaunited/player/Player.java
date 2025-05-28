@@ -25,8 +25,6 @@ import java.util.UUID;
  */
 public class Player {
 
-    private static final Logger LOG = Logger.getLogger(Player.class);
-
     private String username;
     private final String uniqueId;
     private final WebSocketConnection connection;

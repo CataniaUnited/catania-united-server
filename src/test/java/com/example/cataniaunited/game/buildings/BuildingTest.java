@@ -1,14 +1,11 @@
 package com.example.cataniaunited.game.buildings;
 
 import com.example.cataniaunited.exception.GameException;
-import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerColor;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Test;
-
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;

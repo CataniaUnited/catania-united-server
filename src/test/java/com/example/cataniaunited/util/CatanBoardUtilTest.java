@@ -1,6 +1,5 @@
 package com.example.cataniaunited.util;
 
-import com.example.cataniaunited.game.board.tile_list_builder.StandardTileListBuilder;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Constructor;
@@ -8,9 +7,12 @@ import java.lang.reflect.InvocationTargetException;
 
 import static com.example.cataniaunited.util.CatanBoardUtils.calculateAmountOfTilesForLayerK;
 import static com.example.cataniaunited.util.CatanBoardUtils.polarToCartesian;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public class CatanBoardUtilTest {
+class CatanBoardUtilTest {
     @Test
     void polarToCartesianConvertsCorrectly() {
         double r = 10.0;
