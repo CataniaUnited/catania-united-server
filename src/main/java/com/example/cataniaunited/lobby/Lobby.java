@@ -32,6 +32,7 @@ public class Lobby {
     private volatile boolean gameStarted = false; // Flag indicating if the game has started
     private int roundsPlayed = 0;
     private final Map<String, Integer> latestDiceRollOfPlayer = new ConcurrentHashMap<>();
+    private final Map<String, Boolean> readyState = new ConcurrentHashMap<>();
 
     /**
      * Constructs a new Lobby instance.
@@ -48,7 +49,6 @@ public class Lobby {
         Collections.addAll(availableColors, PlayerColor.values());
         players.add(hostPlayer);
         setPlayerColor(hostPlayer, assignAvailableColor());
-
     }
 
     /**
@@ -227,6 +227,7 @@ public class Lobby {
         logger.debugf("Trying to start game in lobby: lobbyId=%s, hostPlayer=%s, players = %s, isGameStarted = %s", lobbyId, hostPlayer, players, gameStarted);
         return hostPlayer.equals(requestingPlayer)
                 && players.size() >= 2
+                && players.stream().allMatch(this::isReady)
                 && !gameStarted;
     }
 
@@ -285,6 +286,7 @@ public class Lobby {
         this.gameStarted = false;
         this.activePlayer = null;
         this.playerOrder.clear();
+        this.readyState.clear();
         this.roundsPlayed = 0;
     }
 
@@ -316,5 +318,14 @@ public class Lobby {
     public void setPlayerOrder(List<String> order) {
         playerOrder.clear();
         playerOrder.addAll(order);
+    }
+
+    public void toggleReady(String playerId) {
+        boolean isReady = readyState.getOrDefault(playerId, false);
+        readyState.put(playerId, !isReady);
+    }
+
+    public boolean isReady(String playerId) {
+        return readyState.getOrDefault(playerId, false);
     }
 }

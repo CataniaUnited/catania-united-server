@@ -24,5 +24,6 @@ public enum MessageType {
     UPGRADE_SETTLEMENT,
     PLACE_ROAD,
     ROLL_DICE,
-    END_TURN
+    END_TURN,
+    SET_READY
 }

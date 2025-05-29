@@ -99,4 +99,6 @@ public interface LobbyService {
 
     String nextTurn(String lobbyId, String playerId) throws GameException;
 
+    void toggleReady(String lobbyId, String playerId) throws GameException;
+
 }

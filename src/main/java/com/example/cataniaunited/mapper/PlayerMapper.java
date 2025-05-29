@@ -33,7 +33,6 @@ public interface PlayerMapper {
     }
 
     default boolean isReady(Player player, @Context Lobby lobby) {
-        //TODO: Implement correctly
-        return false;
+        return lobby.isReady(player.getUniqueId());
     }
 }

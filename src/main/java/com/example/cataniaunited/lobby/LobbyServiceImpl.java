@@ -252,6 +252,12 @@ public class LobbyServiceImpl implements LobbyService {
         return lobby.getActivePlayer();
     }
 
+    @Override
+    public void toggleReady(String lobbyId, String playerId) throws GameException {
+        Lobby lobby = getLobbyById(lobbyId);
+        lobby.toggleReady(playerId);
+    }
+
 
     /**
      * {@inheritDoc}

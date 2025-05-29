@@ -70,6 +70,7 @@ public class GameMessageHandler {
                 case PLACE_ROAD -> placeRoad(message);
                 case ROLL_DICE -> handleDiceRoll(message);
                 case START_GAME -> handleStartGame(message);
+                case SET_READY -> setReady(message);
                 case ERROR, CONNECTION_SUCCESSFUL, CLIENT_DISCONNECTED, LOBBY_CREATED, LOBBY_UPDATED, PLAYER_JOINED,
                      GAME_BOARD_JSON, GAME_WON, DICE_RESULT, NEXT_TURN, GAME_STARTED ->
                         throw new GameException("Invalid client command");
@@ -333,6 +334,12 @@ public class GameMessageHandler {
         MessageDTO messageDTO = new MessageDTO(MessageType.GAME_WON, winnerPlayerId, lobbyId, players, message);
         logger.infof("Player %s has won the game in lobby %s", winnerPlayerId, lobbyId);
         return lobbyService.notifyPlayers(lobbyId, messageDTO);
+    }
+
+    Uni<MessageDTO> setReady(MessageDTO message) throws GameException {
+        lobbyService.toggleReady(message.getLobbyId(), message.getLobbyId());
+        var response = new MessageDTO(MessageType.LOBBY_UPDATED, message.getPlayer(), message.getLobbyId(), getLobbyPlayerInformation(message.getLobbyId()));
+        return lobbyService.notifyPlayers(message.getLobbyId(), response);
     }
 
     Map<String, PlayerInfo> getLobbyPlayerInformation(String lobbyId) throws GameException {
