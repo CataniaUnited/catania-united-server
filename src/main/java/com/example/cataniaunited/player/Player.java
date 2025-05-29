@@ -4,8 +4,6 @@ import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.exception.ui.InsufficientResourcesException;
 import com.example.cataniaunited.game.board.ports.Port;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.websockets.next.WebSocketConnection;
 import org.jboss.logging.Logger;
 
@@ -31,8 +29,6 @@ public class Player {
     HashMap<TileType, Integer> resources = new HashMap<>();
 
     final Set<Port> accessiblePorts = new HashSet<>();
-
-    private static final Logger logger = Logger.getLogger(Player.class);
 
     /**
      * Default constructor. Creates a player with a random username and a unique ID.
