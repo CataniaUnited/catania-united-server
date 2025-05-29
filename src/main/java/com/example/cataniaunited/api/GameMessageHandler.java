@@ -322,19 +322,14 @@ public class GameMessageHandler {
         Player winner = playerService.getPlayerById(winnerPlayerId);
         message.put("winner", winner.getUsername());
 
-        ArrayNode leaderboard = message.putArray("leaderboard");
-        Lobby lobby = lobbyService.getLobbyById(lobbyId);
-        lobby.getPlayers().stream()
-                .map(playerService::getPlayerById)
-                .filter(Objects::nonNull)
-                .sorted(Comparator.comparingInt(Player::getVictoryPoints).reversed())
-                .forEach(p -> {
-                    ObjectNode entry = leaderboard.addObject();
-                    entry.put("username", p.getUsername());
-                    entry.put("vp", p.getVictoryPoints());
-                });
-
         var players = getLobbyPlayerInformation(lobbyId);
+
+        //Build leaderboard
+        ArrayNode leaderboard = message.putArray("leaderboard");
+        players.values().stream()
+                .sorted(Comparator.comparingInt(PlayerInfo::victoryPoints).reversed())
+                .forEach(leaderboard::addPOJO);
+
         MessageDTO messageDTO = new MessageDTO(MessageType.GAME_WON, winnerPlayerId, lobbyId, players, message);
         logger.infof("Player %s has won the game in lobby %s", winnerPlayerId, lobbyId);
         return lobbyService.notifyPlayers(lobbyId, messageDTO);

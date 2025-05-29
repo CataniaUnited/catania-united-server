@@ -1234,21 +1234,31 @@ public class GameWebSocketTest {
 
     @Test
     void testPlaceSettlement_success_playerWins() throws Exception {
-        String playerId = "playerPSW";
+        String winnerPlayerId = "playerPSW";
+        String loserPlayerId = "playerLose";
         int settlementPositionId = 7;
 
-        String actualLobbyId = lobbyService.createLobby(playerId);
+        String actualLobbyId = lobbyService.createLobby(winnerPlayerId);
         assertNotNull(actualLobbyId);
         Lobby lobby = lobbyService.getLobbyById(actualLobbyId);
-        lobby.setActivePlayer(playerId);
+        lobby.setActivePlayer(winnerPlayerId);
 
-        doNothing().when(gameService).placeSettlement(actualLobbyId, playerId, settlementPositionId);
-        when(playerService.checkForWin(playerId)).thenReturn(true);
+        doNothing().when(gameService).placeSettlement(actualLobbyId, winnerPlayerId, settlementPositionId);
+        when(playerService.checkForWin(winnerPlayerId)).thenReturn(true);
 
         Player mockPlayer = mock(Player.class);
-        when(mockPlayer.getUsername()).thenReturn(playerId);
-        when(mockPlayer.getUniqueId()).thenReturn(playerId);
-        when(playerService.getPlayerById(playerId)).thenReturn(mockPlayer); // <-- Ensure this is how it's resolved
+        when(mockPlayer.getUsername()).thenReturn(winnerPlayerId);
+        when(mockPlayer.getUniqueId()).thenReturn(winnerPlayerId);
+        when(mockPlayer.getVictoryPoints()).thenReturn(10);
+        when(playerService.getPlayerById(winnerPlayerId)).thenReturn(mockPlayer); // <-- Ensure this is how it's resolved
+
+        Player mockPlayer2 = mock(Player.class);
+        when(mockPlayer2.getUsername()).thenReturn(loserPlayerId);
+        when(mockPlayer2.getUniqueId()).thenReturn(loserPlayerId);
+        when(mockPlayer2.getVictoryPoints()).thenReturn(8);
+        when(playerService.getPlayerById(loserPlayerId)).thenReturn(mockPlayer2);
+
+        lobbyService.joinLobbyByCode(lobby.getLobbyId(), loserPlayerId);
 
         List<String> receivedMessages = new CopyOnWriteArrayList<>();
         CountDownLatch gameWonLatch = new CountDownLatch(1);
@@ -1270,7 +1280,7 @@ public class GameWebSocketTest {
                 .connectAndAwait();
 
         ObjectNode payload = JsonNodeFactory.instance.objectNode().put("settlementPositionId", settlementPositionId);
-        MessageDTO placeSettlementMsg = new MessageDTO(MessageType.PLACE_SETTLEMENT, playerId, actualLobbyId, payload);
+        MessageDTO placeSettlementMsg = new MessageDTO(MessageType.PLACE_SETTLEMENT, winnerPlayerId, actualLobbyId, payload);
 
         clientConnection.sendTextAndAwait(objectMapper.writeValueAsString(placeSettlementMsg));
 
@@ -1281,14 +1291,25 @@ public class GameWebSocketTest {
         for (String msg : receivedMessages) {
             MessageDTO dto = objectMapper.readValue(msg, MessageDTO.class);
             assertEquals(MessageType.GAME_WON, dto.getType());
-            assertEquals(playerId, dto.getPlayer());
+            assertEquals(winnerPlayerId, dto.getPlayer());
             assertEquals(actualLobbyId, dto.getLobbyId());
-            assertEquals(playerId, dto.getMessageNode("winner").asText());
+            assertEquals(winnerPlayerId, dto.getMessageNode("winner").asText());
+            assertEquals(2, dto.getMessage().withArray("leaderboard").size());
+
+            JsonNode winner = dto.getMessage().withArray("leaderboard").get(0);
+            assertEquals(winnerPlayerId, winner.get("id").asText());
+            assertEquals(winnerPlayerId, winner.get("username").asText());
+            assertEquals(10, winner.get("victoryPoints").asInt());
+
+            JsonNode loser = dto.getMessage().withArray("leaderboard").get(1);
+            assertEquals(loserPlayerId, loser.get("id").asText());
+            assertEquals(loserPlayerId, loser.get("username").asText());
+            assertEquals(8, loser.get("victoryPoints").asInt());
         }
 
-        verify(gameService).placeSettlement(actualLobbyId, playerId, settlementPositionId);
-        verify(playerService, atLeastOnce()).checkForWin(playerId);
-        verify(gameMessageHandler, times(1)).broadcastWin(actualLobbyId, playerId);
+        verify(gameService).placeSettlement(actualLobbyId, winnerPlayerId, settlementPositionId);
+        verify(playerService, atLeastOnce()).checkForWin(winnerPlayerId);
+        verify(gameMessageHandler, times(1)).broadcastWin(actualLobbyId, winnerPlayerId);
         verify(gameService, never()).getGameboardByLobbyId(anyString());
     }
 
