@@ -178,6 +178,15 @@ class LobbyTest {
     }
 
     @Test
+    void canStartGame_doesRequireTwoPlayers() {
+        testLobby.removePlayer("p2");
+        testLobby.removePlayer("p3");
+        testLobby.toggleReady("host");
+
+        assertFalse(testLobby.canStartGame("host"));
+    }
+
+    @Test
     void canStartGame_returnsFalseForNonHostEvenWithEnoughPlayers() {
         assertFalse(testLobby.canStartGame("p2"), "only the host may start the game");
         assertFalse(testLobby.canStartGame("p3"), "only the host may start the game");

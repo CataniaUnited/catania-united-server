@@ -15,6 +15,7 @@ import com.example.cataniaunited.lobby.LobbyService;
 import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerColor;
 import com.example.cataniaunited.player.PlayerService;
+import com.example.cataniaunited.util.Util;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -39,12 +40,12 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -1695,6 +1696,248 @@ public class GameWebSocketTest {
                 error.getMessageNode("error").asText());
 
         verify(lobbyService).joinLobbyByCode(lobbyId, playerId);
+    }
+
+    @Test
+    void testSetReady() throws InterruptedException, GameException {
+        final String[] client1PlayerIdHolder = new String[1];
+        final String[] client2PlayerIdHolder = new String[1];
+
+        CountDownLatch connectionLatch = new CountDownLatch(2);
+
+        List<MessageDTO> player1ReceivedMessages = new CopyOnWriteArrayList<>();
+        CountDownLatch player1SetReadyLatch = new CountDownLatch(3);
+
+        System.out.println("Setting up Client 1...");
+        BasicWebSocketConnector client1Connector = BasicWebSocketConnector.create()
+                .baseUri(serverUri).path("/game")
+                .onTextMessage((conn, msg) -> {
+                    try {
+                        MessageDTO dto = objectMapper.readValue(msg, MessageDTO.class);
+                        System.out.println("Client1 RX: " + msg);
+
+                        if (dto.getType() == MessageType.CONNECTION_SUCCESSFUL) {
+                            client1PlayerIdHolder[0] = dto.getMessageNode("playerId").asText();
+                            System.out.println("Client1 Connected with ID: " + client1PlayerIdHolder[0]);
+                            connectionLatch.countDown();
+                        }
+                    } catch (JsonProcessingException e) {
+                        fail("Client1: Failed to parse message: " + msg, e);
+                    }
+                });
+        var client1WebSocketClientConnection = client1Connector.connectAndAwait();
+        System.out.println("Client 1 connection object: " + client1WebSocketClientConnection);
+
+
+        System.out.println("Setting up Client 2...");
+        BasicWebSocketConnector client2Connector = BasicWebSocketConnector.create()
+                .baseUri(serverUri).path("/game")
+                .onTextMessage((conn, msg) -> {
+                    try {
+                        MessageDTO dto = objectMapper.readValue(msg, MessageDTO.class);
+                        System.out.println("Client2 RX: " + msg);
+                        if (dto.getType() == MessageType.CONNECTION_SUCCESSFUL) {
+                            client2PlayerIdHolder[0] = dto.getMessageNode("playerId").asText();
+                            System.out.println("Client2 Connected with ID: " + client2PlayerIdHolder[0]);
+                            connectionLatch.countDown();
+                        } else if (dto.getType() == MessageType.LOBBY_UPDATED) {
+                            player1ReceivedMessages.add(dto);
+                            player1SetReadyLatch.countDown();
+                        }
+                    } catch (JsonProcessingException e) {
+                        fail("Client2: Failed to parse message: " + msg, e);
+                    }
+                });
+        var client2WebSocketClientConnection = client2Connector.connectAndAwait();
+        System.out.println("Client 2 connection object: " + client2WebSocketClientConnection);
+
+
+        assertTrue(connectionLatch.await(10, TimeUnit.SECONDS), "Not all clients connected and received their IDs. Latch: " + connectionLatch.getCount());
+        assertNotNull(client1PlayerIdHolder[0], "Client 1 Player ID not set");
+        assertNotNull(client2PlayerIdHolder[0], "Client 2 Player ID not set");
+
+        String player1ActualId = client1PlayerIdHolder[0];
+        String player2ActualId = client2PlayerIdHolder[0];
+        System.out.println("Test: player1ActualId = " + player1ActualId);
+        System.out.println("Test: player2ActualId = " + player2ActualId);
+
+        String actualLobbyId = lobbyService.createLobby(player1ActualId);
+        System.out.println("Test: Created lobby with ID: " + actualLobbyId + " for host " + player1ActualId);
+        lobbyService.joinLobbyByCode(actualLobbyId, player2ActualId);
+        System.out.println("Test: Player " + player2ActualId + " joined lobby " + actualLobbyId);
+        Lobby lobby = lobbyService.getLobbyById(actualLobbyId);
+        assertFalse(lobby.isReady(player1ActualId));
+
+        client1WebSocketClientConnection.sendTextAndAwait(new MessageDTO(MessageType.SET_READY, player1ActualId, actualLobbyId));
+        client1WebSocketClientConnection.sendTextAndAwait(new MessageDTO(MessageType.SET_READY, player1ActualId, actualLobbyId));
+        client1WebSocketClientConnection.sendTextAndAwait(new MessageDTO(MessageType.SET_READY, player1ActualId, actualLobbyId));
+
+        assertTrue(player1SetReadyLatch.await(10, TimeUnit.SECONDS));
+        assertEquals(3, player1ReceivedMessages.size());
+
+        var firstMessage = player1ReceivedMessages.get(0);
+        assertEquals(MessageType.LOBBY_UPDATED, firstMessage.getType());
+        assertNotNull(firstMessage.getPlayers());
+        assertTrue(firstMessage.getPlayers().containsKey(player1ActualId));
+        assertTrue(firstMessage.getPlayers().get(player1ActualId).isReady());
+
+        var secondMessage = player1ReceivedMessages.get(1);
+        assertEquals(MessageType.LOBBY_UPDATED, secondMessage.getType());
+        assertNotNull(secondMessage.getPlayers());
+        assertTrue(secondMessage.getPlayers().containsKey(player1ActualId));
+        assertFalse(secondMessage.getPlayers().get(player1ActualId).isReady());
+
+        var thirdMessage = player1ReceivedMessages.get(2);
+        assertEquals(MessageType.LOBBY_UPDATED, thirdMessage.getType());
+        assertNotNull(thirdMessage.getPlayers());
+        assertTrue(thirdMessage.getPlayers().containsKey(player1ActualId));
+        assertTrue(thirdMessage.getPlayers().get(player1ActualId).isReady());
+
+        assertTrue(lobby.isReady(player1ActualId));
+
+        verify(lobbyService, times(3)).toggleReady(actualLobbyId, player1ActualId);
+    }
+
+    @Test
+    void testLeaveLobby() throws InterruptedException, GameException {
+        final String[] client1PlayerIdHolder = new String[1];
+        final String[] client2PlayerIdHolder = new String[1];
+
+        CountDownLatch connectionLatch = new CountDownLatch(2);
+
+        List<MessageDTO> player1ReceivedMessages = new CopyOnWriteArrayList<>();
+        CountDownLatch player1LobbyUpdatedLatch = new CountDownLatch(1);
+
+        System.out.println("Setting up Client 1...");
+        BasicWebSocketConnector client1Connector = BasicWebSocketConnector.create()
+                .baseUri(serverUri).path("/game")
+                .onTextMessage((conn, msg) -> {
+                    try {
+                        MessageDTO dto = objectMapper.readValue(msg, MessageDTO.class);
+                        System.out.println("Client1 RX: " + msg);
+
+                        if (dto.getType() == MessageType.CONNECTION_SUCCESSFUL) {
+                            client1PlayerIdHolder[0] = dto.getMessageNode("playerId").asText();
+                            System.out.println("Client1 Connected with ID: " + client1PlayerIdHolder[0]);
+                            connectionLatch.countDown();
+                        } else if (dto.getType() == MessageType.LOBBY_UPDATED) {
+                            player1ReceivedMessages.add(dto);
+                            player1LobbyUpdatedLatch.countDown();
+                        }
+                    } catch (JsonProcessingException e) {
+                        fail("Client1: Failed to parse message: " + msg, e);
+                    }
+                });
+        var client1WebSocketClientConnection = client1Connector.connectAndAwait();
+        System.out.println("Client 1 connection object: " + client1WebSocketClientConnection);
+
+
+        System.out.println("Setting up Client 2...");
+        BasicWebSocketConnector client2Connector = BasicWebSocketConnector.create()
+                .baseUri(serverUri).path("/game")
+                .onTextMessage((conn, msg) -> {
+                    try {
+                        MessageDTO dto = objectMapper.readValue(msg, MessageDTO.class);
+                        System.out.println("Client2 RX: " + msg);
+                        if (dto.getType() == MessageType.CONNECTION_SUCCESSFUL) {
+                            client2PlayerIdHolder[0] = dto.getMessageNode("playerId").asText();
+                            System.out.println("Client2 Connected with ID: " + client2PlayerIdHolder[0]);
+                            connectionLatch.countDown();
+                        }
+                    } catch (JsonProcessingException e) {
+                        fail("Client2: Failed to parse message: " + msg, e);
+                    }
+                });
+        var client2WebSocketClientConnection = client2Connector.connectAndAwait();
+        System.out.println("Client 2 connection object: " + client2WebSocketClientConnection);
+
+
+        assertTrue(connectionLatch.await(10, TimeUnit.SECONDS), "Not all clients connected and received their IDs. Latch: " + connectionLatch.getCount());
+        assertNotNull(client1PlayerIdHolder[0], "Client 1 Player ID not set");
+        assertNotNull(client2PlayerIdHolder[0], "Client 2 Player ID not set");
+
+        String player1ActualId = client1PlayerIdHolder[0];
+        String player2ActualId = client2PlayerIdHolder[0];
+        System.out.println("Test: player1ActualId = " + player1ActualId);
+        System.out.println("Test: player2ActualId = " + player2ActualId);
+
+        String actualLobbyId = lobbyService.createLobby(player1ActualId);
+        System.out.println("Test: Created lobby with ID: " + actualLobbyId + " for host " + player1ActualId);
+        lobbyService.joinLobbyByCode(actualLobbyId, player2ActualId);
+        System.out.println("Test: Player " + player2ActualId + " joined lobby " + actualLobbyId);
+        Lobby lobby = lobbyService.getLobbyById(actualLobbyId);
+        assertTrue(lobby.getPlayers().contains(player2ActualId));
+
+        client2WebSocketClientConnection.sendTextAndAwait(new MessageDTO(MessageType.LEAVE_LOBBY, player2ActualId, actualLobbyId));
+
+        assertTrue(player1LobbyUpdatedLatch.await(10, TimeUnit.SECONDS));
+        assertEquals(1, player1ReceivedMessages.size());
+
+        var firstMessage = player1ReceivedMessages.get(0);
+        assertEquals(MessageType.LOBBY_UPDATED, firstMessage.getType());
+        assertNotNull(firstMessage.getPlayers());
+        assertFalse(firstMessage.getPlayers().containsKey(player2ActualId));
+
+        assertFalse(lobby.getPlayers().contains(player2ActualId));
+
+        verify(lobbyService).leaveLobby(actualLobbyId, player2ActualId);
+    }
+
+    @Test
+    void testCreateLobby() throws InterruptedException {
+        final String[] client1PlayerIdHolder = new String[1];
+
+        CountDownLatch connectionLatch = new CountDownLatch(1);
+
+        List<MessageDTO> player1ReceivedMessages = new CopyOnWriteArrayList<>();
+        CountDownLatch player1LobbyCreatedLatch = new CountDownLatch(1);
+
+        System.out.println("Setting up Client 1...");
+        BasicWebSocketConnector client1Connector = BasicWebSocketConnector.create()
+                .baseUri(serverUri).path("/game")
+                .onTextMessage((conn, msg) -> {
+                    try {
+                        MessageDTO dto = objectMapper.readValue(msg, MessageDTO.class);
+                        System.out.println("Client1 RX: " + msg);
+
+                        if (dto.getType() == MessageType.CONNECTION_SUCCESSFUL) {
+                            client1PlayerIdHolder[0] = dto.getMessageNode("playerId").asText();
+                            System.out.println("Client1 Connected with ID: " + client1PlayerIdHolder[0]);
+                            connectionLatch.countDown();
+                        } else if (dto.getType() == MessageType.LOBBY_CREATED) {
+                            player1ReceivedMessages.add(dto);
+                            player1LobbyCreatedLatch.countDown();
+                        }
+                    } catch (JsonProcessingException e) {
+                        fail("Client1: Failed to parse message: " + msg, e);
+                    }
+                });
+        var client1WebSocketClientConnection = client1Connector.connectAndAwait();
+        System.out.println("Client 1 connection object: " + client1WebSocketClientConnection);
+
+        assertTrue(connectionLatch.await(10, TimeUnit.SECONDS), "Not all clients connected and received their IDs. Latch: " + connectionLatch.getCount());
+        assertNotNull(client1PlayerIdHolder[0], "Client 1 Player ID not set");
+
+        String player1ActualId = client1PlayerIdHolder[0];
+        System.out.println("Test: player1ActualId = " + player1ActualId);
+
+        client1WebSocketClientConnection.sendTextAndAwait(new MessageDTO(MessageType.CREATE_LOBBY, player1ActualId, null));
+
+        assertTrue(player1LobbyCreatedLatch.await(10, TimeUnit.SECONDS));
+        assertEquals(1, player1ReceivedMessages.size());
+
+        var response = player1ReceivedMessages.get(0);
+        assertEquals(MessageType.LOBBY_CREATED, response.getType());
+        assertNotNull(response.getPlayers());
+        assertTrue(response.getPlayers().containsKey(player1ActualId));
+        String lobbyId = response.getLobbyId();
+        assertFalse(Util.isEmpty(lobbyId));
+
+        Lobby lobby = assertDoesNotThrow(() -> lobbyService.getLobbyById(lobbyId));
+        assertTrue(lobby.getPlayers().contains(player1ActualId));
+        assertEquals(player1ActualId, lobby.getHostPlayer());
+        assertFalse(lobby.isGameStarted());
+        assertFalse(lobby.isReady(player1ActualId));
     }
 
 
