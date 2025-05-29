@@ -2,12 +2,14 @@ package com.example.cataniaunited.api;
 
 import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.dto.MessageType;
+import com.example.cataniaunited.dto.PlayerInfo;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.fi.BuildingAction;
 import com.example.cataniaunited.game.GameService;
 import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.lobby.Lobby;
 import com.example.cataniaunited.lobby.LobbyService;
+import com.example.cataniaunited.mapper.PlayerMapper;
 import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerColor;
 import com.example.cataniaunited.player.PlayerService;
@@ -22,8 +24,9 @@ import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
 import java.util.Comparator;
-import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @ApplicationScoped
 public class GameMessageHandler {
@@ -39,6 +42,9 @@ public class GameMessageHandler {
 
     @Inject
     GameService gameService;
+
+    @Inject
+    PlayerMapper playerMapper;
 
     public Uni<MessageDTO> handleInitialConnection(WebSocketConnection connection) {
         Player player = playerService.addPlayer(connection);
@@ -65,7 +71,7 @@ public class GameMessageHandler {
                 case ROLL_DICE -> handleDiceRoll(message);
                 case START_GAME -> handleStartGame(message);
                 case ERROR, CONNECTION_SUCCESSFUL, CLIENT_DISCONNECTED, LOBBY_CREATED, LOBBY_UPDATED, PLAYER_JOINED,
-                     GAME_BOARD_JSON, GAME_WON, DICE_RESULT, PLAYER_RESOURCES, NEXT_TURN, GAME_STARTED ->
+                     GAME_BOARD_JSON, GAME_WON, DICE_RESULT, NEXT_TURN, GAME_STARTED ->
                         throw new GameException("Invalid client command");
                 case END_TURN -> endTurn(message);
             };
@@ -77,9 +83,10 @@ public class GameMessageHandler {
 
     Uni<MessageDTO> endTurn(MessageDTO message) throws GameException {
         String activePlayerId = lobbyService.nextTurn(message.getLobbyId(), message.getPlayer());
-        ObjectNode payload = createGameBoardWithPlayers(message.getLobbyId());
+        ObjectNode payload = getGameBoardInformation(message.getLobbyId());
         payload.put("activePlayerId", activePlayerId);
-        var response = new MessageDTO(MessageType.NEXT_TURN, payload);
+
+        var response = new MessageDTO(MessageType.NEXT_TURN, message.getPlayer(), message.getLobbyId(), getLobbyPlayerInformation(message.getLobbyId()), payload);
         return lobbyService.notifyPlayers(message.getLobbyId(), response);
     }
 
@@ -100,17 +107,17 @@ public class GameMessageHandler {
             throw new GameException("Invalid road id: id = %s", roadId.toString());
         }
 
-        ObjectNode root = createGameBoardWithPlayers(message.getLobbyId());
+        ObjectNode root = getGameBoardInformation(message.getLobbyId());
 
         MessageDTO update = new MessageDTO(
                 MessageType.PLACE_ROAD,
                 message.getPlayer(),
                 message.getLobbyId(),
+                getLobbyPlayerInformation(message.getLobbyId()),
                 root
         );
 
         return lobbyService.notifyPlayers(message.getLobbyId(), update)
-                .chain(() -> sendPlayerResources(message.getPlayer(), message.getLobbyId()))
                 .chain(() -> Uni.createFrom().item(update));
     }
 
@@ -123,31 +130,11 @@ public class GameMessageHandler {
      * and a "players" object mapping player IDs to their details.
      * @throws GameException if the lobby or game board cannot be found, or if a player in the lobby cannot be retrieved.
      */
-    ObjectNode createGameBoardWithPlayers(String lobbyId) throws GameException {
+    ObjectNode getGameBoardInformation(String lobbyId) throws GameException {
         GameBoard gameboard = gameService.getGameboardByLobbyId(lobbyId);
-        Lobby lobby = lobbyService.getLobbyById(lobbyId);
         ObjectNode root = JsonNodeFactory.instance.objectNode();
         root.set("gameboard", gameboard.getJson());
-        root.set("players", getLobbyPlayerInformation(lobbyId));
-        root.put("activePlayerId", lobby.getActivePlayer());
         return root;
-    }
-
-    ObjectNode getLobbyPlayerInformation(String lobbyId) throws GameException {
-        Lobby lobby = lobbyService.getLobbyById(lobbyId);
-        ObjectNode playersJson = JsonNodeFactory.instance.objectNode();
-        for (String playerId : lobby.getPlayerOrder()) {
-            Player player = playerService.getPlayerById(playerId);
-            if (player != null) {
-                ObjectNode playerNode = player.toJson();
-                PlayerColor color = lobby.getPlayerColor(player.getUniqueId());
-                if (color != null) {
-                    playerNode.put(COLOR_FIELD, color.getHexCode());
-                }
-                playersJson.set(player.getUniqueId(), playerNode);
-            }
-        }
-        return playersJson;
     }
 
     /**
@@ -201,16 +188,16 @@ public class GameMessageHandler {
             return broadcastWin(message.getLobbyId(), message.getPlayer());
         }
 
-        ObjectNode payload = createGameBoardWithPlayers(message.getLobbyId());
+        ObjectNode payload = getGameBoardInformation(message.getLobbyId());
         MessageDTO update = new MessageDTO(
                 message.getType(),
                 message.getPlayer(),
                 message.getLobbyId(),
+                getLobbyPlayerInformation(message.getLobbyId()),
                 payload
         );
 
         return lobbyService.notifyPlayers(message.getLobbyId(), update)
-                .chain(() -> sendPlayerResources(message.getPlayer(), message.getLobbyId()))
                 .chain(() -> Uni.createFrom().item(update));
     }
 
@@ -233,8 +220,12 @@ public class GameMessageHandler {
 
         ObjectNode payload = JsonNodeFactory.instance.objectNode();
         payload.put(COLOR_FIELD, color.getHexCode());
-        payload.set("players", getLobbyPlayerInformation(message.getLobbyId()));
-        MessageDTO playerJoinedMessage = new MessageDTO(MessageType.PLAYER_JOINED, message.getPlayer(), message.getLobbyId(), payload);
+        MessageDTO playerJoinedMessage = new MessageDTO(
+                MessageType.PLAYER_JOINED,
+                message.getPlayer(),
+                message.getLobbyId(),
+                getLobbyPlayerInformation(message.getLobbyId()),
+                payload);
         return lobbyService.notifyPlayers(message.getLobbyId(), playerJoinedMessage);
     }
 
@@ -248,11 +239,8 @@ public class GameMessageHandler {
 
     Uni<MessageDTO> createLobby(MessageDTO message) throws GameException {
         String lobbyId = lobbyService.createLobby(message.getPlayer());
-        PlayerColor color = lobbyService.getPlayerColor(lobbyId, message.getPlayer());
-        ObjectNode colorNode = JsonNodeFactory.instance.objectNode();
-        colorNode.put(COLOR_FIELD, color.getHexCode());
         return Uni.createFrom().item(
-                new MessageDTO(MessageType.LOBBY_CREATED, message.getPlayer(), lobbyId, colorNode));
+                new MessageDTO(MessageType.LOBBY_CREATED, message.getPlayer(), lobbyId, getLobbyPlayerInformation(message.getLobbyId())));
     }
 
     /**
@@ -263,15 +251,10 @@ public class GameMessageHandler {
      * @throws GameException if the player session is not found.
      */
     Uni<MessageDTO> setUsername(MessageDTO message) throws GameException {
-        Player player = playerService.getPlayerById(message.getPlayer());
-        if (player != null) {
-            player.setUsername(message.getMessage().get("username").asText());
-            List<String> allPlayers = playerService.getAllPlayers().stream()
-                    .map(Player::getUsername).toList();
-            MessageDTO update = new MessageDTO(MessageType.LOBBY_UPDATED, player.getUniqueId(), null, allPlayers);
-            return lobbyService.notifyPlayers(message.getLobbyId(), update);
-        }
-        throw new GameException("No player session");
+        String username = message.getMessageNode("username").asText();
+        playerService.setUsername(message.getPlayer(), username);
+        MessageDTO update = new MessageDTO(MessageType.LOBBY_UPDATED, message.getPlayer(), message.getLobbyId(), getLobbyPlayerInformation(message.getLobbyId()));
+        return lobbyService.notifyPlayers(message.getLobbyId(), update);
     }
 
     /**
@@ -303,17 +286,11 @@ public class GameMessageHandler {
                 MessageType.DICE_RESULT,
                 message.getPlayer(),
                 message.getLobbyId(),
+                getLobbyPlayerInformation(message.getLobbyId()),
                 diceResult
         );
 
-        // send updated resources
-        Lobby currentLobby = lobbyService.getLobbyById(message.getLobbyId());
-        List<Uni<Void>> individualResourceSendUnis = currentLobby.getPlayers()
-                .stream().map(pid -> sendPlayerResources(pid, message.getLobbyId())).toList();
-
-        Uni<Void> resourceUpdatesUni = Uni.join().all(individualResourceSendUnis).andCollectFailures().replaceWithVoid();
         return lobbyService.notifyPlayers(message.getLobbyId(), diceResultMessage)
-                .chain(() -> resourceUpdatesUni)
                 .chain(() -> Uni.createFrom().item(diceResultMessage));
     }
 
@@ -327,35 +304,9 @@ public class GameMessageHandler {
      */
     private Uni<MessageDTO> handleStartGame(MessageDTO message) throws GameException {
         gameService.startGame(message.getLobbyId(), message.getPlayer());
-        ObjectNode payload = createGameBoardWithPlayers(message.getLobbyId());
+        ObjectNode payload = getGameBoardInformation(message.getLobbyId());
         MessageDTO response = new MessageDTO(MessageType.GAME_STARTED, null, message.getLobbyId(), payload);
         return lobbyService.notifyPlayers(message.getLobbyId(), response);
-    }
-
-    /**
-     * Sends a message containing the player's current resources to their WebSocket connection.
-     *
-     * @param playerId The id of the {@link Player} whose resources are to be sent.
-     * @param lobbyId  The ID of the lobby the player is in (used for constructing the {@link MessageDTO}).
-     * @return A {@link Uni<Void>} that completes when the send operation is initiated, or fails if the send fails.
-     * Logs an error on failure to send.
-     */
-    Uni<Void> sendPlayerResources(String playerId, String lobbyId) {
-        Player player = playerService.getPlayerById(playerId);
-        if (player == null) {
-            logger.warnf("Player not found in lobby for resource update: lobbyId = %s, playerId = %s", lobbyId, playerId);
-            return Uni.createFrom().voidItem();
-        }
-        ObjectNode resourcesPayload = player.getResourceJSON();
-        MessageDTO resourceMsg = new MessageDTO(
-                MessageType.PLAYER_RESOURCES,
-                player.getUniqueId(),
-                lobbyId,
-                resourcesPayload
-        );
-
-        logger.infof("Sending player resources: lobbyId = %s, playerId = %s, resources = %s", lobbyId, playerId, resourcesPayload.toString());
-        return playerService.sendMessageToPlayer(playerId, resourceMsg);
     }
 
     /**
@@ -366,29 +317,39 @@ public class GameMessageHandler {
      * @param winnerPlayerId The ID of the player who won the game.
      * @return A Uni emitting a {@link MessageDTO} of type GAME_WON.
      */
-    Uni<MessageDTO> broadcastWin(String lobbyId, String winnerPlayerId) {
+    Uni<MessageDTO> broadcastWin(String lobbyId, String winnerPlayerId) throws GameException {
         ObjectNode message = JsonNodeFactory.instance.objectNode();
         Player winner = playerService.getPlayerById(winnerPlayerId);
         message.put("winner", winner.getUsername());
 
         ArrayNode leaderboard = message.putArray("leaderboard");
-        try {
-            lobbyService.getLobbyById(lobbyId).getPlayers().stream()
-                    .map(playerService::getPlayerById)
-                    .filter(Objects::nonNull)
-                    .sorted(Comparator.comparingInt(Player::getVictoryPoints).reversed())
-                    .forEach(p -> {
-                        ObjectNode entry = leaderboard.addObject();
-                        entry.put("username", p.getUsername());
-                        entry.put("vp", p.getVictoryPoints());
-                    });
-        } catch (GameException e) {
-            logger.errorf("Failed to fetch players for lobby %s: %s", lobbyId, e.getMessage());
-            message.put("error", "Failed to build leaderboard");
-        }
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+        lobby.getPlayers().stream()
+                .map(playerService::getPlayerById)
+                .filter(Objects::nonNull)
+                .sorted(Comparator.comparingInt(Player::getVictoryPoints).reversed())
+                .forEach(p -> {
+                    ObjectNode entry = leaderboard.addObject();
+                    entry.put("username", p.getUsername());
+                    entry.put("vp", p.getVictoryPoints());
+                });
 
         MessageDTO messageDTO = new MessageDTO(MessageType.GAME_WON, winnerPlayerId, lobbyId, message);
         logger.infof("Player %s has won the game in lobby %s", winnerPlayerId, lobbyId);
         return lobbyService.notifyPlayers(lobbyId, messageDTO);
+    }
+
+    Map<String, PlayerInfo> getLobbyPlayerInformation(String lobbyId) throws GameException {
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+        return lobby.getPlayers().stream()
+                .map(pid -> playerService.getPlayerById(pid))
+                .filter(Objects::nonNull)
+                .map(player -> playerMapper.toDto(player, lobby))
+                .collect(
+                        Collectors.toMap(
+                                PlayerInfo::id,
+                                playerInfo -> playerInfo
+                        )
+                );
     }
 }

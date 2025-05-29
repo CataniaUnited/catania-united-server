@@ -45,8 +45,10 @@ public class Lobby {
     public Lobby(String lobbyId, String hostPlayer) {
         this.lobbyId = lobbyId;
         this.hostPlayer = hostPlayer;
-        players.add(hostPlayer);
         Collections.addAll(availableColors, PlayerColor.values());
+        players.add(hostPlayer);
+        setPlayerColor(hostPlayer, assignAvailableColor());
+
     }
 
     /**
@@ -58,6 +60,10 @@ public class Lobby {
         return lobbyId;
     }
 
+    public String getHostPlayer() {
+        return hostPlayer;
+    }
+
     /**
      * Gets the set of player IDs currently in this lobby.
      * The returned set is a thread-safe {@link CopyOnWriteArraySet}.
@@ -65,7 +71,7 @@ public class Lobby {
      * @return A {@link Set} of player ID strings.
      */
     public Set<String> getPlayers() {
-        return players;
+        return Set.copyOf(players);
     }
 
     /**

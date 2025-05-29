@@ -19,6 +19,8 @@ dependencies {
     implementation(enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}"))
     implementation("io.quarkus:quarkus-websockets-next")
     implementation("io.quarkus:quarkus-arc")
+    implementation("org.mapstruct:mapstruct:1.6.3")
+    annotationProcessor("org.mapstruct:mapstruct-processor:1.6.3")
     testImplementation("io.quarkus:quarkus-junit5")
     testImplementation("io.quarkus:quarkus-junit5-mockito")
     testImplementation("io.rest-assured:rest-assured")
@@ -46,7 +48,12 @@ tasks.withType<Test> {
 }
 tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"
-    options.compilerArgs.add("-parameters")
+    options.compilerArgs.addAll(
+        listOf(
+            "-parameters",
+            "-Amapstruct.defaultComponentModel=cdi",
+        )
+    )
 }
 
 tasks.test {

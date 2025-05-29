@@ -1,6 +1,7 @@
 package com.example.cataniaunited.player;
 
 import com.example.cataniaunited.dto.MessageDTO;
+import com.example.cataniaunited.exception.GameException;
 import io.quarkus.websockets.next.WebSocketConnection;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -117,6 +118,15 @@ public class PlayerService {
     public boolean checkForWin(String playerId) {
         Player player = getPlayerById(playerId);
         return player != null && player.getVictoryPoints() >= WIN_THRESHOLD;
+    }
+
+    public void setUsername(String playerId, String username) throws GameException {
+        Player player = getPlayerById(playerId);
+        if (player == null) {
+            logger.errorf("Update of username failed, no player found: playerId = %s, username = %s", playerId, username);
+            throw new GameException("Player with id %s not found", playerId);
+        }
+        player.setUsername(username);
     }
 
     /**

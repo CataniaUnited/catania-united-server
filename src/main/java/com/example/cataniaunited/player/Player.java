@@ -5,14 +5,12 @@ import com.example.cataniaunited.exception.ui.InsufficientResourcesException;
 import com.example.cataniaunited.game.board.ports.Port;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.websockets.next.WebSocketConnection;
 import org.jboss.logging.Logger;
 
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
@@ -145,6 +143,7 @@ public class Player {
     public ObjectNode toJson() {
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode playerNode = mapper.createObjectNode();
+        playerNode.put("id", this.uniqueId);
         playerNode.put("username", this.username);
         playerNode.put("victoryPoints", this.victoryPoints);
         logger.infof("Serializing player %s with VP=%d", this.username, this.victoryPoints);
@@ -205,20 +204,8 @@ public class Player {
         resources.put(resource, resourceCount);
     }
 
-    /**
-     * Gets a JSON representation of the player's current resource counts.
-     * Excludes WASTE tiles.
-     *
-     * @return An {@link ObjectNode} where keys are resource type names (String) and values are their counts (Integer).
-     */
-    public ObjectNode getResourceJSON() {
-        ObjectNode resourcesNode = JsonNodeFactory.instance.objectNode();
-        for (Map.Entry<TileType, Integer> entry : this.resources.entrySet()) {
-            if (entry.getKey() != TileType.WASTE) {
-                resourcesNode.put(entry.getKey().name(), entry.getValue());
-            }
-        }
-        return resourcesNode;
+    public HashMap<TileType, Integer> getResources() {
+        return resources;
     }
 
     /**

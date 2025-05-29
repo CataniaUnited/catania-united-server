@@ -2,6 +2,7 @@ package com.example.cataniaunited.api;
 
 import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.dto.MessageType;
+import com.example.cataniaunited.dto.PlayerInfo;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.GameService;
 import com.example.cataniaunited.game.board.BuildingSite;
@@ -36,13 +37,16 @@ import java.net.URI;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -72,9 +76,6 @@ public class GameWebSocketTest {
 
     @InjectSpy
     GameMessageHandler gameMessageHandler;
-
-    @InjectSpy
-    GameWebSocket gameWebSocket;
 
     @InjectSpy
     PlayerService playerService;
@@ -114,43 +115,6 @@ public class GameWebSocketTest {
         assertEquals(MessageType.CONNECTION_SUCCESSFUL, responseMessage.getType());
         assertNotNull(responseMessage.getMessageNode("playerId").textValue());
         verify(playerService).addPlayer(any());
-    }
-
-    @Test
-    void testWebSocketSendMessage() throws InterruptedException, JsonProcessingException {
-        var messageDto = new MessageDTO();
-        messageDto.setType(MessageType.CREATE_LOBBY); // Send CREATE_LOBBY request
-        messageDto.setPlayer("Player 1");
-        messageDto.setLobbyId("1");
-
-        List<String> receivedMessages = new CopyOnWriteArrayList<>();
-        // Expecting 2 messages
-        CountDownLatch messageLatch = new CountDownLatch(2);
-
-        var webSocketClientConnection = BasicWebSocketConnector.create().baseUri(serverUri).path("/game").onTextMessage((connection, message) -> {
-            receivedMessages.add(message);
-            messageLatch.countDown();  // Decrease latch count when a message arrives
-        }).connectAndAwait();
-
-        // Send message
-        String sentMessage = objectMapper.writeValueAsString(messageDto);
-        webSocketClientConnection.sendTextAndAwait(sentMessage);
-
-        // Wait up to 5 seconds for both messages to arrive
-        boolean allMessagesReceived = messageLatch.await(5, TimeUnit.SECONDS);
-
-        assertTrue(allMessagesReceived, "Not all messages were received in time!");
-        assertEquals(2, receivedMessages.size());
-
-        MessageDTO responseMessage = objectMapper.readValue(receivedMessages.get(receivedMessages.size() - 1), MessageDTO.class);
-
-        assertEquals(MessageType.LOBBY_CREATED, responseMessage.getType()); // Expect LOBBY_CREATED response
-        assertEquals("Player 1", responseMessage.getPlayer()); // Player should remain the same
-        assertNotNull(responseMessage.getLobbyId());
-
-        String color = responseMessage.getMessageNode("color").textValue();
-        assertNotNull(color, "Color should be present");
-        assertTrue(color.matches("#[0-9A-Fa-f]{6}"), "Color should be a valid hex code");
     }
 
     @Test
@@ -268,7 +232,7 @@ public class GameWebSocketTest {
         MessageDTO received = objectMapper.readValue(receivedMessages.get(receivedMessages.size() - 1), MessageDTO.class);
         assertEquals(MessageType.LOBBY_UPDATED, received.getType());
         assertNotNull(received.getPlayers());
-        assertTrue(received.getPlayers().contains("Chicken"));
+        assertEquals("Chicken", received.getPlayers().get(player.getUniqueId()).username());
 
     }
 
@@ -276,7 +240,7 @@ public class GameWebSocketTest {
     void testSetUsernameOfNonExistingPlayer() throws Exception {
         String invalidId = "InvalidId";
         String newUsername = "Chicken";
-        String expectedErrorMessage = "No player session";
+        String expectedErrorMessage = "Player with id %s not found".formatted(invalidId);
 
         // We expect one CONNECTION_SUCCESSFUL and one ERROR message
         CountDownLatch connectionLatch = new CountDownLatch(1);
@@ -309,9 +273,9 @@ public class GameWebSocketTest {
         assertTrue(connectionLatch.await(5, TimeUnit.SECONDS), "Did not receive CONNECTION_SUCCESSFUL message");
 
         // Now send the SET_USERNAME message
-        MessageDTO setUsernameMsg = new MessageDTO();
-        setUsernameMsg.setType(MessageType.SET_USERNAME);
-        setUsernameMsg.setPlayer(invalidId);
+        ObjectNode payload = objectMapper.createObjectNode();
+        payload.put("username", newUsername);
+        MessageDTO setUsernameMsg = new MessageDTO(MessageType.SET_USERNAME, invalidId, null, payload);
         System.out.println("Test Client: Sending SET_USERNAME with username: " + newUsername);
         client.sendTextAndAwait(setUsernameMsg);
 
@@ -567,21 +531,21 @@ public class GameWebSocketTest {
         Player mockPlayer1 = mock(Player.class);
         when(mockPlayer1.getUniqueId()).thenReturn(player1);
         when(mockPlayer1.getUsername()).thenReturn(player1);
-        when(mockPlayer1.getResourceJSON()).thenReturn(JsonNodeFactory.instance.objectNode());
+        when(mockPlayer1.getResources()).thenReturn(new HashMap<>());
         when(mockPlayer1.getResourceCount(any(TileType.class))).thenReturn(10);
         when(mockPlayer1.toJson()).thenReturn(objectMapper.createObjectNode().put("username", player1));
 
         Player mockPlayer2 = mock(Player.class);
         when(mockPlayer2.getUniqueId()).thenReturn(player2);
         when(mockPlayer2.getUsername()).thenReturn(player2);
-        when(mockPlayer2.getResourceJSON()).thenReturn(JsonNodeFactory.instance.objectNode());
+        when(mockPlayer2.getResources()).thenReturn(new HashMap<>());
         when(mockPlayer2.getResourceCount(any(TileType.class))).thenReturn(10);
         when(mockPlayer2.toJson()).thenReturn(objectMapper.createObjectNode().put("username", player2));
 
         Player mockPlayer3 = mock(Player.class);
         when(mockPlayer3.getUniqueId()).thenReturn(player3);
         when(mockPlayer3.getUsername()).thenReturn(player3);
-        when(mockPlayer3.getResourceJSON()).thenReturn(JsonNodeFactory.instance.objectNode());
+        when(mockPlayer3.getResources()).thenReturn(new HashMap<>());
         when(mockPlayer3.getResourceCount(any(TileType.class))).thenReturn(10);
         when(mockPlayer3.toJson()).thenReturn(objectMapper.createObjectNode().put("username", player3));
 
@@ -620,16 +584,16 @@ public class GameWebSocketTest {
 
         MessageDTO responseMessage = objectMapper.readValue(receivedMessages.get(receivedMessages.size() - 1), MessageDTO.class);
 
-        JsonNode playersNode = responseMessage.getMessageNode("players");
-        assertNotNull(playersNode, "Players node missing from message payload");
+        var playerInfo = responseMessage.getPlayers();
+        assertNotNull(playerInfo, "Players node missing from message payload");
 
-        assertTrue(playersNode.has(player1), "Missing player1 in response");
-        assertTrue(playersNode.has(player2), "Missing player2 in response");
-        assertTrue(playersNode.has(player3), "Missing player3 in response");
+        assertTrue(playerInfo.containsKey(player1), "Missing player1 in response");
+        assertTrue(playerInfo.containsKey(player2), "Missing player2 in response");
+        assertTrue(playerInfo.containsKey(player3), "Missing player3 in response");
 
-        assertEquals(player1, playersNode.get(player1).get("username").asText());
-        assertEquals(player2, playersNode.get(player2).get("username").asText());
-        assertEquals(player3, playersNode.get(player3).get("username").asText());
+        assertEquals(player1, playerInfo.get(player1).username());
+        assertEquals(player2, playerInfo.get(player2).username());
+        assertEquals(player3, playerInfo.get(player3).username());
     }
 
     @Test
@@ -708,7 +672,7 @@ public class GameWebSocketTest {
         Player mockPlayer2 = mock(Player.class);
         when(mockPlayer2.getUniqueId()).thenReturn(player2);
         when(mockPlayer2.getUsername()).thenReturn(player2);
-        when(mockPlayer2.getResourceJSON()).thenReturn(objectMapper.createObjectNode().put("wood", 1));
+        when(mockPlayer2.getResources()).thenReturn(new HashMap<>());
         when(mockPlayer2.getResourceCount(any(TileType.class))).thenReturn(10);
         when(mockPlayer2.toJson()).thenReturn(objectMapper.createObjectNode().put("username", player2));
         when(playerService.getPlayerById(player2)).thenReturn(mockPlayer2);
@@ -723,7 +687,7 @@ public class GameWebSocketTest {
         doReturn(gameBoard).when(gameService).getGameboardByLobbyId(lobbyId);
 
         ObjectNode mergedBoardJson = objectMapper.createObjectNode().put("merged", "gameData");
-        doReturn(mergedBoardJson).when(gameMessageHandler).createGameBoardWithPlayers(lobbyId);
+        doReturn(mergedBoardJson).when(gameMessageHandler).getGameBoardInformation(lobbyId);
 
         ObjectNode placeRoadMessageNode = objectMapper.createObjectNode().put("roadId", roadId);
         MessageDTO placeRoadMessageDTO = new MessageDTO(MessageType.PLACE_ROAD, player2, lobbyId, placeRoadMessageNode);
@@ -784,7 +748,7 @@ public class GameWebSocketTest {
 
         verify(gameService).placeRoad(lobbyId, player2, roadId);
         verify(playerService, times(2)).getPlayerById(player2);
-        verify(gameMessageHandler).createGameBoardWithPlayers(lobbyId);
+        verify(gameMessageHandler).getGameBoardInformation(lobbyId);
         verify(gameService, times(2)).getGameboardByLobbyId(lobbyId);
     }
 
@@ -855,9 +819,9 @@ public class GameWebSocketTest {
         playerData.put("color", assignedColor.getHexCode());
         playersNode.set(playerId, playerData);
 
-        doReturn(fullJson).when(gameMessageHandler).createGameBoardWithPlayers(lobbyId);
+        doReturn(fullJson).when(gameMessageHandler).getGameBoardInformation(lobbyId);
 
-        ObjectNode result = gameMessageHandler.createGameBoardWithPlayers(lobbyId);
+        ObjectNode result = gameMessageHandler.getGameBoardInformation(lobbyId);
 
         assertTrue(result.has("gameboard"));
         assertTrue(result.has("players"));
@@ -1016,8 +980,6 @@ public class GameWebSocketTest {
 
         List<MessageDTO> player1ReceivedMessages = new CopyOnWriteArrayList<>();
         List<MessageDTO> player2ReceivedMessages = new CopyOnWriteArrayList<>();
-        CountDownLatch player1ResourceLatch = new CountDownLatch(1);
-        CountDownLatch player2ResourceLatch = new CountDownLatch(1);
         CountDownLatch diceResultLatch = new CountDownLatch(2);
         CountDownLatch connectionLatch = new CountDownLatch(2);
 
@@ -1029,10 +991,8 @@ public class GameWebSocketTest {
                         if (dto.getType() == MessageType.CONNECTION_SUCCESSFUL) {
                             actualPlayerIds.add(dto.getMessageNode("playerId").asText());
                             connectionLatch.countDown();
-                        } else if (dto.getType() == MessageType.PLAYER_RESOURCES && actualPlayerIds.contains(dto.getPlayer()) && dto.getPlayer().equals(actualPlayerIds.get(0))) {
-                            player1ReceivedMessages.add(dto);
-                            player1ResourceLatch.countDown();
                         } else if (dto.getType() == MessageType.DICE_RESULT) {
+                            player1ReceivedMessages.add(dto);
                             diceResultLatch.countDown();
                         }
                     } catch (JsonProcessingException e) {
@@ -1050,10 +1010,8 @@ public class GameWebSocketTest {
                         if (dto.getType() == MessageType.CONNECTION_SUCCESSFUL) {
                             actualPlayerIds.add(dto.getMessageNode("playerId").asText());
                             connectionLatch.countDown();
-                        } else if (dto.getType() == MessageType.PLAYER_RESOURCES && actualPlayerIds.contains(dto.getPlayer()) && dto.getPlayer().equals(actualPlayerIds.get(1))) {
-                            player2ReceivedMessages.add(dto);
-                            player2ResourceLatch.countDown();
                         } else if (dto.getType() == MessageType.DICE_RESULT) {
+                            player2ReceivedMessages.add(dto);
                             diceResultLatch.countDown();
                         }
                     } catch (JsonProcessingException e) {
@@ -1083,24 +1041,19 @@ public class GameWebSocketTest {
 
         assertTrue(diceResultLatch.await(10, TimeUnit.SECONDS),
                 "Both clients did not receive DICE_RESULT message in time. Latch: " + diceResultLatch.getCount());
-        assertTrue(player1ResourceLatch.await(10, TimeUnit.SECONDS),
-                "Player 1 did not receive PLAYER_RESOURCES message in time. Received: " + player1ReceivedMessages.size() + ". Latch: " + player1ResourceLatch.getCount());
-        assertTrue(player2ResourceLatch.await(10, TimeUnit.SECONDS),
-                "Player 2 did not receive PLAYER_RESOURCES message in time. Received: " + player2ReceivedMessages.size() + ". Latch: " + player2ResourceLatch.getCount());
 
-        assertEquals(1, player1ReceivedMessages.stream().filter(m -> m.getType() == MessageType.PLAYER_RESOURCES).count());
-        MessageDTO p1ResMsg = player1ReceivedMessages.stream().filter(m -> m.getType() == MessageType.PLAYER_RESOURCES).findFirst().get();
+
+        MessageDTO p1ResMsg = player1ReceivedMessages.get(0);
         assertEquals(player1ActualId, p1ResMsg.getPlayer());
         assertEquals(actualLobbyId, p1ResMsg.getLobbyId());
-        assertNotNull(p1ResMsg.getMessage());
-        assertTrue(p1ResMsg.getMessage().has("CLAY"), "Player 1 resource missing in payload");
+        assertTrue(p1ResMsg.getPlayers().containsKey(player1ActualId));
+        assertTrue(p1ResMsg.getPlayers().get(player1ActualId).resources().containsKey(TileType.CLAY), "Player 1 resource missing in payload");
 
-        assertEquals(1, player2ReceivedMessages.stream().filter(m -> m.getType() == MessageType.PLAYER_RESOURCES).count());
-        MessageDTO p2ResMsg = player2ReceivedMessages.stream().filter(m -> m.getType() == MessageType.PLAYER_RESOURCES).findFirst().get();
-        assertEquals(player2ActualId, p2ResMsg.getPlayer());
+        MessageDTO p2ResMsg = player2ReceivedMessages.get(0);
+        assertEquals(player1ActualId, p2ResMsg.getPlayer());
         assertEquals(actualLobbyId, p2ResMsg.getLobbyId());
-        assertNotNull(p2ResMsg.getMessage());
-        assertTrue(p2ResMsg.getMessage().has("CLAY"), "Player 2 resource missing in payload");
+        assertTrue(p2ResMsg.getPlayers().containsKey(player2ActualId));
+        assertTrue(p2ResMsg.getPlayers().get(player2ActualId).resources().containsKey(TileType.CLAY), "Player 2 resource missing in payload");
 
         verify(gameService).rollDice(actualLobbyId, player1ActualId);
         verify(playerService, atLeastOnce()).getPlayerById(player1ActualId);
@@ -1118,7 +1071,6 @@ public class GameWebSocketTest {
         CountDownLatch connectionLatch = new CountDownLatch(2);
 
         List<MessageDTO> player1ReceivedMessages = new CopyOnWriteArrayList<>();
-        CountDownLatch player1ResourceLatch = new CountDownLatch(1);
         CountDownLatch player1DiceResultLatch = new CountDownLatch(1);
 
         System.out.println("Setting up Client 1...");
@@ -1133,16 +1085,9 @@ public class GameWebSocketTest {
                             client1PlayerIdHolder[0] = dto.getMessageNode("playerId").asText();
                             System.out.println("Client1 Connected with ID: " + client1PlayerIdHolder[0]);
                             connectionLatch.countDown();
-                        } else if (dto.getType() == MessageType.PLAYER_RESOURCES) {
-                            String targetPlayerId = dto.getPlayer();
-                            System.out.println("Client1 got PLAYER_RESOURCES for: " + targetPlayerId + ", self ID: " + client1PlayerIdHolder[0]);
-                            if (client1PlayerIdHolder[0] != null && client1PlayerIdHolder[0].equals(targetPlayerId)) {
-                                System.out.println("Client1: Matched PLAYER_RESOURCES. Counting down latch.");
-                                player1ReceivedMessages.add(dto);
-                                player1ResourceLatch.countDown();
-                            }
                         } else if (dto.getType() == MessageType.DICE_RESULT) {
                             System.out.println("Client1 got DICE_RESULT.");
+                            player1ReceivedMessages.add(dto);
                             player1DiceResultLatch.countDown();
                         }
                     } catch (JsonProcessingException e) {
@@ -1204,10 +1149,7 @@ public class GameWebSocketTest {
 
         System.out.println("Test: Awaiting DICE_RESULT for player 1...");
         assertTrue(player1DiceResultLatch.await(3, TimeUnit.SECONDS), "Player 1 did not receive DICE_RESULT. Latch: " + player1DiceResultLatch.getCount());
-        System.out.println("Test: Awaiting PLAYER_RESOURCES for player 1...");
-        assertTrue(player1ResourceLatch.await(3, TimeUnit.SECONDS), "Player 1 did not receive PLAYER_RESOURCES. Latch: " + player1ResourceLatch.getCount() + ". Received messages for P1: " + player1ReceivedMessages.size());
 
-        assertEquals(1, player1ReceivedMessages.stream().filter(m -> m.getType() == MessageType.PLAYER_RESOURCES).count());
         verify(gameService).rollDice(actualLobbyId, player1ActualId);
         verify(playerService, atLeastOnce()).getPlayerById(player1ActualId);
         verify(playerService, atLeastOnce()).getPlayerById(player2ActualId);
@@ -1223,7 +1165,6 @@ public class GameWebSocketTest {
         CountDownLatch connectionLatch = new CountDownLatch(2);
 
         List<MessageDTO> player1ReceivedMessages = new CopyOnWriteArrayList<>();
-        CountDownLatch player1ResourceLatch = new CountDownLatch(1);
         CountDownLatch diceResultLatch = new CountDownLatch(2);
 
         BasicWebSocketConnector client1Connector = BasicWebSocketConnector.create()
@@ -1234,9 +1175,6 @@ public class GameWebSocketTest {
                         if (dto.getType() == MessageType.CONNECTION_SUCCESSFUL) {
                             actualPlayerIds.add(dto.getMessageNode("playerId").asText());
                             connectionLatch.countDown();
-                        } else if (dto.getType() == MessageType.PLAYER_RESOURCES) {
-                            player1ReceivedMessages.add(dto);
-                            player1ResourceLatch.countDown();
                         } else if (dto.getType() == MessageType.DICE_RESULT) {
                             diceResultLatch.countDown();
                         }
@@ -1255,6 +1193,7 @@ public class GameWebSocketTest {
                             actualPlayerIds.add(dto.getMessageNode("playerId").asText());
                             connectionLatch.countDown();
                         } else if (dto.getType() == MessageType.DICE_RESULT) {
+                            player1ReceivedMessages.add(dto);
                             diceResultLatch.countDown();
                         }
                     } catch (JsonProcessingException e) {
@@ -1279,9 +1218,13 @@ public class GameWebSocketTest {
         client1WebSocketClientConnection.sendTextAndAwait(objectMapper.writeValueAsString(rollDiceMsg));
 
         assertTrue(diceResultLatch.await(5, TimeUnit.SECONDS), "Dice results not received by both.");
-        assertTrue(player1ResourceLatch.await(5, TimeUnit.SECONDS), "Player 1 did not receive PLAYER_RESOURCES.");
-        assertEquals(1, player1ReceivedMessages.stream().filter(m -> m.getType() == MessageType.PLAYER_RESOURCES).count());
+        assertEquals(1, player1ReceivedMessages.size());
 
+
+        MessageDTO received = player1ReceivedMessages.get(0);
+        PlayerInfo player1Info = received.getPlayers().get(player1ActualId);
+        assertNotNull(player1Info);
+        assertFalse(player1Info.resources().isEmpty());
         verify(gameService).rollDice(actualLobbyId, player1ActualId);
         verify(lobbyService).notifyPlayers(eq(lobby.getLobbyId()), any(MessageDTO.class));
 
@@ -1641,7 +1584,7 @@ public class GameWebSocketTest {
 
         String lobbyId = lobbyService.createLobby(hostPlayer.getUniqueId());
 
-        doThrow(new GameException("Test exception")).when(gameMessageHandler).createGameBoardWithPlayers(lobbyId);
+        doThrow(new GameException("Test exception")).when(gameMessageHandler).getGameBoardInformation(lobbyId);
 
         List<String> receivedMessages = new CopyOnWriteArrayList<>();
         CountDownLatch successLatch = new CountDownLatch(1);

@@ -13,7 +13,6 @@ public enum MessageType {
     GAME_BOARD_JSON,
     GAME_STARTED,
     DICE_RESULT,
-    PLAYER_RESOURCES,
     NEXT_TURN,
 
     //Client Messages
