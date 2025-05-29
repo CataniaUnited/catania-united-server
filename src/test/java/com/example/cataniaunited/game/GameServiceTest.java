@@ -70,12 +70,12 @@ class GameServiceTest {
         String lobbyId = lobbyService.createLobby(hostId);
 
         Lobby lobbySpy = spy(lobbyService.getLobbyById(lobbyId));
-        lobbySpy.getPlayers().add("p2");
 
         Player host = mock(Player.class);
         Player p2 = mock(Player.class);
         when(playerService.getPlayerById(hostId)).thenReturn(host);
         when(playerService.getPlayerById("p2")).thenReturn(p2);
+        lobbyService.joinLobbyByCode(lobbyId, "p2");
 
         Lobby lobby = lobbyService.getLobbyById(lobbyId);
         assertFalse(lobby.isGameStarted());
