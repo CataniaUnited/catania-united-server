@@ -11,6 +11,7 @@ import org.jboss.logging.Logger;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
@@ -136,21 +137,6 @@ public class Player {
     }
 
     /**
-     * Converts the player's basic information (username, victory points) to a JSON representation.
-     *
-     * @return An {@link ObjectNode} containing the player's username and victory points.
-     */
-    public ObjectNode toJson() {
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode playerNode = mapper.createObjectNode();
-        playerNode.put("id", this.uniqueId);
-        playerNode.put("username", this.username);
-        playerNode.put("victoryPoints", this.victoryPoints);
-        logger.infof("Serializing player %s with VP=%d", this.username, this.victoryPoints);
-        return playerNode;
-    }
-
-    /**
      * Gets the count of a specific resource type held by the player.
      *
      * @param type The {@link TileType} of the resource.
@@ -204,7 +190,7 @@ public class Player {
         resources.put(resource, resourceCount);
     }
 
-    public HashMap<TileType, Integer> getResources() {
+    public Map<TileType, Integer> getResources() {
         return resources;
     }
 

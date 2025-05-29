@@ -110,19 +110,6 @@ class PlayerTest {
     }
 
     @Test
-    void testToJsonIncludesUsernameAndVictoryPoints() {
-        Player testUser = new Player("TestUser");
-        testUser.addVictoryPoints(3);
-
-        ObjectNode json = testUser.toJson();
-
-        assertNotNull(json);
-        assertEquals("TestUser", json.get("username").asText());
-        assertEquals(3, json.get("victoryPoints").asInt());
-    }
-
-
-    @Test
     void toStringContainsAllRelevantFields() {
         String username = "TestUserToString";
         WebSocketConnection mockConnection = mock(WebSocketConnection.class);

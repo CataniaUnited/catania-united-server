@@ -26,7 +26,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @QuarkusTest
-public class GameMessageHandlerTest {
+class GameMessageHandlerTest {
 
     @Inject
     GameMessageHandler gameMessageHandler;

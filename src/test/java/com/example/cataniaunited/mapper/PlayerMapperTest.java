@@ -18,7 +18,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @QuarkusTest
-public class PlayerMapperTest {
+class PlayerMapperTest {
 
     @Inject
     PlayerMapper playerMapper;
