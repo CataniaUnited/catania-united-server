@@ -334,7 +334,8 @@ public class GameMessageHandler {
                     entry.put("vp", p.getVictoryPoints());
                 });
 
-        MessageDTO messageDTO = new MessageDTO(MessageType.GAME_WON, winnerPlayerId, lobbyId, message);
+        var players = getLobbyPlayerInformation(lobbyId);
+        MessageDTO messageDTO = new MessageDTO(MessageType.GAME_WON, winnerPlayerId, lobbyId, players, message);
         logger.infof("Player %s has won the game in lobby %s", winnerPlayerId, lobbyId);
         return lobbyService.notifyPlayers(lobbyId, messageDTO);
     }

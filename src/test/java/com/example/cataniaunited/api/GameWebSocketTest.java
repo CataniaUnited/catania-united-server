@@ -1247,6 +1247,7 @@ public class GameWebSocketTest {
 
         Player mockPlayer = mock(Player.class);
         when(mockPlayer.getUsername()).thenReturn(playerId);
+        when(mockPlayer.getUniqueId()).thenReturn(playerId);
         when(playerService.getPlayerById(playerId)).thenReturn(mockPlayer); // <-- Ensure this is how it's resolved
 
         List<String> receivedMessages = new CopyOnWriteArrayList<>();
