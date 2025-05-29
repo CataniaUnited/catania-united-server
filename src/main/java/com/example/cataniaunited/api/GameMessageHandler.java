@@ -337,7 +337,8 @@ public class GameMessageHandler {
     }
 
     Uni<MessageDTO> setReady(MessageDTO message) throws GameException {
-        lobbyService.toggleReady(message.getLobbyId(), message.getLobbyId());
+        logger.infof("Toggle ready state of player: lobbyId = %s, playerId = %s", message.getPlayer());
+        lobbyService.toggleReady(message.getLobbyId(), message.getPlayer());
         var response = new MessageDTO(MessageType.LOBBY_UPDATED, message.getPlayer(), message.getLobbyId(), getLobbyPlayerInformation(message.getLobbyId()));
         return lobbyService.notifyPlayers(message.getLobbyId(), response);
     }
