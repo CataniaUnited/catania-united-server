@@ -43,6 +43,8 @@ public interface LobbyService {
      */
     boolean joinLobbyByCode(String lobbyId, String player);
 
+    void leaveLobby(String lobbyId, String playerId) throws GameException;
+
     /**
      * Removes a player from a specified lobby.
      *

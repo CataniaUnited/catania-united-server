@@ -114,6 +114,12 @@ public class LobbyServiceImpl implements LobbyService {
         return false;
     }
 
+    @Override
+    public void leaveLobby(String lobbyId, String playerId) throws GameException {
+        Lobby lobby = getLobbyById(lobbyId);
+        lobby.removePlayer(playerId);
+    }
+
     /**
      * Assigns an available color to a player within a specific lobby.
      *
@@ -153,7 +159,7 @@ public class LobbyServiceImpl implements LobbyService {
      */
     @Override
     public Lobby getLobbyById(String lobbyId) throws GameException {
-        if(Util.isEmpty(lobbyId)) {
+        if (Util.isEmpty(lobbyId)) {
             logger.errorf("Lobby not found because given lobbyId is empty or null: id = %s", lobbyId);
             throw new GameException("ID of Lobby must not be empty");
         }

@@ -18,6 +18,7 @@ public enum MessageType {
     //Client Messages
     CREATE_LOBBY,
     JOIN_LOBBY,
+    LEAVE_LOBBY,
     SET_USERNAME,
     START_GAME,
     PLACE_SETTLEMENT,

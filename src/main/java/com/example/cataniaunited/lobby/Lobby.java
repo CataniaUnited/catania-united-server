@@ -89,12 +89,13 @@ public class Lobby {
      * This also removes the player's color assignment from the lobby's internal map.
      *
      * @param player The ID of the player to remove.
-     * @return {@code true} if the player was successfully found and removed from the player set, {@code false} otherwise.
-     * Note: {@code playerColors.remove(player)} does not return a boolean indicating removal success directly in this context.
+     *               Note: {@code playerColors.remove(player)} does not return a boolean indicating removal success directly in this context.
      */
-    public boolean removePlayer(String player) {
+    public void removePlayer(String player) {
         playerColors.remove(player);
-        return players.remove(player);
+        readyState.remove(player);
+        playerOrder.remove(player);
+        players.remove(player);
     }
 
     /**

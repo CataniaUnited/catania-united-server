@@ -64,6 +64,7 @@ public class GameMessageHandler {
             return switch (message.getType()) {
                 case CREATE_LOBBY -> createLobby(message);
                 case JOIN_LOBBY -> joinLobby(message);
+                case LEAVE_LOBBY -> leaveLobby(message);
                 case SET_USERNAME -> setUsername(message);
                 case PLACE_SETTLEMENT -> placeSettlement(message);
                 case UPGRADE_SETTLEMENT -> upgradeSettlement(message);
@@ -230,6 +231,12 @@ public class GameMessageHandler {
         return lobbyService.notifyPlayers(message.getLobbyId(), playerJoinedMessage);
     }
 
+    Uni<MessageDTO> leaveLobby(MessageDTO message) throws GameException {
+        lobbyService.leaveLobby(message.getLobbyId(), message.getPlayer());
+        var response = new MessageDTO(MessageType.LOBBY_UPDATED, message.getPlayer(), message.getLobbyId(), getLobbyPlayerInformation(message.getLobbyId()));
+        return lobbyService.notifyPlayers(message.getLobbyId(), response);
+    }
+
     /**
      * Handles a request to create a new lobby.
      *
@@ -337,7 +344,7 @@ public class GameMessageHandler {
     }
 
     Uni<MessageDTO> setReady(MessageDTO message) throws GameException {
-        logger.infof("Toggle ready state of player: lobbyId = %s, playerId = %s", message.getPlayer());
+        logger.infof("Toggle ready state of player: lobbyId = %s, playerId = %s", message.getLobbyId(), message.getPlayer());
         lobbyService.toggleReady(message.getLobbyId(), message.getPlayer());
         var response = new MessageDTO(MessageType.LOBBY_UPDATED, message.getPlayer(), message.getLobbyId(), getLobbyPlayerInformation(message.getLobbyId()));
         return lobbyService.notifyPlayers(message.getLobbyId(), response);
