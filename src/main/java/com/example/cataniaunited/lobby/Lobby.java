@@ -32,6 +32,7 @@ public class Lobby {
     private volatile boolean gameStarted = false; // Flag indicating if the game has started
     private int roundsPlayed = 0;
     private final Map<String, Integer> latestDiceRollOfPlayer = new ConcurrentHashMap<>();
+    private final Map<String, Boolean> readyState = new ConcurrentHashMap<>();
 
     /**
      * Constructs a new Lobby instance.
@@ -45,8 +46,9 @@ public class Lobby {
     public Lobby(String lobbyId, String hostPlayer) {
         this.lobbyId = lobbyId;
         this.hostPlayer = hostPlayer;
-        players.add(hostPlayer);
         Collections.addAll(availableColors, PlayerColor.values());
+        players.add(hostPlayer);
+        setPlayerColor(hostPlayer, assignAvailableColor());
     }
 
     /**
@@ -58,6 +60,10 @@ public class Lobby {
         return lobbyId;
     }
 
+    public String getHostPlayer() {
+        return hostPlayer;
+    }
+
     /**
      * Gets the set of player IDs currently in this lobby.
      * The returned set is a thread-safe {@link CopyOnWriteArraySet}.
@@ -65,7 +71,7 @@ public class Lobby {
      * @return A {@link Set} of player ID strings.
      */
     public Set<String> getPlayers() {
-        return players;
+        return Set.copyOf(players);
     }
 
     /**
@@ -83,12 +89,13 @@ public class Lobby {
      * This also removes the player's color assignment from the lobby's internal map.
      *
      * @param player The ID of the player to remove.
-     * @return {@code true} if the player was successfully found and removed from the player set, {@code false} otherwise.
-     * Note: {@code playerColors.remove(player)} does not return a boolean indicating removal success directly in this context.
+     *               Note: {@code playerColors.remove(player)} does not return a boolean indicating removal success directly in this context.
      */
-    public boolean removePlayer(String player) {
+    public void removePlayer(String player) {
         playerColors.remove(player);
-        return players.remove(player);
+        readyState.remove(player);
+        playerOrder.remove(player);
+        players.remove(player);
     }
 
     /**
@@ -221,6 +228,7 @@ public class Lobby {
         logger.debugf("Trying to start game in lobby: lobbyId=%s, hostPlayer=%s, players = %s, isGameStarted = %s", lobbyId, hostPlayer, players, gameStarted);
         return hostPlayer.equals(requestingPlayer)
                 && players.size() >= 2
+                && players.stream().allMatch(this::isReady)
                 && !gameStarted;
     }
 
@@ -279,6 +287,7 @@ public class Lobby {
         this.gameStarted = false;
         this.activePlayer = null;
         this.playerOrder.clear();
+        this.readyState.clear();
         this.roundsPlayed = 0;
     }
 
@@ -310,5 +319,14 @@ public class Lobby {
     public void setPlayerOrder(List<String> order) {
         playerOrder.clear();
         playerOrder.addAll(order);
+    }
+
+    public void toggleReady(String playerId) {
+        boolean isReady = readyState.getOrDefault(playerId, false);
+        readyState.put(playerId, !isReady);
+    }
+
+    public boolean isReady(String playerId) {
+        return readyState.getOrDefault(playerId, false);
     }
 }

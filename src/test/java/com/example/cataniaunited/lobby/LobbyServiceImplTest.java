@@ -77,6 +77,18 @@ class LobbyServiceImplTest {
     }
 
     @Test
+    void getLobbyByIdShouldThrowExceptionWhenLobbyIdIsNull() {
+        GameException ge = assertThrows(GameException.class, () -> lobbyService.getLobbyById(null));
+        assertEquals("ID of Lobby must not be empty", ge.getMessage());
+    }
+
+    @Test
+    void getLobbyByIdShouldThrowExceptionWhenLobbyIdIsEmpty() {
+        GameException ge = assertThrows(GameException.class, () -> lobbyService.getLobbyById(""));
+        assertEquals("ID of Lobby must not be empty", ge.getMessage());
+    }
+
+    @Test
     void testGeneratedLobbyIdFormat() {
         for (int i = 0; i < 100; i++) {
             String lobbyId = lobbyService.createLobby("Player" + i);

@@ -4,9 +4,6 @@ import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.exception.ui.InsufficientResourcesException;
 import com.example.cataniaunited.game.board.ports.Port;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.websockets.next.WebSocketConnection;
 import org.jboss.logging.Logger;
 
@@ -32,8 +29,6 @@ public class Player {
     HashMap<TileType, Integer> resources = new HashMap<>();
 
     final Set<Port> accessiblePorts = new HashSet<>();
-
-    private static final Logger logger = Logger.getLogger(Player.class);
 
     /**
      * Default constructor. Creates a player with a random username and a unique ID.
@@ -138,20 +133,6 @@ public class Player {
     }
 
     /**
-     * Converts the player's basic information (username, victory points) to a JSON representation.
-     *
-     * @return An {@link ObjectNode} containing the player's username and victory points.
-     */
-    public ObjectNode toJson() {
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode playerNode = mapper.createObjectNode();
-        playerNode.put("username", this.username);
-        playerNode.put("victoryPoints", this.victoryPoints);
-        logger.infof("Serializing player %s with VP=%d", this.username, this.victoryPoints);
-        return playerNode;
-    }
-
-    /**
      * Gets the count of a specific resource type held by the player.
      *
      * @param type The {@link TileType} of the resource.
@@ -205,20 +186,8 @@ public class Player {
         resources.put(resource, resourceCount);
     }
 
-    /**
-     * Gets a JSON representation of the player's current resource counts.
-     * Excludes WASTE tiles.
-     *
-     * @return An {@link ObjectNode} where keys are resource type names (String) and values are their counts (Integer).
-     */
-    public ObjectNode getResourceJSON() {
-        ObjectNode resourcesNode = JsonNodeFactory.instance.objectNode();
-        for (Map.Entry<TileType, Integer> entry : this.resources.entrySet()) {
-            if (entry.getKey() != TileType.WASTE) {
-                resourcesNode.put(entry.getKey().name(), entry.getValue());
-            }
-        }
-        return resourcesNode;
+    public Map<TileType, Integer> getResources() {
+        return resources;
     }
 
     /**

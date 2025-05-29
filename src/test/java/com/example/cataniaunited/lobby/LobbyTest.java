@@ -167,10 +167,22 @@ class LobbyTest {
     @Test
     void canStartGame_requiresTwoPlayersAndGameNotYetStarted() {
         // host can start when ≥2 players
+        testLobby.toggleReady("host");
+        testLobby.toggleReady("p2");
+        testLobby.toggleReady("p3");
         assertTrue(testLobby.canStartGame("host"));
 
         // once started, cannot start again
         testLobby.setGameStarted(true);
+        assertFalse(testLobby.canStartGame("host"));
+    }
+
+    @Test
+    void canStartGame_doesRequireTwoPlayers() {
+        testLobby.removePlayer("p2");
+        testLobby.removePlayer("p3");
+        testLobby.toggleReady("host");
+
         assertFalse(testLobby.canStartGame("host"));
     }
 

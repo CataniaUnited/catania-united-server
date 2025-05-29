@@ -34,7 +34,6 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -69,18 +68,19 @@ class GameServiceTest {
         String hostId = "host";
         String lobbyId = lobbyService.createLobby(hostId);
 
-        Lobby lobbySpy = spy(lobbyService.getLobbyById(lobbyId));
-        lobbySpy.getPlayers().add("p2");
-
         Player host = mock(Player.class);
         Player p2 = mock(Player.class);
         when(playerService.getPlayerById(hostId)).thenReturn(host);
         when(playerService.getPlayerById("p2")).thenReturn(p2);
+        lobbyService.joinLobbyByCode(lobbyId, "p2");
 
         Lobby lobby = lobbyService.getLobbyById(lobbyId);
+        lobby.toggleReady(hostId);
+        lobby.toggleReady("p2");
         assertFalse(lobby.isGameStarted());
         assertTrue(lobby.getPlayerOrder().isEmpty());
         assertNull(lobby.getActivePlayer());
+
 
         gameService.startGame(lobbyId, hostId);
 

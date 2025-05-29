@@ -43,6 +43,8 @@ public interface LobbyService {
      */
     boolean joinLobbyByCode(String lobbyId, String player);
 
+    void leaveLobby(String lobbyId, String playerId) throws GameException;
+
     /**
      * Removes a player from a specified lobby.
      *
@@ -98,5 +100,7 @@ public interface LobbyService {
     Uni<MessageDTO> notifyPlayers(String lobbyId, MessageDTO dto);
 
     String nextTurn(String lobbyId, String playerId) throws GameException;
+
+    void toggleReady(String lobbyId, String playerId) throws GameException;
 
 }

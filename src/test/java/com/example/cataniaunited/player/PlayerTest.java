@@ -4,7 +4,6 @@ import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.exception.ui.InsufficientResourcesException;
 import com.example.cataniaunited.game.board.ports.Port;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.websockets.next.WebSocketConnection;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -110,19 +109,6 @@ class PlayerTest {
     }
 
     @Test
-    void testToJsonIncludesUsernameAndVictoryPoints() {
-        Player testUser = new Player("TestUser");
-        testUser.addVictoryPoints(3);
-
-        ObjectNode json = testUser.toJson();
-
-        assertNotNull(json);
-        assertEquals("TestUser", json.get("username").asText());
-        assertEquals(3, json.get("victoryPoints").asInt());
-    }
-
-
-    @Test
     void toStringContainsAllRelevantFields() {
         String username = "TestUserToString";
         WebSocketConnection mockConnection = mock(WebSocketConnection.class);
@@ -191,53 +177,6 @@ class PlayerTest {
             player.receiveResource(type, amount);
             assertEquals(ressourceAmount + amount * 2, (int) player.resources.get(type), "Resource count for " + type + " should be " + (amount * 2) + " after second get.");
         }
-    }
-
-
-    @Test
-    void getResourceJSONWithSomeResourcesReturnsCorrectJSON() {
-        player.receiveResource(TileType.WHEAT, 3);
-        player.receiveResource(TileType.SHEEP, 1);
-        player.receiveResource(TileType.ORE, 0);
-
-        ObjectNode json = player.getResourceJSON();
-        assertNotNull(json);
-
-        assertEquals(TileType.WHEAT.getInitialAmount() + 3, json.get(TileType.WHEAT.name()).asInt());
-        assertEquals(TileType.SHEEP.getInitialAmount() + 1, json.get(TileType.SHEEP.name()).asInt());
-        assertEquals(TileType.ORE.getInitialAmount(), json.get(TileType.ORE.name()).asInt());
-
-        assertTrue(json.has(TileType.WOOD.name()), "JSON should have WOOD field");
-        assertEquals(TileType.WOOD.getInitialAmount(), json.get(TileType.WOOD.name()).asInt(), "WOOD count should be 0");
-        assertTrue(json.has(TileType.CLAY.name()), "JSON should have CLAY field");
-        assertEquals(TileType.CLAY.getInitialAmount(), json.get(TileType.CLAY.name()).asInt(), "CLAY count should be 0");
-
-
-        assertNull(json.get(TileType.WASTE.name()), "JSON should not contain WASTE resource.");
-        assertEquals(TileType.values().length - 1, json.size(), "JSON object should have one field for each non-WASTE resource type.");
-    }
-
-    @Test
-    void getResourceJSONDoesNotIncludeWaste() {
-        player.receiveResource(TileType.WHEAT, 2);
-        player.receiveResource(TileType.WASTE, 5);
-
-        ObjectNode json = player.getResourceJSON();
-        assertNotNull(json);
-        assertTrue(json.has(TileType.WHEAT.name()));
-        assertFalse(json.has(TileType.WASTE.name()), "JSON should not include WASTE type.");
-    }
-
-    @Test
-    void getResourceJSONDoesNotIncludeWasteEvenIfInList() {
-        player.resources.put(TileType.WASTE, 256);
-        player.receiveResource(TileType.WHEAT, 2);
-        player.receiveResource(TileType.WASTE, 5);
-
-        ObjectNode json = player.getResourceJSON();
-        assertNotNull(json);
-        assertTrue(json.has(TileType.WHEAT.name()));
-        assertFalse(json.has(TileType.WASTE.name()), "JSON should not include WASTE type.");
     }
 
     @Test

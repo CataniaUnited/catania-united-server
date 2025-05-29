@@ -4,7 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -16,7 +17,7 @@ public class MessageDTO {
     private MessageType type;
     private String player;
     private String lobbyId;
-    private List<String> players;
+    private Map<String, PlayerInfo> players = new HashMap<>();
     private ObjectNode message;
 
     public MessageDTO() {
@@ -32,14 +33,20 @@ public class MessageDTO {
         this.player = player;
         this.lobbyId = lobbyId;
     }
+
     public MessageDTO(MessageType type, String player, String lobbyId, ObjectNode message) {
         this(type, player, lobbyId);
         this.message = message;
     }
 
-    public MessageDTO(MessageType type, String player, String lobbyId, List<String> players) {
+    public MessageDTO(MessageType type, String player, String lobbyId, Map<String, PlayerInfo> players) {
         this(type, player, lobbyId);
         this.players = players;
+    }
+
+    public MessageDTO(MessageType type, String player, String lobbyId, Map<String, PlayerInfo> players, ObjectNode message) {
+        this(type, player, lobbyId, players);
+        this.message = message;
     }
 
     public MessageType getType() {
@@ -66,7 +73,7 @@ public class MessageDTO {
         this.lobbyId = lobbyId;
     }
 
-    public List<String> getPlayers() {
+    public Map<String, PlayerInfo> getPlayers() {
         return players;
     }
 

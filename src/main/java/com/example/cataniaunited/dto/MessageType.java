@@ -13,17 +13,18 @@ public enum MessageType {
     GAME_BOARD_JSON,
     GAME_STARTED,
     DICE_RESULT,
-    PLAYER_RESOURCES,
     NEXT_TURN,
 
     //Client Messages
     CREATE_LOBBY,
     JOIN_LOBBY,
+    LEAVE_LOBBY,
     SET_USERNAME,
     START_GAME,
     PLACE_SETTLEMENT,
     UPGRADE_SETTLEMENT,
     PLACE_ROAD,
     ROLL_DICE,
-    END_TURN
+    END_TURN,
+    SET_READY
 }
