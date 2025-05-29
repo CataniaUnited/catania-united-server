@@ -240,7 +240,7 @@ public class GameMessageHandler {
     Uni<MessageDTO> createLobby(MessageDTO message) throws GameException {
         String lobbyId = lobbyService.createLobby(message.getPlayer());
         return Uni.createFrom().item(
-                new MessageDTO(MessageType.LOBBY_CREATED, message.getPlayer(), lobbyId, getLobbyPlayerInformation(message.getLobbyId())));
+                new MessageDTO(MessageType.LOBBY_CREATED, message.getPlayer(), lobbyId, getLobbyPlayerInformation(lobbyId)));
     }
 
     /**

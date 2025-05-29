@@ -7,6 +7,7 @@ import com.example.cataniaunited.exception.ui.InvalidTurnException;
 import com.example.cataniaunited.fi.LobbyAction;
 import com.example.cataniaunited.player.PlayerColor;
 import com.example.cataniaunited.player.PlayerService;
+import com.example.cataniaunited.util.Util;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -152,6 +153,11 @@ public class LobbyServiceImpl implements LobbyService {
      */
     @Override
     public Lobby getLobbyById(String lobbyId) throws GameException {
+        if(Util.isEmpty(lobbyId)) {
+            logger.errorf("Lobby not found because given lobbyId is empty or null: id = %s", lobbyId);
+            throw new GameException("ID of Lobby must not be empty");
+        }
+
         Lobby lobby = lobbies.get(lobbyId);
         if (lobby == null) {
             logger.errorf("Lobby not found: id = %s", lobbyId);
