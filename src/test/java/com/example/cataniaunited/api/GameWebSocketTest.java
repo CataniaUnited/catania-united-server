@@ -549,6 +549,10 @@ public class GameWebSocketTest {
         when(mockPlayer3.getResourceCount(any(TileType.class))).thenReturn(10);
         when(mockPlayer3.toJson()).thenReturn(objectMapper.createObjectNode().put("username", player3));
 
+        lobbyService.toggleReady(lobbyId, player1);
+        lobbyService.toggleReady(lobbyId, player2);
+        lobbyService.toggleReady(lobbyId, player3);
+
         gameService.startGame(lobbyId, player1);
 
         Lobby lobby = lobbyService.getLobbyById(lobbyId);
@@ -1033,6 +1037,9 @@ public class GameWebSocketTest {
         Lobby lobby = lobbyService.getLobbyById(actualLobbyId);
         assertNotNull(lobby, "Lobby should not be null after retrieval");
 
+        lobbyService.toggleReady(actualLobbyId, player1ActualId);
+        lobbyService.toggleReady(actualLobbyId, player2ActualId);
+
         gameService.startGame(actualLobbyId, player1ActualId);
         lobby.setActivePlayer(player1ActualId);
 
@@ -1133,6 +1140,9 @@ public class GameWebSocketTest {
         System.out.println("Test: Created lobby with ID: " + actualLobbyId + " for host " + player1ActualId);
         lobbyService.joinLobbyByCode(actualLobbyId, player2ActualId);
         System.out.println("Test: Player " + player2ActualId + " joined lobby " + actualLobbyId);
+
+        lobbyService.toggleReady(actualLobbyId, player1ActualId);
+        lobbyService.toggleReady(actualLobbyId, player2ActualId);
 
         gameService.startGame(actualLobbyId, player1ActualId);
         System.out.println("Test: Gameboard created for lobby " + actualLobbyId);
@@ -1446,6 +1456,9 @@ public class GameWebSocketTest {
         String lobbyId = lobbyService.createLobby(player1.getUniqueId());
         lobbyService.joinLobbyByCode(lobbyId, player2.getUniqueId());
 
+        lobbyService.toggleReady(lobbyId, player1.getUniqueId());
+        lobbyService.toggleReady(lobbyId, player2.getUniqueId());
+
         MessageDTO startedMessage = new MessageDTO(MessageType.START_GAME, player1.getUniqueId(), lobbyId);
         connection.sendTextAndAwait(startedMessage);
 
@@ -1529,6 +1542,9 @@ public class GameWebSocketTest {
         System.out.println("Test: Created lobby with ID: " + actualLobbyId + " for host " + player1ActualId);
         lobbyService.joinLobbyByCode(actualLobbyId, player2ActualId);
         System.out.println("Test: Player " + player2ActualId + " joined lobby " + actualLobbyId);
+
+        lobbyService.toggleReady(actualLobbyId, player1ActualId);
+        lobbyService.toggleReady(actualLobbyId, player2ActualId);
 
         gameService.startGame(actualLobbyId, player1ActualId);
         System.out.println("Test: Gameboard created for lobby " + actualLobbyId);

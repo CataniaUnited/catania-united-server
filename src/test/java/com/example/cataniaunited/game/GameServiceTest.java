@@ -69,8 +69,6 @@ class GameServiceTest {
         String hostId = "host";
         String lobbyId = lobbyService.createLobby(hostId);
 
-        Lobby lobbySpy = spy(lobbyService.getLobbyById(lobbyId));
-
         Player host = mock(Player.class);
         Player p2 = mock(Player.class);
         when(playerService.getPlayerById(hostId)).thenReturn(host);
@@ -78,9 +76,12 @@ class GameServiceTest {
         lobbyService.joinLobbyByCode(lobbyId, "p2");
 
         Lobby lobby = lobbyService.getLobbyById(lobbyId);
+        lobby.toggleReady(hostId);
+        lobby.toggleReady("p2");
         assertFalse(lobby.isGameStarted());
         assertTrue(lobby.getPlayerOrder().isEmpty());
         assertNull(lobby.getActivePlayer());
+
 
         gameService.startGame(lobbyId, hostId);
 
