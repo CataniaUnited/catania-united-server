@@ -1557,10 +1557,9 @@ public class GameWebSocketTest {
 
         var receivedDTO = player1ReceivedMessages.get(0);
         assertEquals(MessageType.NEXT_TURN, receivedDTO.getType());
-        assertEquals(player2ActualId, receivedDTO.getMessageNode("activePlayerId").asText());
+        assertTrue(receivedDTO.getPlayers().containsKey(player2ActualId));
+        assertTrue(receivedDTO.getPlayers().get(player2ActualId).isActivePlayer());
         assertNotNull(receivedDTO.getMessageNode("gameboard"));
-        assertNotNull(receivedDTO.getMessageNode("players"));
-
     }
 
     @Test
