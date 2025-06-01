@@ -18,6 +18,8 @@ public interface PlayerMapper {
     @Mapping(target = "color", expression = "java( mapPlayerColor(player, lobby) )")
     @Mapping(target = "isHost", expression = "java( isHost(player, lobby) )")
     @Mapping(target = "isReady", expression = "java( isReady(player, lobby) )")
+    @Mapping(target = "isActivePlayer", expression = "java( isActivePlayer(player, lobby) )")
+    @Mapping(target = "canRollDice", expression = "java( canRollDice(player, lobby) )")
     PlayerInfo toDto(Player player, @Context Lobby lobby);
 
     default String mapPlayerColor(Player player, @Context Lobby lobby) {
@@ -34,5 +36,13 @@ public interface PlayerMapper {
 
     default boolean isReady(Player player, @Context Lobby lobby) {
         return lobby.isReady(player.getUniqueId());
+    }
+
+    default boolean isActivePlayer(Player player, @Context Lobby lobby) {
+        return player.getUniqueId().equals(lobby.getActivePlayer());
+    }
+
+    default boolean canRollDice(Player player, @Context Lobby lobby) {
+        return lobby.canRollDice(player.getUniqueId());
     }
 }

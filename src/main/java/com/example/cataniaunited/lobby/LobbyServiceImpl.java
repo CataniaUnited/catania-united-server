@@ -198,7 +198,7 @@ public class LobbyServiceImpl implements LobbyService {
     public void checkPlayerDiceRoll(String lobbyId, String playerId) throws GameException {
         executeLobbyCheck(lobbyId, lobby -> {
             checkPlayerTurn(lobby, playerId);
-            if (!lobby.mayRollDice(playerId)) {
+            if (!lobby.canRollDice(playerId)) {
                 throw new DiceRollException();
             }
         });

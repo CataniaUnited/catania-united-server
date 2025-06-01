@@ -299,7 +299,7 @@ public class Lobby {
         return List.copyOf(playerOrder);
     }
 
-    public boolean mayRollDice(String playerId) {
+    public boolean canRollDice(String playerId) {
         return latestDiceRollOfPlayer.getOrDefault(playerId, 0) <= roundsPlayed;
     }
 
