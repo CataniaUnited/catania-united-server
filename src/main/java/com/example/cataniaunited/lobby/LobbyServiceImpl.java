@@ -235,6 +235,12 @@ public class LobbyServiceImpl implements LobbyService {
         try {
             logger.debugf("Notifying players in lobby: lobbyId=%s, message=%s", lobbyId, dto);
             Lobby lobby = getLobbyById(lobbyId);
+
+            if(Util.isEmpty(lobby.getPlayers())){
+                logger.warnf("No players in lobby - dropped message: lobbyId=%s", lobbyId);
+                return Uni.createFrom().item(dto);
+            }
+
             List<Uni<Void>> sendUnis = lobby.getPlayers()
                     .stream()
                     .map(playerId -> playerService.sendMessageToPlayer(playerId, dto))
@@ -255,7 +261,9 @@ public class LobbyServiceImpl implements LobbyService {
     public String nextTurn(String lobbyId, String playerId) throws GameException {
         Lobby lobby = getLobbyById(lobbyId);
         lobby.nextPlayerTurn();
-        return lobby.getActivePlayer();
+        String activePlayerId = lobby.getActivePlayer();
+        logger.debugf("Player ended turn: lobbyId=%s, previousActivePlayer=%s, nextActivePlayer=%s", lobbyId, playerId, activePlayerId);
+        return activePlayerId;
     }
 
     @Override
