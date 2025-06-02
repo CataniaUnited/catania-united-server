@@ -5,6 +5,7 @@ import com.example.cataniaunited.game.board.Placable;
 import com.example.cataniaunited.game.board.Transform;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.example.cataniaunited.util.Util;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -25,9 +26,6 @@ public abstract class Port implements Placable {
     protected BuildingSite buildingSite2;
     private static final double PORT_DISTANCE = 10.0;
     protected Transform portStructureTransform = Transform.ORIGIN;
-
-    protected Transform bridge1Transform = Transform.ORIGIN;
-    protected Transform bridge2Transform = Transform.ORIGIN;
 
     /**
      * Constructs a Port with a specified trade-in ratio.
@@ -194,32 +192,6 @@ public abstract class Port implements Placable {
 
         // Assign the calculated transform to the port structure
         this.portStructureTransform = new Transform(currentPortCenterX, currentPortCenterY, calculatedPortRotation);
-
-        // --- Step 7: Bridge 1 Transform (Connecting buildingSite1 to port structure) ---
-        // Vector from building site 1 to the port structure's center
-        double vecSp1ToPortX = currentPortCenterX - x1;
-        double vecSp1ToPortY = currentPortCenterY - y1;
-        // Rotation of bridge 1 aligns with this vector
-        double calculatedBridge1Rotation = Math.atan2(vecSp1ToPortY, vecSp1ToPortX);
-        // Midpoint of bridge 1
-        double currentBridge1X = (x1 + currentPortCenterX) / 2.0;
-        double currentBridge1Y = (y1 + currentPortCenterY) / 2.0;
-
-        // Assign the calculated transform to bridge 1
-        this.bridge1Transform = new Transform(currentBridge1X, currentBridge1Y, calculatedBridge1Rotation);
-
-        // --- Step 8: Bridge 2 Transform (Connecting buildingSite2 to port structure) ---
-        // Vector from building site 2 to the port structure's center
-        double vecSp2ToPortX = currentPortCenterX - x2;
-        double vecSp2ToPortY = currentPortCenterY - y2;
-        // Rotation of bridge 2 aligns with this vector
-        double calculatedBridge2Rotation = Math.atan2(vecSp2ToPortY, vecSp2ToPortX);
-        // Midpoint of bridge 2
-        double currentBridge2X = (x2 + currentPortCenterX) / 2.0;
-        double currentBridge2Y = (y2 + currentPortCenterY) / 2.0;
-
-        // Assign the calculated transform to bridge 2
-        this.bridge2Transform = new Transform(currentBridge2X, currentBridge2Y, calculatedBridge2Rotation);
     }
 
     /**
@@ -242,6 +214,8 @@ public abstract class Port implements Placable {
     public ObjectNode toJson() {
         JsonNodeFactory factory = JsonNodeFactory.instance;
         ObjectNode node = JsonNodeFactory.instance.objectNode();
+        ArrayNode coordinates1Node = factory.arrayNode(2);
+        ArrayNode coordinates2Node = factory.arrayNode(2);
         node.put("inputResourceAmount", this.inputResourceAmount); // e.g. 3 for 3:1
 
         // Create a parent node for all visual/transformational aspects of the port
@@ -251,22 +225,23 @@ public abstract class Port implements Placable {
         // The toJson method in the Transform record will handle its own serialization
         portNode.set("portTransform", this.portStructureTransform.toJson(factory));
 
-        // Add the transform for the first bridge
-        portNode.set("bridge1Transform", this.bridge1Transform.toJson(factory));
-
-        // Add the transform for the second bridge
-        portNode.set("bridge2Transform", this.bridge2Transform.toJson(factory));
-
         // Include IDs of associated building sites if they exist
         if (buildingSite1 != null && buildingSite2 != null) {
             portNode.put("settlementPosition1Id", buildingSite1.getId());
             portNode.put("settlementPosition2Id", buildingSite2.getId());
-        }
+
+            for (double val : this.buildingSite1.getCoordinates()) {
+                coordinates1Node.add(val);
+            }
+
+            portNode.set("buildingSite1Position", coordinates1Node);
 
 
-        if (buildingSite1 != null && buildingSite2 != null) {
-            portNode.put("settlementPosition1Id", buildingSite1.getId());
-            portNode.put("settlementPosition2Id", buildingSite2.getId());
+            for (double val : this.buildingSite2.getCoordinates()) {
+                coordinates2Node.add(val);
+            }
+
+            portNode.set("buildingSite2Position", coordinates2Node);
         }
 
         return node;

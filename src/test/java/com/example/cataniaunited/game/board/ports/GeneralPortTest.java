@@ -217,14 +217,6 @@ class GeneralPortTest {
         assertEquals(0.0, portSubNode.get("y").asDouble(), 0.001, "Default port y-coordinate should be 0.0.");
         assertEquals(0.0, portSubNode.get("rotation").asDouble(), 0.001, "Default port rotation should be 0.0.");
 
-        assertTrue(portStructureNode.has("bridge1Transform"), "'portStructure' should contain a 'bridge1' object.");
-        JsonNode bridge1Node = portStructureNode.get("bridge1Transform");
-        assertEquals(0.0, bridge1Node.get("x").asDouble(), 0.001);
-
-        assertTrue(portStructureNode.has("bridge2Transform"), "'portStructure' should contain a 'bridge2' object.");
-        JsonNode bridge2Node = portStructureNode.get("bridge2Transform");
-        assertEquals(0.0, bridge2Node.get("x").asDouble(), 0.001);
-
         assertFalse(portStructureNode.has("settlementPosition1Id"), "Should not have settlementPosition1Id when settlements are not set.");
         assertFalse(portStructureNode.has("settlementPosition2Id"), "Should not have settlementPosition2Id when settlements are not set.");
     }
