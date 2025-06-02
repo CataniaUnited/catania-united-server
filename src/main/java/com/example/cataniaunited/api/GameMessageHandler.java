@@ -313,7 +313,12 @@ public class GameMessageHandler {
     private Uni<MessageDTO> handleStartGame(MessageDTO message) throws GameException {
         gameService.startGame(message.getLobbyId(), message.getPlayer());
         ObjectNode payload = getGameBoardInformation(message.getLobbyId());
-        MessageDTO response = new MessageDTO(MessageType.GAME_STARTED, null, message.getLobbyId(), payload);
+        MessageDTO response = new MessageDTO(
+                MessageType.GAME_STARTED,
+                message.getPlayer(),
+                message.getLobbyId(),
+                getLobbyPlayerInformation(message.getLobbyId()),
+                payload);
         return lobbyService.notifyPlayers(message.getLobbyId(), response);
     }
 
