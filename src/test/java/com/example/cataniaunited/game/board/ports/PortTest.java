@@ -216,17 +216,23 @@ class PortTest {
         assertEquals(port.portStructureTransform.y(), portTransformNode.get("y").asDouble(), 0.001);
         assertEquals(port.portStructureTransform.rotation(), portTransformNode.get("rotation").asDouble(), 0.001);
 
-        assertTrue(portVisuals.has("bridge1Transform"), "PortVisuals should have bridge1Transform node.");
-        JsonNode bridge1Node = portVisuals.get("bridge1Transform");
-        assertEquals(port.bridge1Transform.x(), bridge1Node.get("x").asDouble(), 0.001);
-        assertEquals(port.bridge1Transform.y(), bridge1Node.get("y").asDouble(), 0.001);
-        assertEquals(port.bridge1Transform.rotation(), bridge1Node.get("rotation").asDouble(), 0.001);
+        // Assert 'buildingSite1Position' within 'portVisuals'
+        assertTrue(portVisuals.has("buildingSite1Position"), "PortVisuals should have buildingSite1Position node.");
+        JsonNode bs1PosNode = portVisuals.get("buildingSite1Position");
+        assertNotNull(bs1PosNode, "buildingSite1Position node should not be null.");
+        assertTrue(bs1PosNode.isArray(), "buildingSite1Position should be an array.");
+        assertEquals(2, bs1PosNode.size(), "buildingSite1Position array should have 2 elements.");
+        assertEquals(mockSettlement1.getCoordinates()[0], bs1PosNode.get(0).asDouble(), 0.001, "X coordinate of buildingSite1Position");
+        assertEquals(mockSettlement1.getCoordinates()[1], bs1PosNode.get(1).asDouble(), 0.001, "Y coordinate of buildingSite1Position");
 
-        assertTrue(portVisuals.has("bridge2Transform"), "PortVisuals should have bridge2Transform node.");
-        JsonNode bridge2Node = portVisuals.get("bridge2Transform");
-        assertEquals(port.bridge2Transform.x(), bridge2Node.get("x").asDouble(), 0.001);
-        assertEquals(port.bridge2Transform.y(), bridge2Node.get("y").asDouble(), 0.001);
-        assertEquals(port.bridge2Transform.rotation(), bridge2Node.get("rotation").asDouble(), 0.001);
+        // Assert 'buildingSite2Position' within 'portVisuals'
+        assertTrue(portVisuals.has("buildingSite2Position"), "PortVisuals should have buildingSite2Position node.");
+        JsonNode bs2PosNode = portVisuals.get("buildingSite2Position");
+        assertNotNull(bs2PosNode, "buildingSite2Position node should not be null.");
+        assertTrue(bs2PosNode.isArray(), "buildingSite2Position should be an array.");
+        assertEquals(2, bs2PosNode.size(), "buildingSite2Position array should have 2 elements.");
+        assertEquals(mockSettlement2.getCoordinates()[0], bs2PosNode.get(0).asDouble(), 0.001, "X coordinate of buildingSite2Position");
+        assertEquals(mockSettlement2.getCoordinates()[1], bs2PosNode.get(1).asDouble(), 0.001, "Y coordinate of buildingSite2Position");
 
         assertTrue(portVisuals.has("settlementPosition1Id"), "PortVisuals should have settlementPosition1Id.");
         assertEquals(1, portVisuals.get("settlementPosition1Id").asInt());
@@ -254,10 +260,6 @@ class PortTest {
 
         assertTrue(portVisuals.has("portTransform"));
         assertEquals(Transform.ORIGIN.x(), portVisuals.get("portTransform").get("x").asDouble(), 0.001);
-        assertTrue(portVisuals.has("bridge1Transform"));
-        assertEquals(Transform.ORIGIN.x(), portVisuals.get("bridge1Transform").get("x").asDouble(), 0.001);
-        assertTrue(portVisuals.has("bridge2Transform"));
-        assertEquals(Transform.ORIGIN.x(), portVisuals.get("bridge2Transform").get("x").asDouble(), 0.001);
 
         assertFalse(portVisuals.has("settlementPosition1Id"));
         assertFalse(portVisuals.has("settlementPosition2Id"));
@@ -266,16 +268,12 @@ class PortTest {
     void toJsonShouldReflectManuallySetTransformsWhenSettlementsAreNull() {
         // Manually set transforms (possible because port fields are protected)
         port.portStructureTransform = new Transform(1.0, 2.0, 0.5);
-        port.bridge1Transform = new Transform(0.1, 0.2, 0.3);
-        port.bridge2Transform = new Transform(0.4, 0.5, 0.6);
 
         ObjectNode json = port.toJson();
         assertTrue(json.has("portVisuals"), "JSON should have portVisuals node.");
         JsonNode portVisuals = json.get("portVisuals");
 
         assertEquals(1.0, portVisuals.get("portTransform").get("x").asDouble(), 0.001);
-        assertEquals(0.1, portVisuals.get("bridge1Transform").get("x").asDouble(), 0.001);
-        assertEquals(0.4, portVisuals.get("bridge2Transform").get("x").asDouble(), 0.001);
 
         assertFalse(portVisuals.has("settlementPosition1Id"));
         assertFalse(portVisuals.has("settlementPosition2Id"));
@@ -286,7 +284,6 @@ class PortTest {
         port.calculatePosition(); // settlements are null
         assertArrayEquals(Transform.ORIGIN.getCoordinatesArray(), port.getCoordinates(), "Coordinates should be from Transform.ORIGIN.");
         assertEquals(Transform.ORIGIN, port.portStructureTransform, "portStructureTransform should be ORIGIN.");
-        assertEquals(Transform.ORIGIN, port.bridge1Transform, "bridge1Transform should be ORIGIN.");
     }
 
     @Test
@@ -309,36 +306,7 @@ class PortTest {
         assertEquals(10.0, port.portStructureTransform.y(), 0.001, "PortTransform Y is incorrect.");
         assertEquals(0.0, port.portStructureTransform.rotation(), 0.001, "PortTransform Rotation is incorrect.");
 
-        assertEquals(5.0, port.bridge1Transform.x(), 0.001, "Bridge1Transform X is incorrect.");
-        assertEquals(5.0, port.bridge1Transform.y(), 0.001, "Bridge1Transform Y is incorrect.");
-        assertEquals(Math.atan2(10,10), port.bridge1Transform.rotation(), 0.001, "Bridge1Transform Rotation is incorrect.");
-
-        assertEquals(15.0, port.bridge2Transform.x(), 0.001, "Bridge2Transform X is incorrect.");
-        assertEquals(5.0, port.bridge2Transform.y(), 0.001, "Bridge2Transform Y is incorrect.");
-        assertEquals(Math.atan2(10, -10), port.bridge2Transform.rotation(), 0.001, "Bridge2Transform Rotation is incorrect.");
-
         assertArrayEquals(new double[]{10.0, 10.0}, port.getCoordinates(), 0.001, "getCoordinates returned incorrect values.");
-    }
-
-    @Test
-    void calculatePositionWithVerticalSettlementsShouldCalculatePositions() {
-        when(mockSettlement1.getCoordinates()).thenReturn(new double[]{0.0, 0.0});
-        when(mockSettlement2.getCoordinates()).thenReturn(new double[]{0.0, 20.0});
-
-        port.setAssociatedBuildingSites(mockSettlement1, mockSettlement2);
-        port.calculatePosition();
-
-        assertEquals(-10.0, port.portStructureTransform.x(), 0.001, "PortTransform X is incorrect.");
-        assertEquals(10.0, port.portStructureTransform.y(), 0.001, "PortTransform Y is incorrect.");
-        assertEquals(Math.PI / 2, port.portStructureTransform.rotation(), 0.001, "PortTransform Rotation is incorrect.");
-
-        assertEquals(-5.0, port.bridge1Transform.x(), 0.001);
-        assertEquals(5.0, port.bridge1Transform.y(), 0.001);
-        assertEquals(Math.atan2(10, -10), port.bridge1Transform.rotation(), 0.001);
-
-        assertEquals(-5.0, port.bridge2Transform.x(), 0.001);
-        assertEquals(15.0, port.bridge2Transform.y(), 0.001);
-        assertEquals(Math.atan2(-10, -10), port.bridge2Transform.rotation(), 0.001);
     }
 
     @Test
@@ -383,10 +351,6 @@ class PortTest {
         assertEquals(15.0, port.portStructureTransform.y(), 0.001, "PortTransform Y should be midY as unitNormalY is 0.");
         assertEquals(0.0, port.portStructureTransform.rotation(), 0.001, "PortTransform Rotation should be 0 for identical points.");
         assertArrayEquals(new double[]{10.0, 15.0}, port.getCoordinates(), 0.001, "Port should be at the common settlement location.");
-
-        assertEquals(10.0, port.bridge1Transform.x(), 0.001); // (x1 + portX)/2 = (10+10)/2 = 10
-        assertEquals(15.0, port.bridge1Transform.y(), 0.001); // (y1 + portY)/2 = (15+15)/2 = 15
-        assertEquals(0.0, port.bridge1Transform.rotation(), 0.001); // atan2(portY-y1, portX-x1) = atan2(0,0) = 0
     }
 
     @Test
@@ -396,8 +360,6 @@ class PortTest {
 
         // Manually set transforms to ensure portVisuals content is predictable beyond defaults
         port.portStructureTransform = new Transform(1.0, 2.0, 0.1);
-        port.bridge1Transform = new Transform(0.11, 0.22, 0.33);
-        port.bridge2Transform = new Transform(0.44, 0.55, 0.66);
 
         ObjectNode json = port.toJson();
         JsonNode portVisuals = json.get("portVisuals");
@@ -408,8 +370,6 @@ class PortTest {
 
         assertTrue(portVisuals.has("portTransform"));
         assertEquals(1.0, portVisuals.get("portTransform").get("x").asDouble(), 0.001);
-        assertTrue(portVisuals.has("bridge1Transform")); // Bridge transforms are always present
-        assertEquals(0.11, portVisuals.get("bridge1Transform").get("x").asDouble(), 0.001);
     }
 
     @Test
@@ -418,8 +378,6 @@ class PortTest {
         port.setAssociatedBuildingSites(mockSettlement1, null);
 
         port.portStructureTransform = new Transform(3.0, 4.0, 0.2);
-        port.bridge1Transform = new Transform(0.11, 0.22, 0.33);
-        port.bridge2Transform = new Transform(0.44, 0.55, 0.66);
 
         ObjectNode json = port.toJson();
         JsonNode portVisuals = json.get("portVisuals");
@@ -430,7 +388,5 @@ class PortTest {
 
         assertTrue(portVisuals.has("portTransform"));
         assertEquals(3.0, portVisuals.get("portTransform").get("x").asDouble(), 0.001);
-        assertTrue(portVisuals.has("bridge2Transform")); // Bridge transforms are always present
-        assertEquals(0.44, portVisuals.get("bridge2Transform").get("x").asDouble(), 0.001);
     }
 }

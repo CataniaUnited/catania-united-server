@@ -169,7 +169,7 @@ class SpecificResourcePortTest {
         assertEquals(TileType.WOOD.name(), jsonNode.get("resource").asText(), "'resource' field should be 'WOOD'.");
 
         assertTrue(jsonNode.has("inputResourceAmount"), "JSON should contain 'inputResourceAmount' from superclass.");
-        assertEquals(2, jsonNode.get("inputResourceAmount").asInt(), "'inputResourceAmount' should be 2 for a SpecificResourcePort.");
+        assertEquals(2, jsonNode.get("inputResourceAmount").asInt(), "'inputResourceAmount' should be 3 for a GeneralPort.");
 
         assertTrue(jsonNode.has("portVisuals"), "JSON should contain 'portStructure' node from superclass.");
         JsonNode portStructureNode = jsonNode.get("portVisuals");
@@ -180,17 +180,8 @@ class SpecificResourcePortTest {
         assertEquals(0.0, portSubNode.get("y").asDouble(), 0.001, "Default port y-coordinate should be 0.0.");
         assertEquals(0.0, portSubNode.get("rotation").asDouble(), 0.001, "Default port rotation should be 0.0.");
 
-        assertTrue(portStructureNode.has("bridge1Transform"), "'portStructure' should contain a 'bridge1' object.");
-        JsonNode bridge1Node = portStructureNode.get("bridge1Transform");
-        assertEquals(0.0, bridge1Node.get("x").asDouble(), 0.001);
-
-        assertTrue(portStructureNode.has("bridge2Transform"), "'portStructure' should contain a 'bridge2' object.");
-        JsonNode bridge2Node = portStructureNode.get("bridge2Transform");
-        assertEquals(0.0, bridge2Node.get("x").asDouble(), 0.001);
-
         assertFalse(portStructureNode.has("settlementPosition1Id"), "Should not have settlementPosition1Id when settlements are not set.");
         assertFalse(portStructureNode.has("settlementPosition2Id"), "Should not have settlementPosition2Id when settlements are not set.");
-
 
         SpecificResourcePort sheepPort = new SpecificResourcePort(TileType.SHEEP);
         ObjectNode sheepJsonNode = sheepPort.toJson();
