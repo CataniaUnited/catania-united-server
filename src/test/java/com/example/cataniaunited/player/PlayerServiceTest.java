@@ -309,5 +309,22 @@ class PlayerServiceTest {
         verify(mockConnection, never()).sendText(testMessage);
     }
 
+    @Test
+    void resetVictoryPointsShouldNotFailOnNonExistingPlayer() {
+        assertDoesNotThrow(() -> playerService.resetVictoryPoints("non-existent-player-id-123"));
+    }
+
+    @Test
+    void resetVictoryPointsShouldSetVictoryPointsOfPlayerToZero() {
+        Player player = playerService.addPlayer(mockConnection1);
+        int currentVictoryPoints = player.getVictoryPoints();
+        player.addVictoryPoints(5);
+        assertEquals(currentVictoryPoints + 5, player.getVictoryPoints());
+
+        playerService.resetVictoryPoints(player.getUniqueId());
+
+        assertEquals(0, player.getVictoryPoints());
+    }
+
 }
 

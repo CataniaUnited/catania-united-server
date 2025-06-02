@@ -84,10 +84,8 @@ public class GameMessageHandler {
     }
 
     Uni<MessageDTO> endTurn(MessageDTO message) throws GameException {
-        String activePlayerId = lobbyService.nextTurn(message.getLobbyId(), message.getPlayer());
+        lobbyService.nextTurn(message.getLobbyId(), message.getPlayer());
         ObjectNode payload = getGameBoardInformation(message.getLobbyId());
-        payload.put("activePlayerId", activePlayerId);
-
         var response = new MessageDTO(MessageType.NEXT_TURN, message.getPlayer(), message.getLobbyId(), getLobbyPlayerInformation(message.getLobbyId()), payload);
         return lobbyService.notifyPlayers(message.getLobbyId(), response);
     }

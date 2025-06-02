@@ -10,6 +10,8 @@ public record PlayerInfo(
         String color,
         boolean isHost,
         boolean isReady,
+        boolean isActivePlayer,
+        boolean canRollDice,
         int victoryPoints,
         Map<TileType, Integer> resources) {
 }

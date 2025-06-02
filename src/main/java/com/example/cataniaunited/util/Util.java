@@ -1,6 +1,6 @@
 package com.example.cataniaunited.util;
 
-import java.util.List;
+import java.util.Collection;
 
 public class Util {
 
@@ -29,7 +29,7 @@ public class Util {
      * @param l The list to check.
      * @return true if the object is null or empty; false otherwise.
      */
-    public static boolean isEmpty(List<?> l) {
+    public static boolean isEmpty(Collection<?> l) {
         return l == null || l.isEmpty();
     }
 }

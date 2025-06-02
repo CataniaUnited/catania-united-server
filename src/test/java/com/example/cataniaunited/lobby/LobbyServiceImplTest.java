@@ -18,6 +18,7 @@ import org.jboss.logging.Logger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -359,11 +360,9 @@ class LobbyServiceImplTest {
         when(playerService.getPlayerById(hostId)).thenReturn(host);
         when(playerService.getPlayerById(player2)).thenReturn(p2);
 
-        MessageDTO dto = new MessageDTO(MessageType.ERROR, (ObjectNode) null);
-
+        MessageDTO dto = new MessageDTO(MessageType.ERROR, null);
 
         lobbyService.notifyPlayers(lobbyId, dto);
-
 
         verify(playerService).sendMessageToPlayer(hostId, dto);
         verify(playerService).sendMessageToPlayer(player2, dto);
@@ -394,5 +393,18 @@ class LobbyServiceImplTest {
                 .assertFailedWith(RuntimeException.class, exception.getMessage())
                 .assertSubscribed()
                 .assertTerminated();
+    }
+
+    @Test
+    void notifyPlayersShouldDropMessageSilentlyOnEmptyLobby() throws GameException {
+        String lobbyId = "testLobbyId";
+        Lobby lobbyMock = mock(Lobby.class);
+        when(lobbyMock.getPlayers()).thenReturn(Collections.emptySet());
+        doReturn(lobbyMock).when(lobbyService).getLobbyById(lobbyId);
+        var message = new MessageDTO(MessageType.JOIN_LOBBY, null);
+        Uni<MessageDTO> notifyUni = assertDoesNotThrow(() -> lobbyService.notifyPlayers(lobbyId, message));
+        notifyUni.subscribe()
+                .withSubscriber(UniAssertSubscriber.create())
+                .assertItem(message);
     }
 }

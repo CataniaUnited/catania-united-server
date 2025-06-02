@@ -60,7 +60,11 @@ public class PlayerService {
      * @return The {@link Player} with the given ID, or null if not found.
      */
     public Player getPlayerById(String id) {
-        return playersById.get(id);
+        Player player = playersById.get(id);
+        if (player == null) {
+            logger.warnf("Player not found: id=%s", id);
+        }
+        return player;
     }
 
     /**
@@ -106,6 +110,13 @@ public class PlayerService {
         Player player = getPlayerById(playerId);
         if (player != null) {
             player.addVictoryPoints(points);
+        }
+    }
+
+    public void resetVictoryPoints(String playerId) {
+        Player player = getPlayerById(playerId);
+        if (player != null) {
+            player.resetVictoryPoints();
         }
     }
 

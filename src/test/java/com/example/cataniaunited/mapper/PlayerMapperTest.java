@@ -14,7 +14,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 @QuarkusTest
@@ -31,7 +33,7 @@ class PlayerMapperTest {
     }
 
     @Test
-    void mapPlayerColorShouldReturnHexCode(){
+    void mapPlayerColorShouldReturnHexCode() {
         Lobby lobbyMock = mock(Lobby.class);
         when(lobbyMock.getPlayerColor(playerMock.getUniqueId())).thenReturn(PlayerColor.CYAN);
 
@@ -40,7 +42,7 @@ class PlayerMapperTest {
     }
 
     @Test
-    void mapPlayerNameShouldReturnNullIfPlayerHasNoColor(){
+    void mapPlayerNameShouldReturnNullIfPlayerHasNoColor() {
         Lobby lobbyMock = mock(Lobby.class);
         when(lobbyMock.getPlayerColor(playerMock.getUniqueId())).thenReturn(null);
         String colorHex = playerMapper.mapPlayerColor(playerMock, lobbyMock);
@@ -48,20 +50,49 @@ class PlayerMapperTest {
     }
 
     @Test
-    void isHostShouldReturnTrueIfPlayerIsHost(){
+    void isHostShouldReturnTrueIfPlayerIsHost() {
         Lobby lobbyMock = new Lobby("1234", playerMock.getUniqueId());
         assertTrue(playerMapper.isHost(playerMock, lobbyMock));
     }
 
     @Test
-    void isHostShouldReturnFalseIfPlayerIsHost(){
+    void isHostShouldReturnFalseIfPlayerIsHost() {
         Lobby lobbyMock = new Lobby("1234", "123");
         assertFalse(playerMapper.isHost(playerMock, lobbyMock));
     }
 
     @Test
-    void testToDto(){
+    void isActivePlayerShouldReturnTrueIfItIsPlayersTurn() {
         Lobby lobbyMock = new Lobby("1234", playerMock.getUniqueId());
+        lobbyMock.setActivePlayer(playerMock.getUniqueId());
+        assertTrue(playerMapper.isActivePlayer(playerMock, lobbyMock));
+    }
+
+    @Test
+    void isActivePlayerShouldReturnFalseIfItIsNotPlayersTurn() {
+        Lobby lobbyMock = new Lobby("1234", playerMock.getUniqueId());
+        lobbyMock.setActivePlayer("anotherPlayer");
+        assertFalse(playerMapper.isActivePlayer(playerMock, lobbyMock));
+    }
+
+    @Test
+    void canRollDiceShouldReturnTrueIfItPlayerCanRollDice() {
+        Lobby lobbyMock = spy(new Lobby("1234", playerMock.getUniqueId()));
+        doReturn(true).when(lobbyMock).canRollDice(playerMock.getUniqueId());
+        assertTrue(playerMapper.canRollDice(playerMock, lobbyMock));
+    }
+
+    @Test
+    void canRollDiceShouldReturnTrueIfItPlayerCannotRollDice() {
+        Lobby lobbyMock = spy(new Lobby("1234", playerMock.getUniqueId()));
+        doReturn(false).when(lobbyMock).canRollDice(playerMock.getUniqueId());
+        assertFalse(playerMapper.canRollDice(playerMock, lobbyMock));
+    }
+
+    @Test
+    void testToDto() {
+        Lobby lobbyMock = new Lobby("1234", playerMock.getUniqueId());
+        lobbyMock.setActivePlayer(playerMock.getUniqueId());
         PlayerColor expectedColor = lobbyMock.getPlayerColor(playerMock.getUniqueId());
         playerMock.receiveResource(TileType.WHEAT, 3);
         playerMock.receiveResource(TileType.SHEEP, 1);
@@ -74,6 +105,8 @@ class PlayerMapperTest {
         assertEquals(expectedColor.getHexCode(), playerInfo.color());
         assertFalse(playerInfo.isReady());
         assertTrue(playerInfo.isHost());
+        assertTrue(playerInfo.isActivePlayer());
+        assertTrue(playerInfo.canRollDice());
         assertEquals(5, playerInfo.resources().get(TileType.WHEAT));
         assertEquals(3, playerInfo.resources().get(TileType.SHEEP));
         assertEquals(0, playerInfo.resources().get(TileType.ORE));
