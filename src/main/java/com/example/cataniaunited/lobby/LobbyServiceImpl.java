@@ -118,6 +118,7 @@ public class LobbyServiceImpl implements LobbyService {
     public void leaveLobby(String lobbyId, String playerId) throws GameException {
         Lobby lobby = getLobbyById(lobbyId);
         lobby.removePlayer(playerId);
+        playerService.resetVictoryPoints(playerId);
     }
 
     /**
@@ -236,7 +237,7 @@ public class LobbyServiceImpl implements LobbyService {
             logger.debugf("Notifying players in lobby: lobbyId=%s, message=%s", lobbyId, dto);
             Lobby lobby = getLobbyById(lobbyId);
 
-            if(Util.isEmpty(lobby.getPlayers())){
+            if (Util.isEmpty(lobby.getPlayers())) {
                 logger.warnf("No players in lobby - dropped message: lobbyId=%s", lobbyId);
                 return Uni.createFrom().item(dto);
             }

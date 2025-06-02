@@ -316,5 +316,16 @@ class PlayerTest {
         assertNotEquals(playerA, playerB, "Players with same fields but different unique IDs should not be equal.");
         assertNotEquals(playerB, playerA, "Players with same fields but different unique IDs should not be equal.");
     }
+
+    @Test
+    void resetVictoryPointsSetsPointsToZero() {
+        int victoryPoints = player.getVictoryPoints();
+        player.addVictoryPoints(7);
+        assertEquals(victoryPoints + 7, player.getVictoryPoints());
+
+        player.resetVictoryPoints();
+
+        assertEquals(0, player.getVictoryPoints());
+    }
 }
 

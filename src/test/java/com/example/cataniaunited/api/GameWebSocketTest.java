@@ -1874,7 +1874,12 @@ public class GameWebSocketTest {
 
         assertFalse(lobby.getPlayers().contains(player2ActualId));
 
+        Player player2 = playerService.getPlayerById(player2ActualId);
+        assertNotNull(player2);
+        assertEquals(0, player2.getVictoryPoints());
+
         verify(lobbyService).leaveLobby(actualLobbyId, player2ActualId);
+        verify(playerService).resetVictoryPoints(player2ActualId);
     }
 
     @Test

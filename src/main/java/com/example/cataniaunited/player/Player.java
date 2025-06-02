@@ -5,7 +5,6 @@ import com.example.cataniaunited.exception.ui.InsufficientResourcesException;
 import com.example.cataniaunited.game.board.ports.Port;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import io.quarkus.websockets.next.WebSocketConnection;
-import org.jboss.logging.Logger;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -108,6 +107,10 @@ public class Player {
 
     public int getVictoryPoints() {
         return victoryPoints;
+    }
+
+    public void resetVictoryPoints() {
+        this.victoryPoints = 0;
     }
 
     public void addPort(Port port) {
