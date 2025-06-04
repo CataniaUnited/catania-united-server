@@ -10,12 +10,13 @@ import com.example.cataniaunited.util.Util;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
 import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @ApplicationScoped
 public class TradingService {
@@ -25,7 +26,7 @@ public class TradingService {
     @Inject
     PlayerService playerService;
     private static final Logger logger = Logger.getLogger(TradingService.class);
-    public Uni<MessageDTO> handleBankTradeRequest(MessageDTO message) throws GameException{
+    public void handleBankTradeRequest(MessageDTO message) throws GameException{
         checkTradeRequestJson(message);
         Player player = playerService.getPlayerById(message.getPlayer());
 
@@ -46,6 +47,7 @@ public class TradingService {
             if (port.canTrade(offeredResources, targetResources)){
                 // Port Accepts Trade
                 canTrade = true;
+                break;
             }
         }
 
@@ -60,8 +62,6 @@ public class TradingService {
         }
 
         tradeResources(player, offeredResources, targetResources);
-
-        return null;
     }
 
     void checkTradeRequestJson(MessageDTO message) throws GameException {
@@ -137,18 +137,30 @@ public class TradingService {
 
      boolean checkIfCanTradeWithBank(List<TileType> offeredResources, List<TileType> targetResources){
          if (Util.isEmpty(offeredResources) || Util.isEmpty(targetResources)) {
-             logger.errorf("offered or target resources is empty (Offered: %s; Target: %s)", offeredResources, targetResources);
+             logger.infof("offered or target resources is empty (Offered: %s; Target: %s)", offeredResources, targetResources);
              return false;
          }
 
          if (offeredResources.size() % STANDARD_TRADE_RATIO != 0 || (offeredResources.size() / STANDARD_TRADE_RATIO) != targetResources.size()) {
-             logger.errorf("Trade Ratio is Invalid (Offered: %s; count %d, ratio: %d)", offeredResources, offeredResources.size(), STANDARD_TRADE_RATIO);
+             logger.infof("Trade Ratio is Invalid (Offered: %s; count %d, ratio: %d)", offeredResources, offeredResources.size(), STANDARD_TRADE_RATIO);
              return false;
          }
 
          for (TileType desired : targetResources) {
              if (offeredResources.contains(desired)) {
-                 logger.errorf("Cant trade for Resource that's offered (Offered: %s; Target: %s)", offeredResources, targetResources);
+                 logger.infof("Cant trade for Resource that's offered (Offered: %s; Target: %s)", offeredResources, targetResources);
+                 return false;
+             }
+         }
+
+         Map<TileType, Long> offeredResourceMap = offeredResources.stream()
+                 .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
+
+         // For each type of resource offered, check if its count is a multiple of the port's inputResourceAmount
+         for (Map.Entry<TileType, Long> entry : offeredResourceMap.entrySet()) {
+             long countOfEntryType = entry.getValue();
+             if (countOfEntryType % STANDARD_TRADE_RATIO != 0) {
+                 logger.info("Bank trade bundle not uniform.");
                  return false;
              }
          }
