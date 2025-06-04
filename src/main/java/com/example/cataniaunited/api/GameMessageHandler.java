@@ -72,8 +72,10 @@ public class GameMessageHandler {
                 case ROLL_DICE -> handleDiceRoll(message);
                 case START_GAME -> handleStartGame(message);
                 case SET_READY -> setReady(message);
+                case TRADE_WITH_BANK -> throw new GameException("Not yet implemented");
+                case TRADE_WITH_PLAYER -> throw new GameException("Not yet implemented");
                 case ERROR, CONNECTION_SUCCESSFUL, CLIENT_DISCONNECTED, LOBBY_CREATED, LOBBY_UPDATED, PLAYER_JOINED,
-                     GAME_BOARD_JSON, GAME_WON, DICE_RESULT, NEXT_TURN, GAME_STARTED ->
+                        GAME_BOARD_JSON, GAME_WON, DICE_RESULT, NEXT_TURN, GAME_STARTED, PLAYER_UPDATE ->
                         throw new GameException("Invalid client command");
                 case END_TURN -> endTurn(message);
             };

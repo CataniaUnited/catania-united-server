@@ -73,7 +73,7 @@ class TradingServiceTest {
     }
 
     private MessageDTO createMessageDTO(ObjectNode payload) {
-        MessageDTO message = new MessageDTO(MessageType.ERROR, payload);
+        MessageDTO message = new MessageDTO(MessageType.TRADE_WITH_BANK, payload);
         message.setPlayer(playerId);
         return message;
     }
@@ -222,7 +222,7 @@ class TradingServiceTest {
     @Test
     void testCheckIfCanTradeWithBankInvalidRatioWrongOutputCount() {
         List<TileType> offered = List.of(TileType.WOOD, TileType.WOOD, TileType.WOOD, TileType.WOOD); // 4 offered
-        List<TileType> target = List.of(TileType.CLAY, TileType.ORE); // 2 target 
+        List<TileType> target = List.of(TileType.CLAY, TileType.ORE); // 2 target
         assertFalse(tradingService.checkIfCanTradeWithBank(offered, target));
     }
 

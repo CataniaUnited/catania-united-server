@@ -2,7 +2,9 @@ package com.example.cataniaunited.player;
 
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.exception.ui.InsufficientResourcesException;
+import com.example.cataniaunited.game.board.ports.GeneralPort;
 import com.example.cataniaunited.game.board.ports.Port;
+import com.example.cataniaunited.game.board.ports.SpecificResourcePort;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import io.quarkus.websockets.next.WebSocketConnection;
 import org.junit.jupiter.api.Assertions;
@@ -224,6 +226,16 @@ class PlayerTest {
         player.resources.put(TileType.WOOD, woodResource);
         player.removeResource(TileType.WOOD, 2);
         assertEquals(woodResource - 2, player.resources.get(TileType.WOOD));
+    }
+
+    @Test
+    void getAccessiblePortsReturnsCorrectPortSet(){
+        player.addPort(new GeneralPort());
+        player.addPort(new SpecificResourcePort(TileType.WOOD));
+        player.addPort(new SpecificResourcePort(TileType.WHEAT));
+        player.addPort(new GeneralPort());
+
+        assertEquals(player.accessiblePorts, player.getAccessiblePorts(), "Port Sets do Not Match");
     }
 
     @Test
