@@ -7,6 +7,7 @@ import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.fi.BuildingAction;
 import com.example.cataniaunited.game.GameService;
 import com.example.cataniaunited.game.board.GameBoard;
+import com.example.cataniaunited.game.trade.TradingService;
 import com.example.cataniaunited.lobby.Lobby;
 import com.example.cataniaunited.lobby.LobbyService;
 import com.example.cataniaunited.mapper.PlayerMapper;
@@ -46,6 +47,10 @@ public class GameMessageHandler {
     @Inject
     PlayerMapper playerMapper;
 
+    @Inject
+    TradingService tradingService;
+
+
     public Uni<MessageDTO> handleInitialConnection(WebSocketConnection connection) {
         Player player = playerService.addPlayer(connection);
         ObjectNode message = JsonNodeFactory.instance.objectNode().put("playerId", player.getUniqueId());
@@ -72,10 +77,10 @@ public class GameMessageHandler {
                 case ROLL_DICE -> handleDiceRoll(message);
                 case START_GAME -> handleStartGame(message);
                 case SET_READY -> setReady(message);
-                case TRADE_WITH_BANK -> throw new GameException("Not yet implemented");
+                case TRADE_WITH_BANK -> handleTradeWithBank(message);
                 case TRADE_WITH_PLAYER -> throw new GameException("Not yet implemented");
                 case ERROR, CONNECTION_SUCCESSFUL, CLIENT_DISCONNECTED, LOBBY_CREATED, LOBBY_UPDATED, PLAYER_JOINED,
-                        GAME_BOARD_JSON, GAME_WON, DICE_RESULT, NEXT_TURN, GAME_STARTED, PLAYER_UPDATE ->
+                        GAME_BOARD_JSON, GAME_WON, DICE_RESULT, NEXT_TURN, GAME_STARTED, PLAYER_RESOURCE_UPDATE ->
                         throw new GameException("Invalid client command");
                 case END_TURN -> endTurn(message);
             };
@@ -367,5 +372,43 @@ public class GameMessageHandler {
                                 playerInfo -> playerInfo
                         )
                 );
+    }
+
+
+    /**
+     * Handles a request from a player to trade resources with the bank.
+     *
+     * @param message The {@link MessageDTO} containing trade details (offered and target resources).
+     *                The player ID is inferred from the message sender.
+     *                The lobby ID is also part of the message.
+     * @return A Uni emitting a {@link MessageDTO} of type {@link MessageType#PLAYER_RESOURCE_UPDATE}
+     *         containing the updated player information (resources).
+     *         This update is broadcast to all players in the lobby.
+     * @throws GameException if the trade is invalid (e.g., not player's turn, insufficient resources,
+     *                       invalid trade ratio, or other issues identified by {@link TradingService}).
+     */
+    Uni<MessageDTO> handleTradeWithBank(MessageDTO message) throws GameException {
+        // Check if player is active player -> else can't trade
+        lobbyService.checkPlayerTurn(message.getLobbyId(), message.getPlayer());
+
+        // Try to trade -> if not successful GameException
+        tradingService.handleBankTradeRequest(message);
+
+        // Trade successful, get updated player information (which includes resources)
+        Map<String, PlayerInfo> updatedPlayerInfos = getLobbyPlayerInformation(message.getLobbyId());
+
+
+        MessageDTO updateResponse = new MessageDTO(
+                MessageType.PLAYER_RESOURCE_UPDATE,
+                message.getPlayer(),
+                message.getLobbyId(),
+                updatedPlayerInfos
+        );
+
+        logger.infof("Player %s completed trade with bank in lobby %s. Broadcasting PLAYER_RESOURCE_UPDATE.", message.getPlayer(), message.getLobbyId());
+
+        // Notify all players in the lobby about the new Resource Distribution
+        return lobbyService.notifyPlayers(message.getLobbyId(), updateResponse)
+                .chain(() -> Uni.createFrom().item(updateResponse));
     }
 }

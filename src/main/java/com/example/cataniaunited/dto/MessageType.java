@@ -14,7 +14,7 @@ public enum MessageType {
     GAME_STARTED,
     DICE_RESULT,
     NEXT_TURN,
-    PLAYER_UPDATE, // TODO: RENAME
+    PLAYER_RESOURCE_UPDATE,
 
     //Client Messages
     CREATE_LOBBY,
