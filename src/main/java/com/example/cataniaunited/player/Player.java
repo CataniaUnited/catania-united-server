@@ -218,4 +218,8 @@ public class Player {
     public int hashCode() {
         return Objects.hashCode(uniqueId);
     }
+
+    public Set<Port> getAccessiblePorts() {
+        return accessiblePorts;
+    }
 }
