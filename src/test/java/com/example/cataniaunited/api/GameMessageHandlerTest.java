@@ -138,14 +138,14 @@ class GameMessageHandlerTest {
         MessageDTO inputMessage = new MessageDTO(MessageType.TRADE_WITH_BANK, player1Id, lobbyId, tradePayload);
 
         // Mock LobbyService to pass checkTurn
-        doNothing().when(lobbyService).checkPlayerTurn(eq(lobbyId), eq(player1Id));
+        doNothing().when(lobbyService).checkPlayerTurn(lobbyId, player1Id);
         Lobby mockLobby = mock(Lobby.class);
         when(lobbyService.getLobbyById(lobbyId)).thenReturn(mockLobby);
 
         gameMessageHandler.handleGameMessage(inputMessage);
 
-        verify(lobbyService).checkPlayerTurn(eq(lobbyId), eq(player1Id));
-        verify(tradingService).handleBankTradeRequest(eq(inputMessage));
+        verify(lobbyService).checkPlayerTurn(lobbyId, player1Id);
+        verify(tradingService).handleBankTradeRequest(inputMessage);
 
         assertEquals(0, player.getResourceCount(TileType.WOOD));
         assertEquals(1, player.getResourceCount(TileType.SHEEP));
@@ -194,7 +194,7 @@ class GameMessageHandlerTest {
         MessageDTO inputMessage = new MessageDTO(MessageType.TRADE_WITH_BANK, player1Id, lobbyId, tradePayload);
 
         // Mock LobbyService to pass checkTurn
-        doNothing().when(lobbyService).checkPlayerTurn(eq(lobbyId), eq(player1Id));
+        doNothing().when(lobbyService).checkPlayerTurn(lobbyId, player1Id);
         Lobby mockLobby = mock(Lobby.class);
         when(lobbyService.getLobbyById(lobbyId)).thenReturn(mockLobby);
 

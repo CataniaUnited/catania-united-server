@@ -43,7 +43,7 @@ class TradingServiceTest {
     @BeforeEach
     void setUp() {
         mockPlayer = mock(Player.class);
-        HashMap<TileType, Integer> resources = new HashMap<>();
+        EnumMap<TileType, Integer> resources = new EnumMap<>(TileType.class);
         for (TileType type : TileType.values()) {
             if (type != TileType.WASTE) {
                 resources.put(type, 0);
@@ -162,35 +162,35 @@ class TradingServiceTest {
 
     @Test
     void testCheckIfPlayerHasSufficientResourcesTrue() {
-        Map<TileType, Integer> playerRes = new HashMap<>(Map.of(TileType.WOOD, 5, TileType.CLAY, 3));
+        Map<TileType, Integer> playerRes = new EnumMap<>(Map.of(TileType.WOOD, 5, TileType.CLAY, 3));
         List<TileType> offered = List.of(TileType.WOOD, TileType.WOOD, TileType.CLAY);
         assertTrue(tradingService.checkIfPlayerHasSufficientResources(playerRes, offered));
     }
 
     @Test
     void testCheckIfPlayerHasSufficientResourcesFalseOneType() {
-        Map<TileType, Integer> playerRes = new HashMap<>(Map.of(TileType.WOOD, 1, TileType.CLAY, 3));
+        Map<TileType, Integer> playerRes = new EnumMap<>(Map.of(TileType.WOOD, 1, TileType.CLAY, 3));
         List<TileType> offered = List.of(TileType.WOOD, TileType.WOOD, TileType.CLAY);
         assertFalse(tradingService.checkIfPlayerHasSufficientResources(playerRes, offered));
     }
 
     @Test
     void testCheckIfPlayerHasSufficientResourcesFalseMultipleTypes() {
-        Map<TileType, Integer> playerRes = new HashMap<>(Map.of(TileType.WOOD, 1, TileType.CLAY, 0));
+        Map<TileType, Integer> playerRes = new EnumMap<>(Map.of(TileType.WOOD, 1, TileType.CLAY, 0));
         List<TileType> offered = List.of(TileType.WOOD, TileType.WOOD, TileType.CLAY);
         assertFalse(tradingService.checkIfPlayerHasSufficientResources(playerRes, offered));
     }
 
     @Test
     void testCheckIfPlayerHasSufficientResourcesOfferedEmpty() {
-        Map<TileType, Integer> playerRes = new HashMap<>(Map.of(TileType.WOOD, 5));
+        Map<TileType, Integer> playerRes = new EnumMap<>(Map.of(TileType.WOOD, 5));
         List<TileType> offered = List.of();
         assertTrue(tradingService.checkIfPlayerHasSufficientResources(playerRes, offered));
     }
 
     @Test
     void testCheckIfPlayerHasSufficientResourcesPlayerHasNoneOfOffered() {
-        Map<TileType, Integer> playerRes = new HashMap<>(Map.of(TileType.SHEEP, 5));
+        Map<TileType, Integer> playerRes = new EnumMap<>(Map.of(TileType.SHEEP, 5));
         List<TileType> offered = List.of(TileType.WOOD, TileType.WOOD);
         assertFalse(tradingService.checkIfPlayerHasSufficientResources(playerRes, offered));
     }

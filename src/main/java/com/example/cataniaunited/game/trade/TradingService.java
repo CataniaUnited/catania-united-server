@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 @ApplicationScoped
 public class TradingService {
 
-    private final int STANDARD_TRADE_RATIO = 4;
+    private static final int STANDARD_TRADE_RATIO = 4;
 
     @Inject
     PlayerService playerService;
@@ -111,7 +111,7 @@ public class TradingService {
 
      boolean checkIfPlayerHasSufficientResources(Map<TileType, Integer> playerResources, List<TileType> offeredResources){
          // 1. Count the occurrences of each TileType in the offeredResources list
-         Map<TileType, Integer> offeredResourceMap = new HashMap<>();
+         EnumMap<TileType, Integer> offeredResourceMap = new EnumMap<>(TileType.class);
          for (TileType resource : offeredResources) {
              offeredResourceMap.put(resource, offeredResourceMap.getOrDefault(resource, 0) + 1);
          }
