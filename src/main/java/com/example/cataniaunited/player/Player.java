@@ -87,8 +87,8 @@ public class Player {
      */
     void initializeResources() {
         for (TileType resource : TileType.values()) {
-            if (resource == TileType.WASTE)
-                continue; // No waste resource
+            if (resource == TileType.DESERT)
+                continue; // No DESERT resource
             resources.put(resource, resource.getInitialAmount());
         }
     }
@@ -156,13 +156,13 @@ public class Player {
 
     /**
      * Adds a specified amount of a resource to the player's
-     * Does nothing if the resource type is null or WASTE.
+     * Does nothing if the resource type is null or DESERT.
      *
      * @param resource The {@link TileType} of the resource to receive.
      * @param amount   The amount of the resource to add.
      */
     public void receiveResource(TileType resource, int amount) {
-        if (resource == null || resource == TileType.WASTE)
+        if (resource == null || resource == TileType.DESERT)
             return;
 
         int resourceCount = getResourceCount(resource);
@@ -171,7 +171,7 @@ public class Player {
 
     /**
      * Removes a specified amount of a resource from the player's inventory.
-     * Does nothing if the resource type is null or WASTE.
+     * Does nothing if the resource type is null or DESERT.
      *
      * @param resource The {@link TileType} of the resource to remove.
      * @param amount   The amount of the resource to remove.
@@ -179,7 +179,7 @@ public class Player {
      * @throws InsufficientResourcesException if the player does not have enough of the resource.
      */
     public void removeResource(TileType resource, int amount) throws GameException {
-        if (resource == null || resource == TileType.WASTE)
+        if (resource == null || resource == TileType.DESERT)
             return;
 
         int resourceCount = getResourceCount(resource) - amount;

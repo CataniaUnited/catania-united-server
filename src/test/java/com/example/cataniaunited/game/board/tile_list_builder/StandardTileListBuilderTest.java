@@ -121,7 +121,7 @@ class StandardTileListBuilderTest {
                 .collect(Collectors.groupingBy(Tile::getType, Collectors.counting()));
 
         // Same assertions as before, but acting on builder.tileList
-        assertEquals(1L, counts.getOrDefault(TileType.WASTE, 0L));
+        assertEquals(1L, counts.getOrDefault(TileType.DESERT, 0L));
         assertEquals(4L, counts.getOrDefault(TileType.WHEAT, 0L));
         assertEquals(4L, counts.getOrDefault(TileType.SHEEP, 0L));
         assertEquals(4L, counts.getOrDefault(TileType.WOOD, 0L));
@@ -182,29 +182,29 @@ class StandardTileListBuilderTest {
 
 
     @Test
-    void addValuesAssignsValuesToNonWasteTilesOnly() {
+    void addValuesAssignsValuesToNonDesertTilesOnly() {
         builder.buildTiles();
         builder.addValues();
 
 
-        int nonWasteWithValueCount = 0;
-        Tile wasteTile = null;
+        int nonDesertWithValueCount = 0;
+        Tile desertTile = null;
 
 
         for (Tile tile : builder.tileList) {
-            if (tile.getType() == TileType.WASTE) {
-                assertEquals(0, tile.getValue(), "WASTE tile should not have a value assigned");
-                wasteTile = tile;
+            if (tile.getType() == TileType.DESERT) {
+                assertEquals(0, tile.getValue(), "DESERT tile should not have a value assigned");
+                desertTile = tile;
             } else {
                 assertTrue(tile.getValue() >= 2 && tile.getValue() <= 12 && tile.getValue() != 7,
-                        "Non-WASTE tile should have a value between 2-12 (excluding 7)");
-                nonWasteWithValueCount++;
+                        "Non-DESERT tile should have a value between 2-12 (excluding 7)");
+                nonDesertWithValueCount++;
             }
         }
 
 
-        assertNotNull(wasteTile, "A WASTE tile should exist in the list");
-        assertEquals(builder.tileList.size() - 1, nonWasteWithValueCount, "Exactly N-1 tiles should have values assigned");
+        assertNotNull(desertTile, "A DESERT tile should exist in the list");
+        assertEquals(builder.tileList.size() - 1, nonDesertWithValueCount, "Exactly N-1 tiles should have values assigned");
     }
 
 
@@ -216,7 +216,7 @@ class StandardTileListBuilderTest {
 
 
         Map<Integer, Long> valueCounts = builder.tileList.stream()
-                .filter(tile -> tile.getType() != TileType.WASTE)
+                .filter(tile -> tile.getType() != TileType.DESERT)
                 .map(Tile::getValue)
                 .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
 
@@ -251,7 +251,7 @@ class StandardTileListBuilderTest {
 
 
         Map<Integer, Long> valueCounts = builder.tileList.stream()
-                .filter(tile -> tile.getType() != TileType.WASTE)
+                .filter(tile -> tile.getType() != TileType.DESERT)
                 .map(Tile::getValue)
                 .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
 

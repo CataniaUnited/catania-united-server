@@ -6,7 +6,7 @@ public enum TileType {
     WOOD(4),
     CLAY(4),
     ORE(0),
-    WASTE(0);
+    DESERT(0);
 
     private final int initialAmount;
 

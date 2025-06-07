@@ -396,13 +396,13 @@ public class GraphBuilder {
 
     /**
      * Retrieves a shuffled list of resource types that can be used for specific resource ports.
-     * Excludes {@link TileType#WASTE}.
+     * Excludes {@link TileType#DESERT}.
      *
      * @return A shuffled list of {@link TileType}s.
      */
     private List<TileType> getShuffledResourceTypesForPorts() {
         List<TileType> resourceTypes = Arrays.stream(TileType.values())
-                .filter(type -> type != TileType.WASTE)
+                .filter(type -> type != TileType.DESERT)
                 .collect(toList());
         Collections.shuffle(resourceTypes);
         return resourceTypes;

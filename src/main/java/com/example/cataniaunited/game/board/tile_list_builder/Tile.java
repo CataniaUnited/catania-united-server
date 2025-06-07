@@ -14,14 +14,14 @@ import java.util.List;
 
 /**
  * A hexagonal tile on the Catan game board.
- * Each tile has a type (resource or waste), a production value (dice roll number),
+ * Each tile has a type (resource or desert), a production value (dice roll number),
  * coordinates, and an ID. It also acts as a {@link Publisher} to notify
  * adjacent {@link BuildingSite}s about resource production when Notified via
  * The DiceRoller to which it acts as a {@link Subscriber}.
  */
 public class Tile implements Placable, Publisher<BuildingSite, TileType>, Subscriber<Integer> {
     final TileType type;
-    int value = 0; // Production number (dice roll), 0 for WASTE or if not yet set
+    int value = 0; // Production number (dice roll), 0 for DESERT or if not yet set
 
     double[] coordinates = new double[2];
 
@@ -50,7 +50,7 @@ public class Tile implements Placable, Publisher<BuildingSite, TileType>, Subscr
     /**
      * Gets the production value (dice roll number) of this tile.
      *
-     * @return The production value. Returns 0 if it's a WASTE tile or value not set.
+     * @return The production value. Returns 0 if it's a DESERT tile or value not set.
      */
     public int getValue() {
         return value;
@@ -186,7 +186,7 @@ public class Tile implements Placable, Publisher<BuildingSite, TileType>, Subscr
      * Handles an update notification from a {@link com.example.cataniaunited.game.dice.DiceRoller},
      * indicating a dice roll total.
      * If this tile's production {@link #getValue() value} matches the {@code diceRollTotal}
-     * and this tile is not a {@link TileType#WASTE} tile, it will
+     * and this tile is not a {@link TileType#DESERT} tile, it will
      * {@link #notifySubscribers(TileType) notify its subscribers} (building sites)
      * about the production of its specific {@link #getType() resource type}.
      *

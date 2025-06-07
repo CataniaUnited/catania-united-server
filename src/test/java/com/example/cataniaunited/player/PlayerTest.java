@@ -67,8 +67,8 @@ class PlayerTest {
         assertNull(player.getConnection(), "connection should be null for default constructor.");
 
         for (TileType type : TileType.values()) {
-            if (type == TileType.WASTE) {
-                assertNull(player.resources.get(type), "Waste should be null");
+            if (type == TileType.DESERT) {
+                assertNull(player.resources.get(type), "Desert should be null");
                 continue;
             }
             assertEquals(type.getInitialAmount(), player.resources.get(type), "Initial resource count for " + type + " should be 0.");
@@ -167,8 +167,8 @@ class PlayerTest {
     void getResourceWorksForAllTileTypes() {
         int amount = 2;
         for (TileType type : TileType.values()) {
-            if (type == TileType.WASTE) {
-                assertNull(player.resources.get(type), "Waste should be null");
+            if (type == TileType.DESERT) {
+                assertNull(player.resources.get(type), "Desert should be null");
                 continue;
             }
             int ressourceAmount = player.resources.get(type);
@@ -180,15 +180,15 @@ class PlayerTest {
     }
 
     @Test
-    void getResourceWithWasteTypeDoesNotChangeResourceCounts() {
+    void getResourceWithDesertTypeDoesNotChangeResourceCounts() {
         int initialWoodCount = player.getResourceCount(TileType.WOOD);
         int initialWheatCount = player.getResourceCount(TileType.WHEAT);
 
-        player.receiveResource(TileType.WASTE, 5);
+        player.receiveResource(TileType.DESERT, 5);
 
-        assertEquals(initialWoodCount, player.getResourceCount(TileType.WOOD), "Adding WASTE should not affect WOOD count.");
-        assertEquals(initialWheatCount, player.getResourceCount(TileType.WHEAT), "Adding WASTE should not affect WHEAT count.");
-        assertFalse(player.resources.containsKey(TileType.WASTE), "Player's internal resources map should not contain WASTE key.");
+        assertEquals(initialWoodCount, player.getResourceCount(TileType.WOOD), "Adding DESERT should not affect WOOD count.");
+        assertEquals(initialWheatCount, player.getResourceCount(TileType.WHEAT), "Adding DESERT should not affect WHEAT count.");
+        assertFalse(player.resources.containsKey(TileType.DESERT), "Player's internal resources map should not contain DESERT key.");
     }
 
     @Test
@@ -199,9 +199,9 @@ class PlayerTest {
     }
 
     @Test
-    void removeResourceOfTypeWasteShouldDoNothing() throws GameException {
+    void removeResourceOfTypeDesertShouldDoNothing() throws GameException {
         var previousResource = player.resources;
-        player.removeResource(TileType.WASTE, 5);
+        player.removeResource(TileType.DESERT, 5);
         assertEquals(previousResource, player.resources);
     }
 

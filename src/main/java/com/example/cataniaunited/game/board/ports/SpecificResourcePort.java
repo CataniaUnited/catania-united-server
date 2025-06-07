@@ -20,12 +20,12 @@ public class SpecificResourcePort extends Port {
      * Constructs a new SpecificResourcePort.
      *
      * @param tradeAbleResource The specific {@link TileType} this port trades (e.g., WOOD, SHEEP).
-     *                          Cannot be null or {@link TileType#WASTE}.
-     * @throws IllegalArgumentException if tradeAbleResource is null or {@link TileType#WASTE}.
+     *                          Cannot be null or {@link TileType#DESERT}.
+     * @throws IllegalArgumentException if tradeAbleResource is null or {@link TileType#DESERT}.
      */
     public SpecificResourcePort(TileType tradeAbleResource) {
         super(2); // Resource Ports are 2:1
-        if (tradeAbleResource == null || tradeAbleResource == TileType.WASTE) {
+        if (tradeAbleResource == null || tradeAbleResource == TileType.DESERT) {
             throw new IllegalArgumentException("Specific port must trade a valid resource type.");
         }
         this.tradeAbleResource = tradeAbleResource;

@@ -22,7 +22,7 @@ public interface TileListBuilder {
     void setConfiguration(int sizeOfBoard, int sizeOfHex, boolean flipYAxis);
 
     /**
-     * Creates the basic tile objects with their respective types (e.g., WHEAT, WOOD, WASTE).
+     * Creates the basic tile objects with their respective types (e.g., WHEAT, WOOD, DESERT).
      */
     void buildTiles();
 

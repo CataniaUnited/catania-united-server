@@ -91,11 +91,11 @@ public class StandardTileListBuilder implements TileListBuilder {
 
     /**
      * Builds the initial list of tiles with their types.
-     * One tile is designated as WASTE (desert), and the rest are populated with
+     * One tile is designated as DESERT, and the rest are populated with
      * resource-producing tile types in a repeating sequence.
      *
      * @throws IllegalStateException if configuration has not been set, or if no
-     *                               usable (non-WASTE) tile types are available.
+     *                               usable (non-DESERT) tile types are available.
      */
     @Override
     public void buildTiles() {
@@ -103,16 +103,16 @@ public class StandardTileListBuilder implements TileListBuilder {
             throw new IllegalStateException("Configuration must be set before building tiles.");
         }
 
-        // Filter out the WASTE type to get a list of resource-producing types
+        // Filter out the DESERT type to get a list of resource-producing types
         List<TileType> resourceProducingTypes = Arrays.stream(TileType.values())
-                .filter(type -> type != TileType.WASTE)
+                .filter(type -> type != TileType.DESERT)
                 .toList();
 
-        // Add one WASTE tile (Desert)
-        tileList.add(new Tile(TileType.WASTE));
+        // Add one DESERT tile
+        tileList.add(new Tile(TileType.DESERT));
 
         // Add the remaining tiles as resource-producing tiles
-        // The loop runs for one times less than the total number of tiles because one tile is already added as WASTE.
+        // The loop runs for one times less than the total number of tiles because one tile is already added as DESERT.
         for (int i = 0; i < amountOfTilesOnBoard - 1; i++) {
             // Cycle through the resourceProducingTypes
             TileType currentTileType = resourceProducingTypes.get(i % resourceProducingTypes.size());
@@ -121,7 +121,7 @@ public class StandardTileListBuilder implements TileListBuilder {
     }
 
     /**
-     * Assigns production numbers (dice roll values) to the non-WASTE tiles.
+     * Assigns production numbers (dice roll values) to the non-DESERT tiles.
      * Aims for a balanced distribution of numbers 2-6 and 8-12.
      *
      * @throws IllegalStateException if tiles have not been built yet.
@@ -133,10 +133,10 @@ public class StandardTileListBuilder implements TileListBuilder {
         }
 
         // Calculate the number of tiles that require a production value.
-        // Excluding the TileType.WASTE (Desert) tile since it doesn't produce any resources.
+        // Excluding the TileType.DESERT tile since it doesn't produce any resources.
         int amountOfValuesToCreate = 0;
         for (Tile tile : tileList) {
-            if (tile.getType() != TileType.WASTE) {
+            if (tile.getType() != TileType.DESERT) {
                 amountOfValuesToCreate++;
             }
         }
@@ -146,7 +146,7 @@ public class StandardTileListBuilder implements TileListBuilder {
 
         int valueIndex = 0;
         for (Tile tile : tileList) {
-            if (tile.getType() != TileType.WASTE) { // Do not add a value for Waste tiles since they dont produce resources
+            if (tile.getType() != TileType.DESERT) { // Do not add a value for DESERT tiles since they dont produce resources
                 tile.setValue(productionValues.get(valueIndex++));
             }
         }

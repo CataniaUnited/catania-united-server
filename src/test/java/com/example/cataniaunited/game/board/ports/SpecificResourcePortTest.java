@@ -31,19 +31,19 @@ class SpecificResourcePortTest {
     }
 
     @Test
-    void constructorWithWasteResourceShouldThrowIllegalArgumentException() {
-        Exception exception = assertThrows(IllegalArgumentException.class, () -> new SpecificResourcePort(TileType.WASTE));
+    void constructorWithDesertResourceShouldThrowIllegalArgumentException() {
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> new SpecificResourcePort(TileType.DESERT));
         assertEquals("Specific port must trade a valid resource type.", exception.getMessage());
     }
 
     // Helper Method to avoid complications
     private TileType getDifferentResource(TileType typeToAvoid) {
         for (TileType t : TileType.values()) {
-            if (t != typeToAvoid && t != TileType.WASTE) {
+            if (t != typeToAvoid && t != TileType.DESERT) {
                 return t;
             }
         }
-        return TileType.WASTE;
+        return TileType.DESERT;
     }
 
 
@@ -66,7 +66,7 @@ class SpecificResourcePortTest {
         TileType desired2 = getDifferentResource(portResource);
         if (desired1 == desired2) { // ensure they are different
             for (TileType t : TileType.values()) {
-                if (t != portResource && t != TileType.WASTE && t != desired1) {
+                if (t != portResource && t != TileType.DESERT && t != desired1) {
                     desired2 = t;
                     break;
                 }
