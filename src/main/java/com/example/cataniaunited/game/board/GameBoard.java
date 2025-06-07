@@ -39,6 +39,8 @@ public class GameBoard {
     List<Road> roadList;
     List<Port> portList;
 
+    Tile robberTile;
+
     /**
      * Constructs a new GameBoard based on the number of players.
      * Initializes tiles, building sites, roads, and the dice roller.
@@ -57,6 +59,13 @@ public class GameBoard {
         long starttime = System.nanoTime();
 
         generateTileList();
+        robberTile = tileList.stream()
+                .filter(t -> t.getType() == TileType.DESERT)
+                .findFirst()
+                .orElse(null);
+        if(robberTile != null){
+            robberTile.setRobber(true);
+        }
         generateBoard();
 
         this.diceRoller = new DiceRoller();
@@ -177,6 +186,26 @@ public class GameBoard {
         } catch (IndexOutOfBoundsException e) {
             throw new GameException("Road not found: id = %s", roadId);
         }
+    }
+
+    public void placeRobber (int robberTileId) throws GameException {
+        Tile newRobberTile;
+
+        try {
+            newRobberTile = tileList.get(robberTileId - 1);
+        } catch (IndexOutOfBoundsException e) {
+            throw new GameException("Robber Tile not found: id = %s", robberTileId);
+        }
+
+        if (robberTile != null){
+            robberTile.setRobber(false);
+        }
+        robberTile = newRobberTile;
+        robberTile.setRobber(true);
+    }
+
+    public int getRobberTileId(){
+        return robberTile == null ? -1 : robberTile.getId();
     }
 
     /**
