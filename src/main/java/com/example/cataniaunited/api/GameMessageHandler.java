@@ -70,6 +70,7 @@ public class GameMessageHandler {
                 case UPGRADE_SETTLEMENT -> upgradeSettlement(message);
                 case PLACE_ROAD -> placeRoad(message);
                 case ROLL_DICE -> handleDiceRoll(message);
+                case PLACE_ROBBER -> placeRobber(message);
                 case START_GAME -> handleStartGame(message);
                 case SET_READY -> setReady(message);
                 case ERROR, CONNECTION_SUCCESSFUL, CLIENT_DISCONNECTED, LOBBY_CREATED, LOBBY_UPDATED, PLAYER_JOINED,
@@ -195,6 +196,30 @@ public class GameMessageHandler {
                 message.getLobbyId(),
                 getLobbyPlayerInformation(message.getLobbyId()),
                 payload
+        );
+
+        return lobbyService.notifyPlayers(message.getLobbyId(), update)
+                .chain(() -> Uni.createFrom().item(update));
+    }
+
+    Uni<MessageDTO> placeRobber(MessageDTO message) throws GameException {
+        JsonNode tileId = message.getMessageNode("tileId");
+
+        try {
+            int robberTile = Integer.parseInt(tileId.toString());
+            gameService.placeRobber(message.getLobbyId(), message.getPlayer(), robberTile);
+        } catch (NumberFormatException e) {
+            throw new GameException("Invalid tile id = %s", tileId.toString());
+        }
+
+        ObjectNode root = getGameBoardInformation(message.getLobbyId());
+
+        MessageDTO update = new MessageDTO(
+                MessageType.PLACE_ROBBER,
+                message.getPlayer(),
+                message.getLobbyId(),
+                getLobbyPlayerInformation(message.getLobbyId()),
+                root
         );
 
         return lobbyService.notifyPlayers(message.getLobbyId(), update)
