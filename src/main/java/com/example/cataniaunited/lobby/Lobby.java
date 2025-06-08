@@ -30,6 +30,7 @@ public class Lobby {
     private final List<PlayerColor> availableColors = new CopyOnWriteArrayList<>(); // List of colors not yet assigned
     private volatile String activePlayer; // ID of the player whose turn it is
     private volatile boolean gameStarted = false; // Flag indicating if the game has started
+    private volatile boolean robberPlaced = false; //Flag indicating if robber was placed
     private int roundsPlayed = 0;
     private final Map<String, Integer> latestDiceRollOfPlayer = new ConcurrentHashMap<>();
     private final Map<String, Boolean> readyState = new ConcurrentHashMap<>();
@@ -209,6 +210,14 @@ public class Lobby {
      */
     public void setGameStarted(boolean started) {
         this.gameStarted = started;
+    }
+
+    public boolean isRobberPlaced() {
+        return robberPlaced;
+    }
+
+    public void setRobberPlaced (boolean placed) {
+        this.robberPlaced = placed;
     }
 
 
