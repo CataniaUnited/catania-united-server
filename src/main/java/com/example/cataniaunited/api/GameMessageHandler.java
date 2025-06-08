@@ -74,7 +74,7 @@ public class GameMessageHandler {
                 case START_GAME -> handleStartGame(message);
                 case SET_READY -> setReady(message);
                 case ERROR, CONNECTION_SUCCESSFUL, CLIENT_DISCONNECTED, LOBBY_CREATED, LOBBY_UPDATED, PLAYER_JOINED,
-                     GAME_BOARD_JSON, GAME_WON, DICE_RESULT, NEXT_TURN, GAME_STARTED ->
+                        GAME_BOARD_JSON, GAME_WON, DICE_RESULT, ROBBER_PHASE, NEXT_TURN, GAME_STARTED ->
                         throw new GameException("Invalid client command");
                 case END_TURN -> endTurn(message);
             };
@@ -322,7 +322,25 @@ public class GameMessageHandler {
         );
 
         return lobbyService.notifyPlayers(message.getLobbyId(), diceResultMessage)
-                .chain(() -> Uni.createFrom().item(diceResultMessage));
+            .call(() -> {
+                try {
+                    if(gameService.isRobberPlaced(message.getLobbyId())){
+                        ObjectNode payload = getGameBoardInformation(message.getLobbyId());
+                        MessageDTO waitMessage = new MessageDTO(
+                                MessageType.ROBBER_PHASE,
+                                message.getPlayer(),
+                                message.getLobbyId(),
+                                getLobbyPlayerInformation(message.getLobbyId()),
+                                payload
+                        );
+                        return lobbyService.notifyPlayers(message.getLobbyId(), waitMessage);
+                    }
+                } catch (GameException e) {
+                    throw new RuntimeException(e);
+                }
+                return Uni.createFrom().voidItem();
+            })
+            .replaceWith(diceResultMessage);
     }
 
     /**
