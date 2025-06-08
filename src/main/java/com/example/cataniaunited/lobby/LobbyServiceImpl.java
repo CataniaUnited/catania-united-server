@@ -273,6 +273,15 @@ public class LobbyServiceImpl implements LobbyService {
         lobby.toggleReady(playerId);
     }
 
+    public boolean isRobberPlaced(String lobbyId) throws GameException {
+        Lobby lobby = getLobbyById(lobbyId);
+        return lobby.isRobberPlaced();
+    }
+
+    public void setRobberPlaced(String lobbyId, boolean placed) throws GameException {
+        Lobby lobby = getLobbyById(lobbyId);
+        lobby.setRobberPlaced(placed);
+    }
 
     /**
      * {@inheritDoc}
