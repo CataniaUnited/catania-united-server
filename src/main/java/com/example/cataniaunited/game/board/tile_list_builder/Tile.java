@@ -26,6 +26,7 @@ public class Tile implements Placable, Publisher<BuildingSite, TileType>, Subscr
     double[] coordinates = new double[2];
 
     int id;
+    boolean robber = false;
 
     List<BuildingSite> buildingSitesOfTile = new ArrayList<>(6);
 
@@ -114,6 +115,14 @@ public class Tile implements Placable, Publisher<BuildingSite, TileType>, Subscr
         return id;
     }
 
+    public boolean hasRobber(){
+        return robber;
+    }
+
+    public void setRobber(boolean robber) {
+        this.robber = robber;
+    }
+
     @Override
     public String toString() {
         return String.format(
@@ -137,6 +146,7 @@ public class Tile implements Placable, Publisher<BuildingSite, TileType>, Subscr
         tileNode.put("id", this.id);
         tileNode.put("type", this.type.name());
         tileNode.put("value", this.value);
+        tileNode.put("robber", this.robber);
 
         ArrayNode coordsNode = mapper.createArrayNode();
         coordsNode.add(this.coordinates[0]); // Add x
@@ -194,7 +204,7 @@ public class Tile implements Placable, Publisher<BuildingSite, TileType>, Subscr
      */
     @Override
     public void update(Integer diceRollTotal) {
-        if (value == diceRollTotal)
+        if (value == diceRollTotal && type != TileType.DESERT && !robber)
             notifySubscribers(type);
     }
 
