@@ -1,7 +1,7 @@
 package com.example.cataniaunited.game.board;
 
 import com.example.cataniaunited.exception.GameException;
-import com.example.cataniaunited.exception.ui.BuildableLimitReached;
+import com.example.cataniaunited.exception.ui.BuildableLimitReachedException;
 import com.example.cataniaunited.exception.ui.InsufficientResourcesException;
 import com.example.cataniaunited.game.board.ports.Port;
 import com.example.cataniaunited.game.board.tile_list_builder.Tile;
@@ -236,7 +236,7 @@ class GameBoardTest {
         Player player = new Player("Player1");
         doReturn(5L).when(gameBoard).getPlayerStructureCount(player.getUniqueId(), Settlement.class);
 
-        GameException ge = assertThrows(GameException.class, () -> gameBoard.placeSettlement(player, PlayerColor.BLUE, positionId));
+        GameException ge = assertThrows(BuildableLimitReachedException.class, () -> gameBoard.placeSettlement(player, PlayerColor.BLUE, positionId));
 
         assertEquals("You've reached the %s limit of %s!".formatted(Settlement.class.getSimpleName(), 5), ge.getMessage());
         verify(gameBoard).getPlayerStructureCount(player.getUniqueId(), Settlement.class);
@@ -251,7 +251,7 @@ class GameBoardTest {
         player.receiveResource(TileType.WHEAT, 2);
         doReturn(4L).when(gameBoard).getPlayerStructureCount(player.getUniqueId(), City.class);
 
-        GameException ge = assertThrows(GameException.class, () -> gameBoard.placeCity(player, PlayerColor.BLUE, positionId));
+        GameException ge = assertThrows(BuildableLimitReachedException.class, () -> gameBoard.placeCity(player, PlayerColor.BLUE, positionId));
 
         assertEquals("You've reached the %s limit of %s!".formatted(City.class.getSimpleName(), 4), ge.getMessage());
         verify(gameBoard).getPlayerStructureCount(player.getUniqueId(), City.class);
@@ -305,7 +305,7 @@ class GameBoardTest {
         GameBoard gameBoard = spy(new GameBoard(2));
         var road = gameBoard.roadList.get(0);
         doReturn((long) road.getBuildLimit()).when(gameBoard).getPlayerStructureCount(anyString(), eq(Road.class));
-        GameException ge = assertThrows(BuildableLimitReached.class, () -> gameBoard.placeRoad(new Player("Player1"), PlayerColor.BLUE, road.getId()));
+        GameException ge = assertThrows(BuildableLimitReachedException.class, () -> gameBoard.placeRoad(new Player("Player1"), PlayerColor.BLUE, road.getId()));
         assertEquals("You've reached the %s limit of %s!".formatted(Road.class.getSimpleName(), road.getBuildLimit()), ge.getMessage());
     }
 

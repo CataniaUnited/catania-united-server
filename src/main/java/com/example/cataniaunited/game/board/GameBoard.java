@@ -1,7 +1,7 @@
 package com.example.cataniaunited.game.board;
 
 import com.example.cataniaunited.exception.GameException;
-import com.example.cataniaunited.exception.ui.BuildableLimitReached;
+import com.example.cataniaunited.exception.ui.BuildableLimitReachedException;
 import com.example.cataniaunited.exception.ui.InsufficientResourcesException;
 import com.example.cataniaunited.game.Buildable;
 import com.example.cataniaunited.game.board.ports.Port;
@@ -242,7 +242,7 @@ public class GameBoard {
     private void checkBuildableCount(String playerId, Buildable buildable) throws GameException {
         long buildableCount = getPlayerStructureCount(playerId, buildable.getClass());
         if (buildableCount >= buildable.getBuildLimit()) {
-            throw new BuildableLimitReached(buildable);
+            throw new BuildableLimitReachedException(buildable);
         }
     }
 
