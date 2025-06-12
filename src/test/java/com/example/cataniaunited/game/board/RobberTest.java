@@ -10,7 +10,6 @@ import com.example.cataniaunited.lobby.LobbyService;
 import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerColor;
 import com.example.cataniaunited.player.PlayerService;
-import io.quarkus.websockets.next.WebSocketConnection;
 import java.lang.reflect.Field;
 import jakarta.inject.Inject;
 import io.quarkus.test.junit.mockito.InjectSpy;
@@ -41,35 +40,6 @@ public class RobberTest {
         assertTrue(desert.hasRobber());
         assertEquals(desert.getId(), board.getRobberTileId());
     }
-
-    /*@Test
-    void rollingSevenSetsRobberPhase() throws Exception {
-        String lobbyId = lobbyService.createLobby("Player 1");
-        lobbyService.joinLobbyByCode(lobbyId, "Player 2");
-        Lobby lobby = lobbyService.getLobbyById(lobbyId);
-        String player1Id = String.valueOf(playerService.getPlayerById("Player 1"));
-        lobby.setActivePlayer(player1Id);
-        GameBoard board = gameService.createGameboard(lobbyId);
-
-        Field diceRollerField = GameBoard.class.getDeclaredField("diceRoller");
-        diceRollerField.setAccessible(true);
-        DiceRoller roller = (DiceRoller) diceRollerField.get(board);
-
-        Dice d1 = Mockito.mock(Dice.class);
-        Dice d2 = Mockito.mock(Dice.class);
-        Mockito.when(d1.roll()).thenReturn(3);
-        Mockito.when(d2.roll()).thenReturn(4);
-
-        Field d1Field = DiceRoller.class.getDeclaredField("dice1");
-        d1Field.setAccessible(true);
-        d1Field.set(roller, d1);
-        Field d2Field = DiceRoller.class.getDeclaredField("dice2");
-        d2Field.setAccessible(true);
-        d2Field.set(roller, d2);
-
-        gameService.rollDice(lobbyId, player1Id);
-        assertTrue(gameService.isRobberPlaced(lobbyId));
-    }*/
 
     @Test
     void testRobberBlocksResourceProduction() throws Exception {
