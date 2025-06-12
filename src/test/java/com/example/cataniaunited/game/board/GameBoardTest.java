@@ -238,7 +238,7 @@ class GameBoardTest {
 
         GameException ge = assertThrows(GameException.class, () -> gameBoard.placeSettlement(player, PlayerColor.BLUE, positionId));
 
-        assertEquals("You've reached the %s limit!".formatted(Settlement.class.getSimpleName()), ge.getMessage());
+        assertEquals("You've reached the %s limit of %s!".formatted(Settlement.class.getSimpleName(), 5), ge.getMessage());
         verify(gameBoard).getPlayerStructureCount(player.getUniqueId(), Settlement.class);
     }
 
@@ -253,7 +253,7 @@ class GameBoardTest {
 
         GameException ge = assertThrows(GameException.class, () -> gameBoard.placeCity(player, PlayerColor.BLUE, positionId));
 
-        assertEquals("You've reached the %s limit!".formatted(City.class.getSimpleName()), ge.getMessage());
+        assertEquals("You've reached the %s limit of %s!".formatted(City.class.getSimpleName(), 4), ge.getMessage());
         verify(gameBoard).getPlayerStructureCount(player.getUniqueId(), City.class);
     }
 
@@ -306,7 +306,7 @@ class GameBoardTest {
         var road = gameBoard.roadList.get(0);
         doReturn((long) road.getBuildLimit()).when(gameBoard).getPlayerStructureCount(anyString(), eq(Road.class));
         GameException ge = assertThrows(BuildableLimitReached.class, () -> gameBoard.placeRoad(new Player("Player1"), PlayerColor.BLUE, road.getId()));
-        assertEquals("You've reached the %s limit!".formatted(Road.class.getSimpleName()), ge.getMessage());
+        assertEquals("You've reached the %s limit of %s!".formatted(Road.class.getSimpleName(), road.getBuildLimit()), ge.getMessage());
     }
 
     @Test

@@ -242,7 +242,7 @@ public class GameBoard {
     private void checkBuildableCount(String playerId, Buildable buildable) throws GameException {
         long buildableCount = getPlayerStructureCount(playerId, buildable.getClass());
         if (buildableCount >= buildable.getBuildLimit()) {
-            throw new BuildableLimitReached(buildable.getClass());
+            throw new BuildableLimitReached(buildable);
         }
     }
 

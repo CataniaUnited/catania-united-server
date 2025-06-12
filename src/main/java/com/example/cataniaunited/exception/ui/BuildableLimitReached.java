@@ -5,9 +5,9 @@ import com.example.cataniaunited.game.Buildable;
 
 public class BuildableLimitReached extends GameException {
 
-    private static final String DEFAULT_MESSAGE = "You've reached the %s limit!";
+    private static final String DEFAULT_MESSAGE = "You've reached the %s limit of %s!";
 
-    public BuildableLimitReached(Class<? extends Buildable> buildable) {
-        super(DEFAULT_MESSAGE.formatted(buildable.getSimpleName()));
+    public BuildableLimitReached(Buildable buildable) {
+        super(DEFAULT_MESSAGE.formatted(buildable.getClass().getSimpleName(), buildable.getBuildLimit()));
     }
 }
