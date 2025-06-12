@@ -1,6 +1,7 @@
 package com.example.cataniaunited.game.board;
 
 import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.exception.ui.BuildableLimitReached;
 import com.example.cataniaunited.exception.ui.InsufficientResourcesException;
 import com.example.cataniaunited.game.Buildable;
 import com.example.cataniaunited.game.board.ports.Port;
@@ -20,6 +21,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.jboss.logging.Logger;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -31,8 +33,10 @@ public class GameBoard {
     private static final Logger logger = Logger.getLogger(GameBoard.class);
     static final int DEFAULT_TILES_PER_PLAYER_GOAL = 6;
     static final int SIZE_OF_HEX = 10; // Size parameter for graphical representation of hexes
+
     final int sizeOfBoard; // Number of rings/layers of tiles from the center
     private final DiceRoller diceRoller;
+    private final Map<String, Map<Placable, Class<? extends Buildable>>> playerStructures = new HashMap<>();
 
     List<BuildingSite> buildingSiteGraph;
     List<Tile> tileList;
@@ -148,11 +152,14 @@ public class GameBoard {
      */
     private void placeBuilding(int positionId, Building building) throws GameException {
         try {
-            checkRequiredResources(building.getPlayer(), building);
-            logger.debugf("Placing building: playerId = %s, positionId = %s, type = %s", building.getPlayer().getUniqueId(), positionId, building.getClass().getSimpleName());
+            Player player = building.getPlayer();
+            checkRequiredResources(player, building);
+            checkBuildableCount(player.getUniqueId(), building);
+            logger.debugf("Placing building: playerId = %s, positionId = %s, type = %s", player.getUniqueId(), positionId, building.getClass().getSimpleName());
             BuildingSite buildingSite = buildingSiteGraph.get(positionId - 1);
             buildingSite.setBuilding(building);
-            removeRequiredResources(building.getPlayer(), building);
+            removeRequiredResources(player, building);
+            updatePlayerStructures(player.getUniqueId(), buildingSite, building);
         } catch (IndexOutOfBoundsException e) {
             throw new GameException("Settlement position not found: id = %s", positionId);
         }
@@ -170,10 +177,12 @@ public class GameBoard {
         try {
             Road road = roadList.get(roadId - 1);
             checkRequiredResources(player, road);
+            checkBuildableCount(player.getUniqueId(), road);
             logger.debugf("Placing road: playerId = %s, roadId = %s", player.getUniqueId(), roadId);
             road.setOwner(player);
             road.setColor(color);
             removeRequiredResources(player, road);
+            updatePlayerStructures(player.getUniqueId(), road, road);
         } catch (IndexOutOfBoundsException e) {
             throw new GameException("Road not found: id = %s", roadId);
         }
@@ -184,7 +193,7 @@ public class GameBoard {
      *
      * @param player    The {@link Player} whose resources are to be removed.
      * @param buildable The {@link Buildable} item for which resources are required.
-     * @throws GameException if the player is null or an error occurs during resource removal.
+     * @throws GameException                  if the player is null or an error occurs during resource removal.
      * @throws InsufficientResourcesException if the player does not have enough resources.
      */
     private void removeRequiredResources(Player player, Buildable buildable) throws GameException {
@@ -201,7 +210,7 @@ public class GameBoard {
      *
      * @param player    The {@link Player} to check.
      * @param buildable The {@link Buildable} item.
-     * @throws GameException if the player is null.
+     * @throws GameException                  if the player is null.
      * @throws InsufficientResourcesException if the player does not have enough of any required resource.
      */
     private void checkRequiredResources(Player player, Buildable buildable) throws GameException {
@@ -216,6 +225,24 @@ public class GameBoard {
             if (player.getResourceCount(tileType) < amount) {
                 throw new InsufficientResourcesException();
             }
+        }
+    }
+
+    public long getPlayerStructureCount(String playerId, Class<? extends Buildable> buildableClass) {
+        Map<Placable, Class<? extends Buildable>> structures = playerStructures.getOrDefault(playerId, new HashMap<>());
+        return structures.values().stream().filter(b -> b == buildableClass).count();
+    }
+
+    private void updatePlayerStructures(String playerId, Placable placable, Buildable buildable) {
+        Map<Placable, Class<? extends Buildable>> structures = playerStructures.getOrDefault(playerId, new HashMap<>());
+        structures.put(placable, buildable.getClass());
+        playerStructures.put(playerId, structures);
+    }
+
+    private void checkBuildableCount(String playerId, Buildable buildable) throws GameException {
+        long buildableCount = getPlayerStructureCount(playerId, buildable.getClass());
+        if (buildableCount >= buildable.getBuildLimit()) {
+            throw new BuildableLimitReached(buildable.getClass());
         }
     }
 
@@ -246,7 +273,7 @@ public class GameBoard {
         return roadList;
     }
 
-    public Port getPortOfBuildingSite(int buildingSitePositionId){
+    public Port getPortOfBuildingSite(int buildingSitePositionId) {
         return buildingSiteGraph.get(buildingSitePositionId).getPort();
     }
 
@@ -283,7 +310,7 @@ public class GameBoard {
         }
 
         // Add Ports
-        for (Port port : this.portList){
+        for (Port port : this.portList) {
             portsNode.add(port.toJson());
         }
 
