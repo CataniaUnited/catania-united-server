@@ -1,6 +1,11 @@
 package com.example.cataniaunited.api;
 
+import com.example.cataniaunited.dto.MessageDTO;
+import com.example.cataniaunited.dto.MessageType;
+import com.example.cataniaunited.dto.PlayerInfo;
 import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.game.GameService;
+import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.example.cataniaunited.lobby.Lobby;
 import com.example.cataniaunited.lobby.LobbyService;
@@ -8,12 +13,20 @@ import com.example.cataniaunited.mapper.PlayerMapper;
 import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerColor;
 import com.example.cataniaunited.player.PlayerService;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.quarkus.test.Mock;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.mockito.InjectSpy;
 import io.quarkus.websockets.next.WebSocketConnection;
+import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mockito;
 
+import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -28,7 +41,7 @@ import static org.mockito.Mockito.when;
 @QuarkusTest
 class GameMessageHandlerTest {
 
-    @Inject
+    @InjectMocks
     GameMessageHandler gameMessageHandler;
 
     @InjectSpy
@@ -38,7 +51,7 @@ class GameMessageHandlerTest {
     LobbyService lobbyService;
 
     @InjectSpy
-    PlayerMapper playerMapper;
+    GameService gameService;
 
     @Test
     void getLobbyPlayerInfoShouldNotMapNullValues() throws GameException {
@@ -102,5 +115,40 @@ class GameMessageHandlerTest {
         assertEquals(8, player2Info.victoryPoints());
         assertFalse(player2Info.isHost());
     }
+
+    /*@Test
+    void testPlaceRobber_ValidTileId_NotifiesPlayers() throws Exception {
+        String lobbyId = "123abc";
+        String playerId = "player1";
+        int tileId = 5;
+
+        MessageDTO message = Mockito.mock(MessageDTO.class);
+        JsonNode tileIdNode = new ObjectMapper().readTree("{\"tileId\": " + tileId + "}").get("tileId");
+
+        Mockito.when(message.getMessageNode("tileId")).thenReturn(tileIdNode);
+        Mockito.when(message.getLobbyId()).thenReturn(lobbyId);
+        Mockito.when(message.getPlayer()).thenReturn(playerId);
+
+        ObjectNode gameBoardInfo = new ObjectMapper().createObjectNode();
+        ObjectNode playerInfo = new ObjectMapper().createObjectNode();
+
+        GameBoard board = Mockito.mock(GameBoard.class);
+        Mockito.when(gameService.getGameboardByLobbyId(lobbyId)).thenReturn(board);
+        Mockito.when(gameMessageHandler.getLobbyPlayerInformation(lobbyId)).thenReturn((Map<String, PlayerInfo>) playerInfo);
+        Mockito.when(lobbyService.notifyPlayers(Mockito.eq(lobbyId), Mockito.any()))
+                .thenReturn(Uni.createFrom().nullItem());
+
+        Uni <MessageDTO> result = gameMessageHandler.placeRobber(message);
+        MessageDTO resultDTO = result.await().indefinitely();
+
+        Mockito.verify(gameService).placeRobber(lobbyId, playerId, tileId);
+        Mockito.verify(lobbyService).notifyPlayers(Mockito.eq(lobbyId), Mockito.argThat(dto ->
+                dto.getType() == MessageType.PLACE_ROBBER &&
+                dto.getLobbyId().equals(lobbyId) &&
+                dto.getPlayer().equals(playerId)
+        ));
+
+        assertEquals(MessageType.PLACE_ROBBER, resultDTO.getType());
+    }*/
 
 }
