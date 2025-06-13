@@ -49,4 +49,9 @@ public class Settlement extends Building {
                 TileType.SHEEP, 1
         );
     }
+
+    @Override
+    public int getBuildLimit() {
+        return 5;
+    }
 }

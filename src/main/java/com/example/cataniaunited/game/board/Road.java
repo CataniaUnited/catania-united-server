@@ -217,4 +217,9 @@ public class Road implements Placable, Buildable {
                 TileType.WOOD, 1,
                 TileType.CLAY, 1);
     }
+
+    @Override
+    public int getBuildLimit() {
+        return 15;
+    }
 }
