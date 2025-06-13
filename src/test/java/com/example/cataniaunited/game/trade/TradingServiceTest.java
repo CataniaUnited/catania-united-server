@@ -23,7 +23,6 @@ import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 
@@ -53,6 +52,7 @@ class TradingServiceTest {
         when(playerService.getPlayerById(playerId)).thenReturn(mockPlayer);
         when(mockPlayer.getResources()).thenReturn(resources);
         when(mockPlayer.getAccessiblePorts()).thenReturn(new HashSet<>());
+        when(mockPlayer.getUniqueId()).thenReturn(playerId);
     }
 
 
@@ -77,88 +77,6 @@ class TradingServiceTest {
         message.setPlayer(playerId);
         return message;
     }
-
-    @Test
-    void testCheckTradeRequestJsonValidDoesNotThrow() {
-        ObjectNode payload = createTradeMessagePayload(List.of("WOOD"), List.of("CLAY"));
-        MessageDTO message = createMessageDTO(payload);
-        assertDoesNotThrow(() -> tradingService.checkTradeRequestJson(message));
-    }
-
-    @Test
-    void testCheckTradeRequestJsonPlayerNotFound() {
-        when(playerService.getPlayerById(anyString())).thenReturn(null);
-        ObjectNode payload = createTradeMessagePayload(List.of("WOOD"), List.of("CLAY"));
-        MessageDTO message = createMessageDTO(payload);
-        message.setPlayer("unknownPlayer");
-
-        GameException exception = assertThrows(GameException.class,
-                () -> tradingService.checkTradeRequestJson(message));
-        assertEquals("Player not found", exception.getMessage());
-    }
-
-    @Test
-    void testCheckTradeRequestJsonMissingOfferedResources() {
-        ObjectNode payload = createTradeMessagePayload(null, List.of("CLAY"));
-        MessageDTO message = createMessageDTO(payload);
-
-        GameException exception = assertThrows(GameException.class,
-                () -> tradingService.checkTradeRequestJson(message));
-        assertEquals("Invalid trade Request", exception.getMessage());
-    }
-
-    @Test
-    void testCheckTradeRequestJsonMissingTargetResources() {
-        ObjectNode payload = createTradeMessagePayload(List.of("WOOD"), null);
-        MessageDTO message = createMessageDTO(payload);
-
-        GameException exception = assertThrows(GameException.class,
-                () -> tradingService.checkTradeRequestJson(message));
-        assertEquals("Invalid trade Request", exception.getMessage());
-    }
-
-
-    @Test
-    void testExtractListOutOfArrayNodeValid() throws GameException {
-        ObjectNode jsonMessage = nodeFactory.objectNode();
-        ArrayNode resourcesArray = jsonMessage.putArray("resources");
-        resourcesArray.add("WOOD").add("clay").add("WHEAT");
-
-        List<TileType> result = tradingService.extractListOutOfArrayNode(jsonMessage, "resources");
-        assertEquals(3, result.size());
-        assertTrue(result.containsAll(List.of(TileType.WOOD, TileType.CLAY, TileType.WHEAT)));
-    }
-
-    @Test
-    void testExtractListOutOfArrayNodeInvalidNodeNotArray() {
-        ObjectNode jsonMessage = nodeFactory.objectNode();
-        jsonMessage.put("resources", "WOOD");
-
-        GameException exception = assertThrows(GameException.class,
-                () -> tradingService.extractListOutOfArrayNode(jsonMessage, "resources"));
-        assertTrue(exception.getMessage().contains("Invalid trade Request"));
-    }
-
-    @Test
-    void testExtractListOutOfArrayNodeInvalidResourceName() {
-        ObjectNode jsonMessage = nodeFactory.objectNode();
-        ArrayNode resourcesArray = jsonMessage.putArray("resources");
-        resourcesArray.add("WOOD").add("INVALID_RESOURCE");
-
-        GameException exception = assertThrows(GameException.class,
-                () -> tradingService.extractListOutOfArrayNode(jsonMessage, "resources"));
-        assertEquals("Invalid trade request: Unknown resource type 'INVALID_RESOURCE'.", exception.getMessage());
-    }
-
-    @Test
-    void testExtractListOutOfArrayNodeEmptyArray() throws GameException {
-        ObjectNode jsonMessage = nodeFactory.objectNode();
-        jsonMessage.putArray("resources");
-
-        List<TileType> result = tradingService.extractListOutOfArrayNode(jsonMessage, "resources");
-        assertTrue(result.isEmpty());
-    }
-
 
     @Test
     void testCheckIfPlayerHasSufficientResourcesTrue() {
@@ -284,13 +202,12 @@ class TradingServiceTest {
     void testHandleBankTradeRequestSuccessfulBankTrade() throws GameException {
         mockPlayer.getResources().put(TileType.WOOD, 4);
         mockPlayer.getResources().put(TileType.CLAY, 0);
-        ObjectNode payload = createTradeMessagePayload(
-                List.of("WOOD", "WOOD", "WOOD", "WOOD"),
-                List.of("CLAY")
+        TradeRequest tradeRequest = new TradeRequest(
+                List.of(TileType.WOOD, TileType.WOOD, TileType.WOOD, TileType.WOOD),
+                List.of(TileType.CLAY)
         );
-        MessageDTO message = createMessageDTO(payload);
 
-        assertDoesNotThrow(() -> tradingService.handleBankTradeRequest(message));
+        assertDoesNotThrow(() -> tradingService.handleBankTradeRequest(mockPlayer.getUniqueId(), tradeRequest));
 
         verify(mockPlayer, times(4)).removeResource(TileType.WOOD, 1);
         verify(mockPlayer, times(1)).receiveResource(TileType.CLAY, 1);
@@ -306,13 +223,12 @@ class TradingServiceTest {
         ports.add(generalPort);
         Mockito.doReturn(ports).when(mockPlayer).getAccessiblePorts();
 
-        ObjectNode payload = createTradeMessagePayload(
-                List.of("WOOD", "WOOD", "WOOD"),
-                List.of("CLAY")
+        TradeRequest tradeRequest = new TradeRequest(
+                List.of(TileType.WOOD, TileType.WOOD, TileType.WOOD),
+                List.of(TileType.CLAY)
         );
-        MessageDTO message = createMessageDTO(payload);
 
-        assertDoesNotThrow(() -> tradingService.handleBankTradeRequest(message));
+        assertDoesNotThrow(() -> tradingService.handleBankTradeRequest(mockPlayer.getUniqueId(), tradeRequest));
         verify(mockPlayer, times(3)).removeResource(TileType.WOOD, 1);
         verify(mockPlayer, times(1)).receiveResource(TileType.CLAY, 1);
     }
@@ -328,13 +244,12 @@ class TradingServiceTest {
         Mockito.doReturn(ports).when(mockPlayer).getAccessiblePorts();
 
 
-        ObjectNode payload = createTradeMessagePayload(
-                List.of("WOOD", "WOOD"),
-                List.of("CLAY")
+        TradeRequest tradeRequest = new TradeRequest(
+                List.of(TileType.WOOD, TileType.WOOD),
+                List.of(TileType.CLAY)
         );
-        MessageDTO message = createMessageDTO(payload);
 
-        assertDoesNotThrow(() -> tradingService.handleBankTradeRequest(message));
+        assertDoesNotThrow(() -> tradingService.handleBankTradeRequest(mockPlayer.getUniqueId(), tradeRequest));
 
         verify(mockPlayer, times(2)).removeResource(TileType.WOOD, 1);
         verify(mockPlayer, times(1)).receiveResource(TileType.CLAY, 1);
@@ -343,14 +258,13 @@ class TradingServiceTest {
     @Test
     void testHandleBankTradeRequestInsufficientPlayerResources() throws GameException {
         mockPlayer.getResources().put(TileType.WOOD, 1);
-        ObjectNode payload = createTradeMessagePayload(
-                List.of("WOOD", "WOOD", "WOOD", "WOOD"),
-                List.of("CLAY")
+        TradeRequest tradeRequest = new TradeRequest(
+                List.of(TileType.WOOD, TileType.WOOD, TileType.WOOD, TileType.WOOD),
+                List.of(TileType.CLAY)
         );
-        MessageDTO message = createMessageDTO(payload);
 
         GameException exception = assertThrows(GameException.class,
-                () -> tradingService.handleBankTradeRequest(message));
+                () ->tradingService.handleBankTradeRequest(mockPlayer.getUniqueId(), tradeRequest));
         assertEquals("Insufficient Resources of Player", exception.getMessage());
         verify(mockPlayer, never()).removeResource(any(TileType.class), any(Integer.class));
     }
@@ -366,14 +280,13 @@ class TradingServiceTest {
         Mockito.doReturn(ports).when(mockPlayer).getAccessiblePorts();
 
 
-        ObjectNode payload = createTradeMessagePayload(
-                List.of("WOOD"),
-                List.of("CLAY")
+        TradeRequest tradeRequest = new TradeRequest(
+                List.of(TileType.WOOD),
+                List.of(TileType.CLAY)
         );
-        MessageDTO message = createMessageDTO(payload);
 
         GameException exception = assertThrows(GameException.class,
-                () -> tradingService.handleBankTradeRequest(message));
+                () ->tradingService.handleBankTradeRequest(mockPlayer.getUniqueId(), tradeRequest));
         assertEquals("Trade Ration is invalid", exception.getMessage());
         verify(mockPlayer, never()).removeResource(any(TileType.class), any(Integer.class));
     }

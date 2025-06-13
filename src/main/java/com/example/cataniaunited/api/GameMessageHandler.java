@@ -7,6 +7,7 @@ import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.fi.BuildingAction;
 import com.example.cataniaunited.game.GameService;
 import com.example.cataniaunited.game.board.GameBoard;
+import com.example.cataniaunited.game.trade.TradeRequest;
 import com.example.cataniaunited.game.trade.TradingService;
 import com.example.cataniaunited.lobby.Lobby;
 import com.example.cataniaunited.lobby.LobbyService;
@@ -14,7 +15,9 @@ import com.example.cataniaunited.mapper.PlayerMapper;
 import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerColor;
 import com.example.cataniaunited.player.PlayerService;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -49,6 +52,9 @@ public class GameMessageHandler {
 
     @Inject
     TradingService tradingService;
+
+    @Inject
+    ObjectMapper objectMapper;
 
 
     public Uni<MessageDTO> handleInitialConnection(WebSocketConnection connection) {
@@ -377,22 +383,30 @@ public class GameMessageHandler {
 
     /**
      * Handles a request from a player to trade resources with the bank.
+     * This method now deserializes the message payload into a TradeRequest object
+     * before passing it to the TradingService.
      *
-     * @param message The {@link MessageDTO} containing trade details (offered and target resources).
-     *                The player ID is inferred from the message sender.
-     *                The lobby ID is also part of the message.
+     * @param message The {@link MessageDTO} containing trade details.
      * @return A Uni emitting a {@link MessageDTO} of type {@link MessageType#PLAYER_RESOURCE_UPDATE}
-     *         containing the updated player information (resources).
-     *         This update is broadcast to all players in the lobby.
-     * @throws GameException if the trade is invalid (e.g., not player's turn, insufficient resources,
-     *                       invalid trade ratio, or other issues identified by {@link TradingService}).
+     *         containing the updated player information, broadcast to all players in the lobby.
+     * @throws GameException if the trade is invalid (e.g., bad format, not player's turn,
+     *                       insufficient resources, or other issues from {@link TradingService}).
      */
     Uni<MessageDTO> handleTradeWithBank(MessageDTO message) throws GameException {
         // Check if player is active player -> else can't trade
         lobbyService.checkPlayerTurn(message.getLobbyId(), message.getPlayer());
 
-        // Try to trade -> if not successful GameException
-        tradingService.handleBankTradeRequest(message);
+        TradeRequest tradeRequest;
+        try {
+            // Deserialize the JSON payload into our new TradeRequest record.
+            tradeRequest = objectMapper.treeToValue(message.getMessage(), TradeRequest.class);
+        } catch (JsonProcessingException | IllegalArgumentException e) {
+            logger.errorf("Failed to parse trade request: %s", e.getMessage());
+            throw new GameException("Invalid trade request format.");
+        }
+
+        // Try to trade with the clean TradeRequest object -> if not successful GameException
+        tradingService.handleBankTradeRequest(message.getPlayer(), tradeRequest);
 
         // Trade successful, get updated player information (which includes resources)
         Map<String, PlayerInfo> updatedPlayerInfos = getLobbyPlayerInformation(message.getLobbyId());
