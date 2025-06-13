@@ -2,8 +2,11 @@ package com.example.cataniaunited.game;
 
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.exception.ui.InvalidTurnException;
+import com.example.cataniaunited.exception.ui.MissingRequiredStructuresException;
 import com.example.cataniaunited.game.board.GameBoard;
+import com.example.cataniaunited.game.board.Road;
 import com.example.cataniaunited.game.board.ports.Port;
+import com.example.cataniaunited.game.buildings.Settlement;
 import com.example.cataniaunited.lobby.Lobby;
 import com.example.cataniaunited.lobby.LobbyService;
 import com.example.cataniaunited.player.Player;
@@ -19,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -34,6 +38,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -321,6 +326,66 @@ class GameServiceTest {
         verify(gameboardMock).getPortOfBuildingSite(settlementPositionId);
         verify(mockPlayer, never()).addPort(any(Port.class));
         verify(playerService).addVictoryPoints(playerId, 1);
+    }
+
+    @Test
+    void checkRequiredPlayerStructuresShouldThrowExceptionIfPlayerDidNotBuildEnoughRoads() throws GameException {
+        String playerId = "host";
+        String lobbyId = lobbyMock.getLobbyId();
+        doReturn(gameboardMock).when(gameService).getGameboardByLobbyId(lobbyId);
+
+        //First round
+        doReturn(0L).when(gameboardMock).getPlayerStructureCount(playerId, Road.class);
+        assertThrows(MissingRequiredStructuresException.class, () ->
+                gameService.checkRequiredPlayerStructures(lobbyMock.getLobbyId(), playerId, 0)
+        );
+
+        //Second round
+        doReturn(1L).when(gameboardMock).getPlayerStructureCount(playerId, Road.class);
+        assertThrows(MissingRequiredStructuresException.class, () ->
+                gameService.checkRequiredPlayerStructures(lobbyMock.getLobbyId(), playerId, 1)
+        );
+
+        verify(gameboardMock, times(2)).getPlayerStructureCount(playerId, Road.class);
+        verify(gameboardMock, never()).getPlayerStructureCount(playerId, Settlement.class);
+    }
+
+    @Test
+    void checkRequiredPlayerStructuresShouldThrowExceptionIfPlayerDidNotBuildEnoughSettlements() throws GameException {
+        String playerId = "host";
+        String lobbyId = lobbyMock.getLobbyId();
+        doReturn(gameboardMock).when(gameService).getGameboardByLobbyId(lobbyId);
+
+        //First round
+        doReturn(1L).when(gameboardMock).getPlayerStructureCount(playerId, Road.class);
+        doReturn(0L).when(gameboardMock).getPlayerStructureCount(playerId, Settlement.class);
+
+        assertThrows(MissingRequiredStructuresException.class, () ->
+                gameService.checkRequiredPlayerStructures(lobbyMock.getLobbyId(), playerId, 0)
+        );
+
+        //Second round
+        doReturn(2L).when(gameboardMock).getPlayerStructureCount(playerId, Road.class);
+        doReturn(1L).when(gameboardMock).getPlayerStructureCount(playerId, Settlement.class);
+
+        assertThrows(MissingRequiredStructuresException.class, () ->
+                gameService.checkRequiredPlayerStructures(lobbyMock.getLobbyId(), playerId, 1)
+        );
+
+        verify(gameboardMock, times(2)).getPlayerStructureCount(playerId, Road.class);
+        verify(gameboardMock, times(2)).getPlayerStructureCount(playerId, Settlement.class);
+    }
+
+    @Test
+    void checkRequiredPlayerStructuresShouldSkipCheckAfterSecondRound() throws GameException {
+        String playerId = "host";
+        String lobbyId = lobbyMock.getLobbyId();
+        doReturn(gameboardMock).when(gameService).getGameboardByLobbyId(lobbyId);
+
+        assertDoesNotThrow(() -> gameService.checkRequiredPlayerStructures(lobbyMock.getLobbyId(), playerId, 2));
+
+        verify(gameboardMock, never()).getPlayerStructureCount(playerId, Road.class);
+        verify(gameboardMock, never()).getPlayerStructureCount(playerId, Settlement.class);
     }
 
 }

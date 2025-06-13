@@ -1,8 +1,11 @@
 package com.example.cataniaunited.game;
 
 import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.exception.ui.MissingRequiredStructuresException;
 import com.example.cataniaunited.game.board.GameBoard;
+import com.example.cataniaunited.game.board.Road;
 import com.example.cataniaunited.game.board.ports.Port;
+import com.example.cataniaunited.game.buildings.Settlement;
 import com.example.cataniaunited.lobby.Lobby;
 import com.example.cataniaunited.lobby.LobbyService;
 import com.example.cataniaunited.player.Player;
@@ -178,6 +181,27 @@ public class GameService {
         ObjectNode result = gameboard.rollDice();
         lobbyService.updateLatestDiceRoll(lobbyId, playerId);
         return result;
+    }
+
+    public void checkRequiredPlayerStructures(String lobbyId, String playerId, int currentRound) throws GameException {
+        if (currentRound > 1) {
+            logger.debugf("Skipping required structure check, since the game is past round 2: lobbyId=%s, currentRound=%s", lobbyId, currentRound);
+            return;
+        }
+
+        GameBoard gameBoard = getGameboardByLobbyId(lobbyId);
+        long roadCount = gameBoard.getPlayerStructureCount(playerId, Road.class);
+        if (roadCount < currentRound + 1) {
+            logger.errorf("Player did not build enough roads in this round: lobbyId=%s, playerId=%s, currentRound=%d", lobbyId, playerId, currentRound);
+            throw new MissingRequiredStructuresException();
+        }
+
+        long settlementCount = gameBoard.getPlayerStructureCount(playerId, Settlement.class);
+        if (settlementCount < currentRound + 1) {
+            logger.errorf("Player did not build enough settlements in this round: lobbyId=%s, playerId=%s, currentRound=%d", lobbyId, playerId, currentRound);
+            throw new MissingRequiredStructuresException();
+        }
+
     }
 
     /**

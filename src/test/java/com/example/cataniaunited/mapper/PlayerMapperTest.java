@@ -107,8 +107,8 @@ class PlayerMapperTest {
         assertTrue(playerInfo.isHost());
         assertTrue(playerInfo.isActivePlayer());
         assertTrue(playerInfo.canRollDice());
-        assertEquals(5, playerInfo.resources().get(TileType.WHEAT));
-        assertEquals(3, playerInfo.resources().get(TileType.SHEEP));
+        assertEquals(3, playerInfo.resources().get(TileType.WHEAT));
+        assertEquals(1, playerInfo.resources().get(TileType.SHEEP));
         assertEquals(0, playerInfo.resources().get(TileType.ORE));
 
     }

@@ -191,6 +191,10 @@ class GameBoardTest {
     @Test
     void testPlaceSettlement() throws GameException {
         Player player = new Player();
+        player.receiveResource(TileType.WOOD, 1);
+        player.receiveResource(TileType.CLAY, 1);
+        player.receiveResource(TileType.WHEAT, 1);
+        player.receiveResource(TileType.SHEEP, 1);
         String playerId = player.getUniqueId();
         GameBoard gameBoard = new GameBoard(2);
         var settlementPosition = gameBoard.getBuildingSitePositionGraph().get(0);
@@ -207,6 +211,10 @@ class GameBoardTest {
     void placeSettlementShouldThrowExceptionIfPositionIsLessThanZero() {
         GameBoard gameBoard = new GameBoard(2);
         Player player = new Player("Player1");
+        player.receiveResource(TileType.WOOD, 1);
+        player.receiveResource(TileType.CLAY, 1);
+        player.receiveResource(TileType.WHEAT, 1);
+        player.receiveResource(TileType.SHEEP, 1);
         GameException ge = assertThrows(GameException.class, () -> gameBoard.placeSettlement(player, PlayerColor.BLUE, -1));
         assertEquals("Settlement position not found: id = %s".formatted(-1), ge.getMessage());
     }
@@ -216,6 +224,10 @@ class GameBoardTest {
         GameBoard gameBoard = new GameBoard(2);
         int positionId = gameBoard.getBuildingSitePositionGraph().size() + 1;
         Player player = new Player("Player1");
+        player.receiveResource(TileType.WOOD, 1);
+        player.receiveResource(TileType.CLAY, 1);
+        player.receiveResource(TileType.WHEAT, 1);
+        player.receiveResource(TileType.SHEEP, 1);
         GameException ge = assertThrows(GameException.class, () -> gameBoard.placeSettlement(player, PlayerColor.BLUE, positionId));
         assertEquals("Settlement position not found: id = %s".formatted(positionId), ge.getMessage());
     }
@@ -234,6 +246,10 @@ class GameBoardTest {
         GameBoard gameBoard = spy(new GameBoard(2));
         int positionId = gameBoard.getBuildingSitePositionGraph().size() + 1;
         Player player = new Player("Player1");
+        player.receiveResource(TileType.WOOD, 1);
+        player.receiveResource(TileType.CLAY, 1);
+        player.receiveResource(TileType.WHEAT, 1);
+        player.receiveResource(TileType.SHEEP, 1);
         doReturn(5L).when(gameBoard).getPlayerStructureCount(player.getUniqueId(), Settlement.class);
 
         GameException ge = assertThrows(BuildableLimitReachedException.class, () -> gameBoard.placeSettlement(player, PlayerColor.BLUE, positionId));
@@ -273,6 +289,8 @@ class GameBoardTest {
         GameBoard gameBoard = new GameBoard(2);
         var road = gameBoard.roadList.get(0);
         Player player = new Player("Player1");
+        player.receiveResource(TileType.WOOD, 1);
+        player.receiveResource(TileType.CLAY, 1);
         gameBoard.placeRoad(player, PlayerColor.BLUE, road.getId());
         assertEquals(player, road.getOwner());
     }
@@ -304,8 +322,11 @@ class GameBoardTest {
     void placeRoadShouldThrowExceptionIfMaxLimitIsReached() {
         GameBoard gameBoard = spy(new GameBoard(2));
         var road = gameBoard.roadList.get(0);
+        var player = new Player("Player1");
+        player.receiveResource(TileType.WOOD, 1);
+        player.receiveResource(TileType.CLAY, 1);
         doReturn((long) road.getBuildLimit()).when(gameBoard).getPlayerStructureCount(anyString(), eq(Road.class));
-        GameException ge = assertThrows(BuildableLimitReachedException.class, () -> gameBoard.placeRoad(new Player("Player1"), PlayerColor.BLUE, road.getId()));
+        GameException ge = assertThrows(BuildableLimitReachedException.class, () -> gameBoard.placeRoad(player, PlayerColor.BLUE, road.getId()));
         assertEquals("You've reached the %s limit of %s!".formatted(Road.class.getSimpleName(), road.getBuildLimit()), ge.getMessage());
     }
 
@@ -319,8 +340,11 @@ class GameBoardTest {
         int buildingSite1Id = buildingSite1.getId();
         int buildingSite2Id = buildingSite2.getId();
         Player player = new Player("Player1");
+        player.receiveResource(TileType.WOOD, 4);
+        player.receiveResource(TileType.CLAY, 4);
+        player.receiveResource(TileType.SHEEP, 2);
         player.receiveResource(TileType.ORE, 3);
-        player.receiveResource(TileType.WHEAT, 2);
+        player.receiveResource(TileType.WHEAT, 4);
 
         var roadCount = gameBoard.getPlayerStructureCount(player.getUniqueId(), Road.class);
         var cityCount = gameBoard.getPlayerStructureCount(player.getUniqueId(), City.class);
