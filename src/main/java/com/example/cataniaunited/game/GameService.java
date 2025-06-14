@@ -1,8 +1,12 @@
 package com.example.cataniaunited.game;
 
 import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.exception.ui.MissingRequiredStructuresException;
+import com.example.cataniaunited.exception.ui.SetupLimitExceededException;
 import com.example.cataniaunited.game.board.GameBoard;
+import com.example.cataniaunited.game.board.Road;
 import com.example.cataniaunited.game.board.ports.Port;
+import com.example.cataniaunited.game.buildings.Settlement;
 import com.example.cataniaunited.lobby.Lobby;
 import com.example.cataniaunited.lobby.LobbyService;
 import com.example.cataniaunited.player.Player;
@@ -64,10 +68,14 @@ public class GameService {
     public void placeSettlement(String lobbyId, String playerId, int settlementPositionId) throws GameException {
         lobbyService.checkPlayerTurn(lobbyId, playerId);
         GameBoard gameboard = getGameboardByLobbyId(lobbyId);
-        PlayerColor color = lobbyService.getPlayerColor(lobbyId, playerId);
-        gameboard.placeSettlement(playerService.getPlayerById(playerId), color, settlementPositionId);
-        Player player = playerService.getPlayerById(playerId);
+        BuildRequest buildRequest = createBuildRequest(lobbyId, playerId, settlementPositionId);
+        if (!buildRequest.requiresResourceCheck()
+                && gameboard.getPlayerStructureCount(playerId, Settlement.class) == buildRequest.playedRounds() + 1) {
+            throw new SetupLimitExceededException();
+        }
+        gameboard.placeSettlement(buildRequest);
 
+        Player player = buildRequest.player();
         Port port = gameboard.getPortOfBuildingSite(settlementPositionId);
         if (port != null) {
             player.addPort(port);
@@ -87,8 +95,8 @@ public class GameService {
     public void upgradeSettlement(String lobbyId, String playerId, int settlementPositionId) throws GameException {
         lobbyService.checkPlayerTurn(lobbyId, playerId);
         GameBoard gameboard = getGameboardByLobbyId(lobbyId);
-        PlayerColor color = lobbyService.getPlayerColor(lobbyId, playerId);
-        gameboard.placeCity(playerService.getPlayerById(playerId), color, settlementPositionId);
+        BuildRequest buildRequest = createBuildRequest(lobbyId, playerId, settlementPositionId);
+        gameboard.placeCity(buildRequest);
         playerService.addVictoryPoints(playerId, 1); // Only add one additional Point
     }
 
@@ -104,8 +112,26 @@ public class GameService {
     public void placeRoad(String lobbyId, String playerId, int roadId) throws GameException {
         lobbyService.checkPlayerTurn(lobbyId, playerId);
         GameBoard gameboard = getGameboardByLobbyId(lobbyId);
+        BuildRequest buildRequest = createBuildRequest(lobbyId, playerId, roadId);
+        if (!buildRequest.requiresResourceCheck()
+                && gameboard.getPlayerStructureCount(playerId, Road.class) == buildRequest.playedRounds() + 1) {
+            throw new SetupLimitExceededException();
+        }
+        gameboard.placeRoad(buildRequest);
+    }
+
+    private BuildRequest createBuildRequest(String lobbyId, String playerId, int positionId) throws GameException {
+        Player player = playerService.getPlayerById(playerId);
         PlayerColor color = lobbyService.getPlayerColor(lobbyId, playerId);
-        gameboard.placeRoad(playerService.getPlayerById(playerId), color, roadId);
+        int roundsPlayed = lobbyService.getRoundsPlayed(lobbyId);
+        boolean requiresResourceCheck = roundsPlayed > 1;
+        return new BuildRequest(
+                player,
+                color,
+                positionId,
+                requiresResourceCheck,
+                roundsPlayed
+        );
     }
 
     /**
@@ -115,12 +141,17 @@ public class GameService {
      * @param lobbyId The ID of the lobby where the game is to be started.
      * @throws GameException if the game cannot be started (e.g., already started, not enough players).
      */
-    public void startGame(String lobbyId, String playerId) throws GameException {
+    public void startGame(String lobbyId, String hostPlayerId) throws GameException {
         Lobby lobby = lobbyService.getLobbyById(lobbyId);
-        if (!lobby.canStartGame(playerId)) {
+        if (!lobby.canStartGame(hostPlayerId)) {
             throw new GameException("Starting of game failed");
         }
+
         createGameboard(lobbyId);
+        for (String playerId : lobby.getPlayers()) {
+            playerService.initializePlayerResources(playerId);
+        }
+
         lobby.startGame();
         logger.infof("Game started in lobby: lobbyId=%s, order=%s", lobbyId, lobby.getPlayerOrder());
     }
@@ -178,6 +209,27 @@ public class GameService {
         ObjectNode result = gameboard.rollDice();
         lobbyService.updateLatestDiceRoll(lobbyId, playerId);
         return result;
+    }
+
+    public void checkRequiredPlayerStructures(String lobbyId, String playerId, int currentRound) throws GameException {
+        if (currentRound > 1) {
+            logger.debugf("Skipping required structure check, since the game is past second round: lobbyId=%s, currentRound=%s", lobbyId, currentRound);
+            return;
+        }
+
+        GameBoard gameBoard = getGameboardByLobbyId(lobbyId);
+        long roadCount = gameBoard.getPlayerStructureCount(playerId, Road.class);
+        if (roadCount < currentRound + 1) {
+            logger.errorf("Player did not build enough roads in this round: lobbyId=%s, playerId=%s, currentRound=%d", lobbyId, playerId, currentRound);
+            throw new MissingRequiredStructuresException();
+        }
+
+        long settlementCount = gameBoard.getPlayerStructureCount(playerId, Settlement.class);
+        if (settlementCount < currentRound + 1) {
+            logger.errorf("Player did not build enough settlements in this round: lobbyId=%s, playerId=%s, currentRound=%d", lobbyId, playerId, currentRound);
+            throw new MissingRequiredStructuresException();
+        }
+
     }
 
     /**

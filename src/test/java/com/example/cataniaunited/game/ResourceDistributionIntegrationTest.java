@@ -69,6 +69,11 @@ class ResourceDistributionIntegrationTest {
         WebSocketConnection mockWsConn = Mockito.mock(WebSocketConnection.class);
         Mockito.when(mockWsConn.id()).thenReturn("mock-test-conn-" + System.nanoTime());
         testPlayer = playerService.addPlayer(mockWsConn);
+        testPlayer.receiveResource(TileType.WOOD, 2);
+        testPlayer.receiveResource(TileType.CLAY, 2);
+        testPlayer.receiveResource(TileType.WHEAT, 1);
+        testPlayer.receiveResource(TileType.SHEEP, 1);
+
         WebSocketConnection mockWsConn2 = Mockito.mock(WebSocketConnection.class);
         Mockito.when(mockWsConn2.id()).thenReturn("mock-test-conn-" + System.nanoTime() + 1);
         Player testPlayer2 = playerService.addPlayer(mockWsConn2);
@@ -193,7 +198,7 @@ class ResourceDistributionIntegrationTest {
 
     @Test
     @Order(7)
-    void assertThatPlayerRecievedResources() {
+    void assertThatPlayerReceivedResources() {
         wheatAmountAfterTargetRoll = testPlayer.getResourceCount(TileType.WHEAT);
         assertEquals(wheatAmountBeforeTargetRoll + 1, wheatAmountAfterTargetRoll,
                 String.format("Player should have received 1 %s. Rolled %d (target tile value %d). Initial: %d, Final: %d",

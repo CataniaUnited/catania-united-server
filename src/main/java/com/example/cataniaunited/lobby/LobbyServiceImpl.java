@@ -268,6 +268,12 @@ public class LobbyServiceImpl implements LobbyService {
     }
 
     @Override
+    public int getRoundsPlayed(String lobbyId) throws GameException {
+        Lobby lobby = getLobbyById(lobbyId);
+        return lobby.getRoundsPlayed();
+    }
+
+    @Override
     public void toggleReady(String lobbyId, String playerId) throws GameException {
         Lobby lobby = getLobbyById(lobbyId);
         lobby.toggleReady(playerId);

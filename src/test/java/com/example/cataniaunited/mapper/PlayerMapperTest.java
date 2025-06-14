@@ -107,10 +107,28 @@ class PlayerMapperTest {
         assertTrue(playerInfo.isHost());
         assertTrue(playerInfo.isActivePlayer());
         assertTrue(playerInfo.canRollDice());
-        assertEquals(5, playerInfo.resources().get(TileType.WHEAT));
-        assertEquals(3, playerInfo.resources().get(TileType.SHEEP));
+        assertEquals(3, playerInfo.resources().get(TileType.WHEAT));
+        assertEquals(1, playerInfo.resources().get(TileType.SHEEP));
         assertEquals(0, playerInfo.resources().get(TileType.ORE));
 
+    }
+
+    @Test
+    void toDToShouldReturnNullIfPlayerIsNull() {
+        Lobby lobbyMock = new Lobby("1234", playerMock.getUniqueId());
+        lobbyMock.setActivePlayer(playerMock.getUniqueId());
+        assertNull(playerMapper.toDto(null, lobbyMock));
+    }
+
+    @Test
+    void toDtoShouldMapResourcesToNullIfPlayerResourcesAreNull() {
+        Player playerSpy = spy(new Player("Player 2"));
+        Lobby lobbyMock = new Lobby("1234", playerSpy.getUniqueId());
+        lobbyMock.setActivePlayer(playerSpy.getUniqueId());
+        when(playerSpy.getResources()).thenReturn(null);
+
+        PlayerInfo playerInfo = playerMapper.toDto(playerSpy, lobbyMock);
+        assertNull(playerInfo.resources());
     }
 
 }
