@@ -3,6 +3,7 @@ package com.example.cataniaunited.player;
 import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.websockets.next.WebSocketConnection;
@@ -329,11 +330,35 @@ class PlayerServiceTest {
     }
 
     @Test
-    void initializePlayerResourcesShouldThrowExceptionIfPlayerIsNotExisting(){
+    void initializePlayerResourcesShouldThrowExceptionIfPlayerIsNotExisting() {
         String nonExistentPlayerId = "non-existent-player-id-123";
         var exception = assertThrows(GameException.class, () -> playerService.initializePlayerResources(nonExistentPlayerId));
         assertEquals("Player with id %s not found".formatted(nonExistentPlayerId), exception.getMessage());
 
+    }
+
+    @Test
+    void initializePlayerResourcesShouldResetResourcesToZero() throws GameException {
+        Player player = playerService.addPlayer(mockConnection1);
+        player.receiveResource(TileType.WOOD, 35);
+        player.receiveResource(TileType.CLAY, 70);
+        player.receiveResource(TileType.WHEAT, 120);
+        player.receiveResource(TileType.SHEEP, 10);
+        player.receiveResource(TileType.ORE, 47);
+
+        assertEquals(35, player.getResourceCount(TileType.WOOD));
+        assertEquals(70, player.getResourceCount(TileType.CLAY));
+        assertEquals(120, player.getResourceCount(TileType.WHEAT));
+        assertEquals(10, player.getResourceCount(TileType.SHEEP));
+        assertEquals(47, player.getResourceCount(TileType.ORE));
+
+        playerService.initializePlayerResources(player.getUniqueId());
+
+        assertEquals(0, player.getResourceCount(TileType.WOOD));
+        assertEquals(0, player.getResourceCount(TileType.CLAY));
+        assertEquals(0, player.getResourceCount(TileType.WHEAT));
+        assertEquals(0, player.getResourceCount(TileType.SHEEP));
+        assertEquals(0, player.getResourceCount(TileType.ORE));
     }
 
 }
