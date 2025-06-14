@@ -7,6 +7,7 @@ public record BuildRequest(
         Player player,
         PlayerColor color,
         int positionId,
-        boolean requiresResourceCheck
+        boolean requiresResourceCheck,
+        int playedRounds
 ) {
 }

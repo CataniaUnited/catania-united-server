@@ -2,6 +2,7 @@ package com.example.cataniaunited.game;
 
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.exception.ui.MissingRequiredStructuresException;
+import com.example.cataniaunited.exception.ui.SetupLimitExceededException;
 import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.game.board.Road;
 import com.example.cataniaunited.game.board.ports.Port;
@@ -68,6 +69,10 @@ public class GameService {
         lobbyService.checkPlayerTurn(lobbyId, playerId);
         GameBoard gameboard = getGameboardByLobbyId(lobbyId);
         BuildRequest buildRequest = createBuildRequest(lobbyId, playerId, settlementPositionId);
+        if (!buildRequest.requiresResourceCheck()
+                && gameboard.getPlayerStructureCount(playerId, Settlement.class) == buildRequest.playedRounds() + 1) {
+            throw new SetupLimitExceededException();
+        }
         gameboard.placeSettlement(buildRequest);
 
         Player player = buildRequest.player();
@@ -108,6 +113,10 @@ public class GameService {
         lobbyService.checkPlayerTurn(lobbyId, playerId);
         GameBoard gameboard = getGameboardByLobbyId(lobbyId);
         BuildRequest buildRequest = createBuildRequest(lobbyId, playerId, roadId);
+        if (!buildRequest.requiresResourceCheck()
+                && gameboard.getPlayerStructureCount(playerId, Road.class) == buildRequest.playedRounds() + 1) {
+            throw new SetupLimitExceededException();
+        }
         gameboard.placeRoad(buildRequest);
     }
 
@@ -115,11 +124,13 @@ public class GameService {
         Player player = playerService.getPlayerById(playerId);
         PlayerColor color = lobbyService.getPlayerColor(lobbyId, playerId);
         int roundsPlayed = lobbyService.getRoundsPlayed(lobbyId);
+        boolean requiresResourceCheck = roundsPlayed > 1;
         return new BuildRequest(
                 player,
                 color,
                 positionId,
-                roundsPlayed > 1
+                requiresResourceCheck,
+                roundsPlayed
         );
     }
 
@@ -137,7 +148,7 @@ public class GameService {
         }
 
         createGameboard(lobbyId);
-        for(String playerId : lobby.getPlayers()){
+        for (String playerId : lobby.getPlayers()) {
             playerService.initializePlayerResources(playerId);
         }
 
