@@ -2,6 +2,7 @@ package com.example.cataniaunited.player;
 
 import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import io.quarkus.websockets.next.WebSocketConnection;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -171,5 +172,25 @@ public class PlayerService {
         return connection.sendText(message)
                 .onItem().invoke(v -> logger.debugf("Message sent: player=%s message=%s", playerId, message))
                 .onFailure().invoke(err -> logger.errorf(err, "Failed to send message: player=%s", playerId));
+    }
+
+    /**
+     * Initializes the player's resources map
+     */
+    public void initializePlayerResources(String playerId) throws GameException {
+        Player player = getPlayerById(playerId);
+        if(player == null) {
+            logger.errorf("Initialize player resources failed, no player found: playerId = %s", playerId);
+            throw new GameException("Player with id %s not found", playerId);
+        }
+
+        for (TileType resource : TileType.values()) {
+            if (resource == TileType.WASTE)
+                continue; // No waste resource
+
+            //Set the amount of each resource to 0
+            int resourceCount = player.getResourceCount(resource);
+            player.removeResource(resource, resourceCount);
+        }
     }
 }

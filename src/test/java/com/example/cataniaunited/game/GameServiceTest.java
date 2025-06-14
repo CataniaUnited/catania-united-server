@@ -18,6 +18,7 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.mockito.InjectSpy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import java.util.List;
 import java.util.Set;
@@ -214,7 +215,7 @@ class GameServiceTest {
         doReturn(gameboardMock).when(gameService).getGameboardByLobbyId(lobbyId);
         doReturn(player).when(playerService).getPlayerById(playerId);
         gameService.placeSettlement(lobbyId, playerId, settlementPositionId);
-        verify(gameboardMock).placeSettlement(player, PlayerColor.BLUE, settlementPositionId);
+        verify(gameboardMock).placeSettlement(any(BuildRequest.class));
     }
 
     @Test
@@ -230,10 +231,10 @@ class GameServiceTest {
         doReturn(player).when(playerService).getPlayerById(playerId);
 
         gameService.addGameboardToList(lobbyId, gameboardMock);
-        doNothing().when(gameboardMock).placeSettlement(player, PlayerColor.BLUE, settlementPositionId);
+        doNothing().when(gameboardMock).placeSettlement(any(BuildRequest.class));
         gameService.placeSettlement(lobbyId, playerId, settlementPositionId);
 
-        verify(gameboardMock).placeSettlement(player, PlayerColor.BLUE, settlementPositionId);
+        verify(gameboardMock).placeSettlement(any(BuildRequest.class));
         verify(playerService).addVictoryPoints(playerId, 1);
     }
 
@@ -249,8 +250,73 @@ class GameServiceTest {
         doReturn(gameboardMock).when(gameService).getGameboardByLobbyId(lobbyId);
         doReturn(player).when(playerService).getPlayerById(playerId);
         gameService.placeRoad(lobbyId, playerId, settlementPositionId);
-        verify(gameboardMock).placeRoad(player, PlayerColor.BLUE, settlementPositionId);
+        verify(gameboardMock).placeRoad(any(BuildRequest.class));
     }
+
+    @Test
+    void placeSettlementAndRoadShouldIgnoreResourcesForFirstTwoRounds() throws GameException {
+        int roadId = 1;
+        int settlementPositionId = 1;
+        Player player = new Player("player1");
+        String lobbyId = lobbyMock.getLobbyId();
+        doReturn(lobbyMock).when(lobbyService).getLobbyById(lobbyId);
+        doReturn(true).when(lobbyMock).isPlayerTurn(player.getUniqueId());
+        doReturn(PlayerColor.BLUE).when(lobbyMock).getPlayerColor(player.getUniqueId());
+        doReturn(gameboardMock).when(gameService).getGameboardByLobbyId(lobbyId);
+        doReturn(player).when(playerService).getPlayerById(player.getUniqueId());
+
+        doReturn(1).when(lobbyMock).getRoundsPlayed();
+
+        gameService.placeRoad(lobbyId, player.getUniqueId(), roadId);
+        gameService.placeSettlement(lobbyId, player.getUniqueId(), settlementPositionId);
+
+        ArgumentCaptor<BuildRequest> roadBuildRequestCaptor = ArgumentCaptor.forClass(BuildRequest.class);
+        verify(gameboardMock).placeRoad(roadBuildRequestCaptor.capture());
+        assertEquals(player, roadBuildRequestCaptor.getValue().player());
+        assertEquals(PlayerColor.BLUE, roadBuildRequestCaptor.getValue().color());
+        assertEquals(roadId, roadBuildRequestCaptor.getValue().positionId());
+        assertFalse(roadBuildRequestCaptor.getValue().requiresResourceCheck());
+
+        ArgumentCaptor<BuildRequest> settlementBuildRequestCaptor = ArgumentCaptor.forClass(BuildRequest.class);
+        verify(gameboardMock).placeSettlement(settlementBuildRequestCaptor.capture());
+        assertEquals(player, settlementBuildRequestCaptor.getValue().player());
+        assertEquals(PlayerColor.BLUE, settlementBuildRequestCaptor.getValue().color());
+        assertEquals(settlementPositionId, settlementBuildRequestCaptor.getValue().positionId());
+        assertFalse(settlementBuildRequestCaptor.getValue().requiresResourceCheck());
+    }
+
+    @Test
+    void placeSettlementAndRoadShouldCheckResourcesAfterSecondRound() throws GameException {
+        int roadId = 1;
+        int settlementPositionId = 1;
+        Player player = new Player("player1");
+        String lobbyId = lobbyMock.getLobbyId();
+        doReturn(lobbyMock).when(lobbyService).getLobbyById(lobbyId);
+        doReturn(true).when(lobbyMock).isPlayerTurn(player.getUniqueId());
+        doReturn(PlayerColor.BLUE).when(lobbyMock).getPlayerColor(player.getUniqueId());
+        doReturn(gameboardMock).when(gameService).getGameboardByLobbyId(lobbyId);
+        doReturn(player).when(playerService).getPlayerById(player.getUniqueId());
+
+        doReturn(2).when(lobbyMock).getRoundsPlayed();
+
+        gameService.placeRoad(lobbyId, player.getUniqueId(), roadId);
+        gameService.placeSettlement(lobbyId, player.getUniqueId(), settlementPositionId);
+
+        ArgumentCaptor<BuildRequest> roadBuildRequestCaptor = ArgumentCaptor.forClass(BuildRequest.class);
+        verify(gameboardMock).placeRoad(roadBuildRequestCaptor.capture());
+        assertEquals(player, roadBuildRequestCaptor.getValue().player());
+        assertEquals(PlayerColor.BLUE, roadBuildRequestCaptor.getValue().color());
+        assertEquals(roadId, roadBuildRequestCaptor.getValue().positionId());
+        assertTrue(roadBuildRequestCaptor.getValue().requiresResourceCheck());
+
+        ArgumentCaptor<BuildRequest> settlementBuildRequestCaptor = ArgumentCaptor.forClass(BuildRequest.class);
+        verify(gameboardMock).placeSettlement(settlementBuildRequestCaptor.capture());
+        assertEquals(player, settlementBuildRequestCaptor.getValue().player());
+        assertEquals(PlayerColor.BLUE, settlementBuildRequestCaptor.getValue().color());
+        assertEquals(settlementPositionId, settlementBuildRequestCaptor.getValue().positionId());
+        assertTrue(settlementBuildRequestCaptor.getValue().requiresResourceCheck());
+    }
+
 
     @Test
     void testGetJsonByValidLobbyId() throws GameException {
@@ -291,13 +357,13 @@ class GameServiceTest {
         doReturn(gameboardMock).when(gameService).getGameboardByLobbyId(lobbyId);
 
         when(gameboardMock.getPortOfBuildingSite(settlementPositionId)).thenReturn(mockPort);
-        doNothing().when(gameboardMock).placeSettlement(any(Player.class), any(PlayerColor.class), anyInt());
+        doNothing().when(gameboardMock).placeSettlement(any(BuildRequest.class));
         doNothing().when(playerService).addVictoryPoints(anyString(), anyInt());
 
 
         gameService.placeSettlement(lobbyId, playerId, settlementPositionId);
 
-        verify(gameboardMock).placeSettlement(mockPlayer, PlayerColor.RED, settlementPositionId);
+        verify(gameboardMock).placeSettlement(any(BuildRequest.class));
         verify(gameboardMock).getPortOfBuildingSite(settlementPositionId);
         verify(mockPlayer).addPort(mockPort);
         verify(playerService).addVictoryPoints(playerId, 1);
@@ -317,12 +383,12 @@ class GameServiceTest {
         doReturn(gameboardMock).when(gameService).getGameboardByLobbyId(lobbyId);
 
         when(gameboardMock.getPortOfBuildingSite(settlementPositionId)).thenReturn(null);
-        doNothing().when(gameboardMock).placeSettlement(any(Player.class), any(PlayerColor.class), anyInt());
+        doNothing().when(gameboardMock).placeSettlement(any(BuildRequest.class));
         doNothing().when(playerService).addVictoryPoints(anyString(), anyInt());
 
         gameService.placeSettlement(lobbyId, playerId, settlementPositionId);
 
-        verify(gameboardMock).placeSettlement(mockPlayer, PlayerColor.GREEN, settlementPositionId);
+        verify(gameboardMock).placeSettlement(any(BuildRequest.class));
         verify(gameboardMock).getPortOfBuildingSite(settlementPositionId);
         verify(mockPlayer, never()).addPort(any(Port.class));
         verify(playerService).addVictoryPoints(playerId, 1);

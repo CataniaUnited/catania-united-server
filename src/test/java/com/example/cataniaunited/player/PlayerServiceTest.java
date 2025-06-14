@@ -2,6 +2,7 @@ package com.example.cataniaunited.player;
 
 import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.dto.MessageType;
+import com.example.cataniaunited.exception.GameException;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.websockets.next.WebSocketConnection;
@@ -22,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.atLeastOnce;
@@ -324,6 +326,14 @@ class PlayerServiceTest {
         playerService.resetVictoryPoints(player.getUniqueId());
 
         assertEquals(0, player.getVictoryPoints());
+    }
+
+    @Test
+    void initializePlayerResourcesShouldThrowExceptionIfPlayerIsNotExisting(){
+        String nonExistentPlayerId = "non-existent-player-id-123";
+        var exception = assertThrows(GameException.class, () -> playerService.initializePlayerResources(nonExistentPlayerId));
+        assertEquals("Player with id %s not found".formatted(nonExistentPlayerId), exception.getMessage());
+
     }
 
 }

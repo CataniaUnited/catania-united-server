@@ -113,4 +113,22 @@ class PlayerMapperTest {
 
     }
 
+    @Test
+    void toDToShouldReturnNullIfPlayerIsNull() {
+        Lobby lobbyMock = new Lobby("1234", playerMock.getUniqueId());
+        lobbyMock.setActivePlayer(playerMock.getUniqueId());
+        assertNull(playerMapper.toDto(null, lobbyMock));
+    }
+
+    @Test
+    void toDtoShouldMapResourcesToNullIfPlayerResourcesAreNull() {
+        Player playerSpy = spy(new Player("Player 2"));
+        Lobby lobbyMock = new Lobby("1234", playerSpy.getUniqueId());
+        lobbyMock.setActivePlayer(playerSpy.getUniqueId());
+        when(playerSpy.getResources()).thenReturn(null);
+
+        PlayerInfo playerInfo = playerMapper.toDto(playerSpy, lobbyMock);
+        assertNull(playerInfo.resources());
+    }
+
 }
