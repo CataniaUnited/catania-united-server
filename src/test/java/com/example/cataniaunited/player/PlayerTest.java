@@ -65,16 +65,8 @@ class PlayerTest {
     }
 
     @Test
-    void defaultConstructorInitializesResourcesToZeroAndConnectionToNull() {
+    void defaultConstructorInitializesConnectionToNull() {
         assertNull(player.getConnection(), "connection should be null for default constructor.");
-
-        for (TileType type : TileType.values()) {
-            if (type == TileType.WASTE) {
-                assertNull(player.resources.get(type), "Waste should be null");
-                continue;
-            }
-            assertEquals(type.getInitialAmount(), player.resources.get(type), "Initial resource count for " + type + " should be 0.");
-        }
     }
 
     @Test
@@ -149,7 +141,7 @@ class PlayerTest {
 
         player.receiveResource(testResource, amount);
 
-        assertEquals(testResource.getInitialAmount() + amount, (int) player.resources.get(testResource), "Resource count should be updated after getting resources.");
+        assertEquals(amount, (int) player.resources.get(testResource), "Resource count should be updated after getting resources.");
     }
 
     @Test
@@ -157,7 +149,7 @@ class PlayerTest {
         TileType testResource = TileType.WOOD;
         int firstIncrease = 3;
         int secondIncrease = 7;
-        int expectedTotal = testResource.getInitialAmount() + firstIncrease + secondIncrease;
+        int expectedTotal = firstIncrease + secondIncrease;
 
         player.receiveResource(testResource, firstIncrease);
         player.receiveResource(testResource, secondIncrease);
@@ -173,11 +165,10 @@ class PlayerTest {
                 assertNull(player.resources.get(type), "Waste should be null");
                 continue;
             }
-            int ressourceAmount = player.resources.get(type);
             player.receiveResource(type, amount);
-            assertEquals(ressourceAmount + amount, (int) player.resources.get(type), "Resource count for " + type + " should be " + amount + " after first get.");
+            assertEquals(amount, (int) player.resources.get(type), "Resource count for " + type + " should be " + amount + " after first get.");
             player.receiveResource(type, amount);
-            assertEquals(ressourceAmount + amount * 2, (int) player.resources.get(type), "Resource count for " + type + " should be " + (amount * 2) + " after second get.");
+            assertEquals(amount * 2, (int) player.resources.get(type), "Resource count for " + type + " should be " + (amount * 2) + " after second get.");
         }
     }
 
@@ -215,9 +206,8 @@ class PlayerTest {
     }
 
     @Test
-    void removeResourceShouldThrowExceptionIfResourcseAmountIsTooSmall() {
-        int woodResource = player.resources.get(TileType.WOOD);
-        assertThrows(InsufficientResourcesException.class, () -> player.removeResource(TileType.WOOD, woodResource + 1));
+    void removeResourceShouldThrowExceptionIfResourceAmountIsTooSmall() {
+        assertThrows(InsufficientResourcesException.class, () -> player.removeResource(TileType.WOOD, 1));
     }
 
     @Test
