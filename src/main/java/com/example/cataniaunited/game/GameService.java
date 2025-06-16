@@ -17,6 +17,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -69,8 +70,7 @@ public class GameService {
         lobbyService.checkPlayerTurn(lobbyId, playerId);
         GameBoard gameboard = getGameboardByLobbyId(lobbyId);
         BuildRequest buildRequest = createBuildRequest(lobbyId, playerId, settlementPositionId);
-        if (!buildRequest.requiresResourceCheck()
-                && gameboard.getPlayerStructureCount(playerId, Settlement.class) == buildRequest.playedRounds() + 1) {
+        if (exceedsSetupLimit(buildRequest, gameboard.getPlayerStructureCount(playerId, Settlement.class))) {
             throw new SetupLimitExceededException();
         }
         gameboard.placeSettlement(buildRequest);
@@ -113,24 +113,30 @@ public class GameService {
         lobbyService.checkPlayerTurn(lobbyId, playerId);
         GameBoard gameboard = getGameboardByLobbyId(lobbyId);
         BuildRequest buildRequest = createBuildRequest(lobbyId, playerId, roadId);
-        if (!buildRequest.requiresResourceCheck()
-                && gameboard.getPlayerStructureCount(playerId, Road.class) == buildRequest.playedRounds() + 1) {
+        if (exceedsSetupLimit(buildRequest, gameboard.getPlayerStructureCount(playerId, Road.class))) {
             throw new SetupLimitExceededException();
         }
         gameboard.placeRoad(buildRequest);
+    }
+
+    private boolean exceedsSetupLimit(BuildRequest buildRequest, long structureCount) {
+        return buildRequest.isSetupRound()
+                && buildRequest.maximumStructureCount().isPresent()
+                && structureCount >= buildRequest.maximumStructureCount().get();
     }
 
     private BuildRequest createBuildRequest(String lobbyId, String playerId, int positionId) throws GameException {
         Player player = playerService.getPlayerById(playerId);
         PlayerColor color = lobbyService.getPlayerColor(lobbyId, playerId);
         int roundsPlayed = lobbyService.getRoundsPlayed(lobbyId);
-        boolean requiresResourceCheck = roundsPlayed > 1;
+        boolean isSetupRound = roundsPlayed <= 1;
+        Optional<Integer> maximumStructureCount = isSetupRound ? Optional.of(roundsPlayed + 1) : Optional.empty();
         return new BuildRequest(
                 player,
                 color,
                 positionId,
-                requiresResourceCheck,
-                roundsPlayed
+                isSetupRound,
+                maximumStructureCount
         );
     }
 

@@ -202,7 +202,7 @@ class GameBoardTest {
         Road road = settlementPosition.roads.get(0);
         road.setOwner(player);
 
-        var buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, settlementPosition.getId(), true, 2);
+        var buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, settlementPosition.getId(), false, 2);
         gameBoard.placeSettlement(buildRequest);
         assertNotNull(settlementPosition.building);
         assertEquals(Settlement.class, settlementPosition.building.getClass());
@@ -217,7 +217,7 @@ class GameBoardTest {
         player.receiveResource(TileType.CLAY, 1);
         player.receiveResource(TileType.WHEAT, 1);
         player.receiveResource(TileType.SHEEP, 1);
-        var buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, -1, true, 2);
+        var buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, -1, false, 2);
         GameException ge = assertThrows(GameException.class, () -> gameBoard.placeSettlement(buildRequest));
         assertEquals("Settlement position not found: id = %s".formatted(-1), ge.getMessage());
     }
@@ -231,7 +231,7 @@ class GameBoardTest {
         player.receiveResource(TileType.CLAY, 1);
         player.receiveResource(TileType.WHEAT, 1);
         player.receiveResource(TileType.SHEEP, 1);
-        var buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, positionId, true, 2);
+        var buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, positionId, false, 2);
         GameException ge = assertThrows(GameException.class, () -> gameBoard.placeSettlement(buildRequest));
         assertEquals("Settlement position not found: id = %s".formatted(positionId), ge.getMessage());
     }
@@ -240,7 +240,7 @@ class GameBoardTest {
     void placeSettlementShouldThrowExceptionIfPlayerIsNull() {
         GameBoard gameBoard = new GameBoard(2);
         int positionId = gameBoard.getBuildingSitePositionGraph().get(0).getId();
-        var buildRequest = new BuildRequest(null, PlayerColor.LIGHT_ORANGE, positionId, true, 2);
+        var buildRequest = new BuildRequest(null, PlayerColor.LIGHT_ORANGE, positionId, false, 2);
         GameException ge = assertThrows(GameException.class, () -> gameBoard.placeSettlement(buildRequest));
         assertEquals("Owner of building must not be empty", ge.getMessage());
     }
@@ -255,7 +255,7 @@ class GameBoardTest {
         player.receiveResource(TileType.WHEAT, 1);
         player.receiveResource(TileType.SHEEP, 1);
         doReturn(5L).when(gameBoard).getPlayerStructureCount(player.getUniqueId(), Settlement.class);
-        var buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, positionId, true, 2);
+        var buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, positionId, false, 2);
         GameException ge = assertThrows(BuildableLimitReachedException.class, () -> gameBoard.placeSettlement(buildRequest));
 
         assertEquals("You've reached the %s limit of %s!".formatted(Settlement.class.getSimpleName(), 5), ge.getMessage());
@@ -270,7 +270,7 @@ class GameBoardTest {
         player.receiveResource(TileType.ORE, 3);
         player.receiveResource(TileType.WHEAT, 2);
         doReturn(4L).when(gameBoard).getPlayerStructureCount(player.getUniqueId(), City.class);
-        var buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, positionId, true, 2);
+        var buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, positionId, false, 2);
         GameException ge = assertThrows(BuildableLimitReachedException.class, () -> gameBoard.placeCity(buildRequest));
 
         assertEquals("You've reached the %s limit of %s!".formatted(City.class.getSimpleName(), 4), ge.getMessage());
@@ -283,7 +283,7 @@ class GameBoardTest {
         int positionId = gameBoard.getBuildingSitePositionGraph().get(0).getId();
         Player mockPlayer = spy(new Player("Player1"));
         when(mockPlayer.getResourceCount(any(TileType.class))).thenReturn(0);
-        var buildRequest = new BuildRequest(mockPlayer, PlayerColor.LIGHT_ORANGE, positionId, true, 2);
+        var buildRequest = new BuildRequest(mockPlayer, PlayerColor.LIGHT_ORANGE, positionId, false, 2);
         GameException ge = assertThrows(InsufficientResourcesException.class, () -> gameBoard.placeSettlement(buildRequest));
         assertEquals("Insufficient resources!", ge.getMessage());
     }
@@ -295,7 +295,7 @@ class GameBoardTest {
         Player player = new Player("Player1");
         player.receiveResource(TileType.WOOD, 1);
         player.receiveResource(TileType.CLAY, 1);
-        var buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, road.getId(), true, 2);
+        var buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, road.getId(), false, 2);
         gameBoard.placeRoad(buildRequest);
         assertEquals(player, road.getOwner());
     }
@@ -303,7 +303,7 @@ class GameBoardTest {
     @Test
     void placeRoadShouldThrowExceptionIfRoadIdIsLessThanZero() {
         GameBoard gameBoard = new GameBoard(2);
-        var buildRequest = new BuildRequest(new Player("Player1"), PlayerColor.LIGHT_ORANGE, -1, true, 2);
+        var buildRequest = new BuildRequest(new Player("Player1"), PlayerColor.LIGHT_ORANGE, -1, false, 2);
         GameException ge = assertThrows(GameException.class, () -> gameBoard.placeRoad(buildRequest));
         assertEquals("Road not found: id = %s".formatted(-1), ge.getMessage());
     }
@@ -312,7 +312,7 @@ class GameBoardTest {
     void placeRoadShouldThrowExceptionIfRoadIdIsGreaterThanSize() {
         GameBoard gameBoard = new GameBoard(2);
         int roadId = gameBoard.roadList.size() + 1;
-        var buildRequest = new BuildRequest(new Player("Player1"), PlayerColor.LIGHT_ORANGE, roadId, true, 2);
+        var buildRequest = new BuildRequest(new Player("Player1"), PlayerColor.LIGHT_ORANGE, roadId, false, 2);
         GameException ge = assertThrows(GameException.class, () -> gameBoard.placeRoad(buildRequest));
         assertEquals("Road not found: id = %s".formatted(roadId), ge.getMessage());
     }
@@ -321,7 +321,7 @@ class GameBoardTest {
     void placeRoadShouldThrowExceptionIfPlayerIsNull() {
         GameBoard gameBoard = new GameBoard(2);
         var road = gameBoard.roadList.get(0);
-        var buildRequest = new BuildRequest(null, PlayerColor.LIGHT_ORANGE, road.getId(), true, 2);
+        var buildRequest = new BuildRequest(null, PlayerColor.LIGHT_ORANGE, road.getId(), false, 2);
         GameException ge = assertThrows(GameException.class, () -> gameBoard.placeRoad(buildRequest));
         assertEquals("Player must not be null", ge.getMessage());
     }
@@ -334,7 +334,7 @@ class GameBoardTest {
         player.receiveResource(TileType.WOOD, 1);
         player.receiveResource(TileType.CLAY, 1);
         doReturn((long) road.getBuildLimit()).when(gameBoard).getPlayerStructureCount(anyString(), eq(Road.class));
-        var buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, road.getId(), true, 2);
+        var buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, road.getId(), false, 2);
         GameException ge = assertThrows(BuildableLimitReachedException.class, () -> gameBoard.placeRoad(buildRequest));
         assertEquals("You've reached the %s limit of %s!".formatted(Road.class.getSimpleName(), road.getBuildLimit()), ge.getMessage());
     }
@@ -363,7 +363,7 @@ class GameBoardTest {
         assertEquals(0, cityCount);
         assertEquals(0, settlementCount);
 
-        var buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, road1.getId(), true, 2);
+        var buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, road1.getId(), false, 2);
         gameBoard.placeRoad(buildRequest);
 
         roadCount = gameBoard.getPlayerStructureCount(player.getUniqueId(), Road.class);
@@ -374,7 +374,7 @@ class GameBoardTest {
         assertEquals(0, cityCount);
         assertEquals(0, settlementCount);
 
-        buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, buildingSite1Id, true, 2);
+        buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, buildingSite1Id, false, 2);
         gameBoard.placeSettlement(buildRequest);
 
         roadCount = gameBoard.getPlayerStructureCount(player.getUniqueId(), Road.class);
@@ -385,7 +385,7 @@ class GameBoardTest {
         assertEquals(0, cityCount);
         assertEquals(1, settlementCount);
 
-        buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, road2.getId(), true, 2);
+        buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, road2.getId(), false, 2);
         gameBoard.placeRoad(buildRequest);
 
         roadCount = gameBoard.getPlayerStructureCount(player.getUniqueId(), Road.class);
@@ -396,7 +396,7 @@ class GameBoardTest {
         assertEquals(0, cityCount);
         assertEquals(1, settlementCount);
 
-        buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, buildingSite2Id, true, 2);
+        buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, buildingSite2Id, false, 2);
         gameBoard.placeSettlement(buildRequest);
 
         roadCount = gameBoard.getPlayerStructureCount(player.getUniqueId(), Road.class);
@@ -407,7 +407,7 @@ class GameBoardTest {
         assertEquals(0, cityCount);
         assertEquals(2, settlementCount);
 
-        buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, buildingSite1Id, true, 2);
+        buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, buildingSite1Id, false, 2);
         gameBoard.placeCity(buildRequest);
 
         roadCount = gameBoard.getPlayerStructureCount(player.getUniqueId(), Road.class);

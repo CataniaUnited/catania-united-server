@@ -147,7 +147,7 @@ public class GameBoard {
     private void placeBuilding(BuildRequest buildRequest, Building building) throws GameException {
         try {
             Player player = building.getPlayer();
-            if (buildRequest.requiresResourceCheck()) {
+            if (!buildRequest.isSetupRound()) {
                 checkRequiredResources(player, building);
             }
             checkBuildableCount(player.getUniqueId(), building);
@@ -155,7 +155,7 @@ public class GameBoard {
             logger.debugf("Placing building: playerId = %s, positionId = %s, type = %s", player.getUniqueId(), positionId, building.getClass().getSimpleName());
             BuildingSite buildingSite = buildingSiteGraph.get(positionId - 1);
             buildingSite.setBuilding(building);
-            if (buildRequest.requiresResourceCheck()) {
+            if (!buildRequest.isSetupRound()) {
                 removeRequiredResources(player, building);
             }
 
@@ -176,14 +176,14 @@ public class GameBoard {
             PlayerColor color = buildRequest.color();
             int roadId = buildRequest.positionId();
             Road road = roadList.get(roadId - 1);
-            if (buildRequest.requiresResourceCheck()) {
+            if (!buildRequest.isSetupRound()) {
                 checkRequiredResources(player, road);
             }
             checkBuildableCount(player.getUniqueId(), road);
             logger.debugf("Placing road: playerId = %s, roadId = %s", player.getUniqueId(), roadId);
             road.setOwner(player);
             road.setColor(color);
-            if (buildRequest.requiresResourceCheck()) {
+            if (!buildRequest.isSetupRound()) {
                 removeRequiredResources(player, road);
             }
             updatePlayerStructures(player.getUniqueId(), road, road);

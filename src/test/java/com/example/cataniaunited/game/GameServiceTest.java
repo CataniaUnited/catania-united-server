@@ -3,6 +3,7 @@ package com.example.cataniaunited.game;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.exception.ui.InvalidTurnException;
 import com.example.cataniaunited.exception.ui.MissingRequiredStructuresException;
+import com.example.cataniaunited.exception.ui.SetupLimitExceededException;
 import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.game.board.Road;
 import com.example.cataniaunited.game.board.ports.Port;
@@ -193,6 +194,24 @@ class GameServiceTest {
     }
 
     @Test
+    void placeSettlementShouldThrowExceptionIfSetupLimitIsExceeded() throws GameException {
+        Player player = new Player("player1");
+        String playerId = player.getUniqueId();
+        int settlementPositionId = 15;
+        String lobbyId = lobbyMock.getLobbyId();
+        doReturn(lobbyMock).when(lobbyService).getLobbyById(lobbyId);
+        doReturn(true).when(lobbyMock).isPlayerTurn(playerId);
+        doReturn(PlayerColor.BLUE).when(lobbyMock).getPlayerColor(playerId);
+        doReturn(0).when(lobbyMock).getRoundsPlayed();
+        doReturn(gameboardMock).when(gameService).getGameboardByLobbyId(lobbyId);
+        doReturn(2L).when(gameboardMock).getPlayerStructureCount(playerId, Settlement.class);
+        doReturn(player).when(playerService).getPlayerById(playerId);
+        assertThrows(SetupLimitExceededException.class, () -> gameService.placeSettlement(lobbyId, playerId, settlementPositionId));
+
+        verify(gameboardMock).getPlayerStructureCount(playerId, Settlement.class);
+    }
+
+    @Test
     void placeRoadShouldThrowGameExceptionForNotPlayerTurn() throws GameException {
         String playerId = "playerId1";
         String lobbyId = lobbyMock.getLobbyId();
@@ -201,6 +220,24 @@ class GameServiceTest {
         InvalidTurnException ite = assertThrows(InvalidTurnException.class, () -> gameService.placeRoad(lobbyId, playerId, 1));
         assertEquals("It is not your turn!", ite.getMessage());
         verify(gameService, never()).getGameboardByLobbyId(lobbyId);
+    }
+
+    @Test
+    void placeRoadShouldThrowExceptionIfSetupLimitIsExceeded() throws GameException {
+        Player player = new Player("player1");
+        String playerId = player.getUniqueId();
+        int roadId = 15;
+        String lobbyId = lobbyMock.getLobbyId();
+        doReturn(lobbyMock).when(lobbyService).getLobbyById(lobbyId);
+        doReturn(true).when(lobbyMock).isPlayerTurn(playerId);
+        doReturn(PlayerColor.BLUE).when(lobbyMock).getPlayerColor(playerId);
+        doReturn(0).when(lobbyMock).getRoundsPlayed();
+        doReturn(gameboardMock).when(gameService).getGameboardByLobbyId(lobbyId);
+        doReturn(2L).when(gameboardMock).getPlayerStructureCount(playerId, Road.class);
+        doReturn(player).when(playerService).getPlayerById(playerId);
+        assertThrows(SetupLimitExceededException.class, () -> gameService.placeRoad(lobbyId, playerId, roadId));
+
+        verify(gameboardMock).getPlayerStructureCount(playerId, Road.class);
     }
 
     @Test
@@ -275,14 +312,14 @@ class GameServiceTest {
         assertEquals(player, roadBuildRequestCaptor.getValue().player());
         assertEquals(PlayerColor.BLUE, roadBuildRequestCaptor.getValue().color());
         assertEquals(roadId, roadBuildRequestCaptor.getValue().positionId());
-        assertFalse(roadBuildRequestCaptor.getValue().requiresResourceCheck());
+        assertTrue(roadBuildRequestCaptor.getValue().isSetupRound());
 
         ArgumentCaptor<BuildRequest> settlementBuildRequestCaptor = ArgumentCaptor.forClass(BuildRequest.class);
         verify(gameboardMock).placeSettlement(settlementBuildRequestCaptor.capture());
         assertEquals(player, settlementBuildRequestCaptor.getValue().player());
         assertEquals(PlayerColor.BLUE, settlementBuildRequestCaptor.getValue().color());
         assertEquals(settlementPositionId, settlementBuildRequestCaptor.getValue().positionId());
-        assertFalse(settlementBuildRequestCaptor.getValue().requiresResourceCheck());
+        assertTrue(settlementBuildRequestCaptor.getValue().isSetupRound());
     }
 
     @Test
@@ -307,14 +344,14 @@ class GameServiceTest {
         assertEquals(player, roadBuildRequestCaptor.getValue().player());
         assertEquals(PlayerColor.BLUE, roadBuildRequestCaptor.getValue().color());
         assertEquals(roadId, roadBuildRequestCaptor.getValue().positionId());
-        assertTrue(roadBuildRequestCaptor.getValue().requiresResourceCheck());
+        assertFalse(roadBuildRequestCaptor.getValue().isSetupRound());
 
         ArgumentCaptor<BuildRequest> settlementBuildRequestCaptor = ArgumentCaptor.forClass(BuildRequest.class);
         verify(gameboardMock).placeSettlement(settlementBuildRequestCaptor.capture());
         assertEquals(player, settlementBuildRequestCaptor.getValue().player());
         assertEquals(PlayerColor.BLUE, settlementBuildRequestCaptor.getValue().color());
         assertEquals(settlementPositionId, settlementBuildRequestCaptor.getValue().positionId());
-        assertTrue(settlementBuildRequestCaptor.getValue().requiresResourceCheck());
+        assertFalse(settlementBuildRequestCaptor.getValue().isSetupRound());
     }
 
 
