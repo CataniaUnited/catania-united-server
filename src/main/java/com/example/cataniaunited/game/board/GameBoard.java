@@ -3,6 +3,7 @@ package com.example.cataniaunited.game.board;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.exception.ui.BuildableLimitReachedException;
 import com.example.cataniaunited.exception.ui.InsufficientResourcesException;
+import com.example.cataniaunited.game.BuildRequest;
 import com.example.cataniaunited.game.Buildable;
 import com.example.cataniaunited.game.board.ports.Port;
 import com.example.cataniaunited.game.board.tile_list_builder.StandardTileListBuilder;
@@ -121,70 +122,73 @@ public class GameBoard {
     /**
      * Places a building site for a player at the specified position on the board.
      *
-     * @param player     The {@link Player} placing the settlement.
-     * @param color      The {@link PlayerColor} of the settlement.
-     * @param positionId The ID of the {@link BuildingSite} to place the settlement on.
      * @throws GameException if the placement is invalid (e.g., position occupied, rules violated).
      */
-    public void placeSettlement(Player player, PlayerColor color, int positionId) throws GameException {
-        placeBuilding(positionId, new Settlement(player, color));
+    public void placeSettlement(BuildRequest buildRequest) throws GameException {
+        placeBuilding(buildRequest, new Settlement(buildRequest.player(), buildRequest.color()));
     }
 
     /**
      * Places a city for a player at the specified position on the board, upgrading an existing settlement.
      *
-     * @param player     The {@link Player} placing the city.
-     * @param color      The {@link PlayerColor} of the city.
-     * @param positionId The ID of the {@link BuildingSite} to place the city on.
      * @throws GameException if the placement is invalid (e.g., no settlement to upgrade, rules violated).
      */
-    public void placeCity(Player player, PlayerColor color, int positionId) throws GameException {
-        placeBuilding(positionId, new City(player, color));
+    public void placeCity(BuildRequest buildRequest) throws GameException {
+        placeBuilding(buildRequest, new City(buildRequest.player(), buildRequest.color()));
     }
 
     /**
      * Internal helper method to place a generic building (settlement or city) on the board.
      * Checks for required resources and updates the building site.
      *
-     * @param positionId The ID of the building site.
-     * @param building   The {@link Building} to be placed.
+     * @param building The {@link Building} to be placed.
      * @throws GameException if resources are insufficient, position is invalid, or other rules are violated.
      */
-    private void placeBuilding(int positionId, Building building) throws GameException {
+    private void placeBuilding(BuildRequest buildRequest, Building building) throws GameException {
         try {
             Player player = building.getPlayer();
-            checkRequiredResources(player, building);
+            if (!buildRequest.isSetupRound()) {
+                checkRequiredResources(player, building);
+            }
             checkBuildableCount(player.getUniqueId(), building);
+            int positionId = buildRequest.positionId();
             logger.debugf("Placing building: playerId = %s, positionId = %s, type = %s", player.getUniqueId(), positionId, building.getClass().getSimpleName());
             BuildingSite buildingSite = buildingSiteGraph.get(positionId - 1);
             buildingSite.setBuilding(building);
-            removeRequiredResources(player, building);
+            if (!buildRequest.isSetupRound()) {
+                removeRequiredResources(player, building);
+            }
+
             updatePlayerStructures(player.getUniqueId(), buildingSite, building);
         } catch (IndexOutOfBoundsException e) {
-            throw new GameException("Settlement position not found: id = %s", positionId);
+            throw new GameException("Settlement position not found: id = %s", buildRequest.positionId());
         }
     }
 
     /**
      * Places a road for a player at the specified road ID on the board.
      *
-     * @param player The {@link Player} placing the road.
-     * @param color  The {@link PlayerColor} of the road.
-     * @param roadId The ID of the {@link Road} to be placed.
      * @throws GameException if the placement is invalid (e.g., road ID not found, rules violated).
      */
-    public void placeRoad(Player player, PlayerColor color, int roadId) throws GameException {
+    public void placeRoad(BuildRequest buildRequest) throws GameException {
         try {
+            Player player = buildRequest.player();
+            PlayerColor color = buildRequest.color();
+            int roadId = buildRequest.positionId();
             Road road = roadList.get(roadId - 1);
-            checkRequiredResources(player, road);
+            if (!buildRequest.isSetupRound()) {
+                checkRequiredResources(player, road);
+            }
             checkBuildableCount(player.getUniqueId(), road);
             logger.debugf("Placing road: playerId = %s, roadId = %s", player.getUniqueId(), roadId);
             road.setOwner(player);
             road.setColor(color);
-            removeRequiredResources(player, road);
+            if (!buildRequest.isSetupRound()) {
+                removeRequiredResources(player, road);
+            }
             updatePlayerStructures(player.getUniqueId(), road, road);
         } catch (IndexOutOfBoundsException e) {
-            throw new GameException("Road not found: id = %s", roadId);
+            throw new GameException("Road not found: id = %s", buildRequest.positionId());
         }
     }
 

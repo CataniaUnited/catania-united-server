@@ -116,43 +116,101 @@ class LobbyTest {
     }
 
     @Test
-    void testNextPlayerTurn() throws GameException {
+    void testNextPlayerTurnForThreeOrMorePlayers() throws GameException {
         List<String> playerOrder = List.of("p2", "host", "p3");
         testLobby.setPlayerOrder(playerOrder);
         testLobby.setActivePlayer("p2");
+        assertEquals(0, testLobby.getRoundsPlayed());
 
         //First round in order
         testLobby.nextPlayerTurn();
+        assertEquals(0, testLobby.getRoundsPlayed());
         assertEquals("host", testLobby.getActivePlayer());
+
         testLobby.nextPlayerTurn();
+        assertEquals(0, testLobby.getRoundsPlayed());
         assertEquals("p3", testLobby.getActivePlayer());
 
         //Second round in reverse order
         testLobby.nextPlayerTurn();
-        assertEquals("p3", testLobby.getActivePlayer());
         assertEquals(1, testLobby.getRoundsPlayed());
+        assertEquals("p3", testLobby.getActivePlayer());
+
         testLobby.nextPlayerTurn();
+        assertEquals(1, testLobby.getRoundsPlayed());
         assertEquals("host", testLobby.getActivePlayer());
+
         testLobby.nextPlayerTurn();
+        assertEquals(1, testLobby.getRoundsPlayed());
         assertEquals("p2", testLobby.getActivePlayer());
-        assertEquals(2, testLobby.getRoundsPlayed());
 
         //Third and subsequent rounds in order again
         testLobby.nextPlayerTurn();
+        assertEquals(2, testLobby.getRoundsPlayed());
         assertEquals("host", testLobby.getActivePlayer());
+
         testLobby.nextPlayerTurn();
+        assertEquals(2, testLobby.getRoundsPlayed());
         assertEquals("p3", testLobby.getActivePlayer());
+
+        testLobby.nextPlayerTurn();
+        assertEquals(3, testLobby.getRoundsPlayed());
+        assertEquals("p2", testLobby.getActivePlayer());
+
+        testLobby.nextPlayerTurn();
+        assertEquals(3, testLobby.getRoundsPlayed());
+        assertEquals("host", testLobby.getActivePlayer());
+
+        testLobby.nextPlayerTurn();
+        assertEquals(3, testLobby.getRoundsPlayed());
+        assertEquals("p3", testLobby.getActivePlayer());
+
+        testLobby.nextPlayerTurn();
+        assertEquals(4, testLobby.getRoundsPlayed());
+        assertEquals("p2", testLobby.getActivePlayer());
+    }
+
+    @Test
+    void testNextPlayerTurnForTwoPlayers() throws GameException {
+        List<String> playerOrder = List.of("p2", "p3");
+        testLobby.setPlayerOrder(playerOrder);
+        testLobby.setActivePlayer("p2");
+        assertEquals(0, testLobby.getRoundsPlayed());
+
+        //First round in order
+        testLobby.nextPlayerTurn();
+        assertEquals(0, testLobby.getRoundsPlayed());
+        assertEquals("p3", testLobby.getActivePlayer());
+
+        //Second round reversed
+        testLobby.nextPlayerTurn();
+        assertEquals(1, testLobby.getRoundsPlayed());
+        assertEquals("p3", testLobby.getActivePlayer());
+
+        testLobby.nextPlayerTurn();
+        assertEquals(1, testLobby.getRoundsPlayed());
+        assertEquals("p2", testLobby.getActivePlayer());
+
+        testLobby.nextPlayerTurn();
+        assertEquals(2, testLobby.getRoundsPlayed());
+        assertEquals("p3", testLobby.getActivePlayer());
+
         testLobby.nextPlayerTurn();
         assertEquals("p2", testLobby.getActivePlayer());
         assertEquals(3, testLobby.getRoundsPlayed());
 
         testLobby.nextPlayerTurn();
-        assertEquals("host", testLobby.getActivePlayer());
-        testLobby.nextPlayerTurn();
+        assertEquals(3, testLobby.getRoundsPlayed());
         assertEquals("p3", testLobby.getActivePlayer());
+
         testLobby.nextPlayerTurn();
-        assertEquals("p2", testLobby.getActivePlayer());
         assertEquals(4, testLobby.getRoundsPlayed());
+        assertEquals("p2", testLobby.getActivePlayer());
+
+        testLobby.nextPlayerTurn();
+        assertEquals(4, testLobby.getRoundsPlayed());
+        assertEquals("p3", testLobby.getActivePlayer());
+
     }
 
     @Test
