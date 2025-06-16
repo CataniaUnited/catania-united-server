@@ -120,9 +120,10 @@ public class GameService {
     }
 
     private boolean exceedsSetupLimit(BuildRequest buildRequest, long structureCount) {
+        Optional<Integer> maximumStructureCount = buildRequest.maximumStructureCount();
         return buildRequest.isSetupRound()
-                && buildRequest.maximumStructureCount().isPresent()
-                && structureCount >= buildRequest.maximumStructureCount().get();
+                && maximumStructureCount.isPresent()
+                && structureCount >= maximumStructureCount.get();
     }
 
     private BuildRequest createBuildRequest(String lobbyId, String playerId, int positionId) throws GameException {
