@@ -107,6 +107,7 @@ class PlayerMapperTest {
         assertTrue(playerInfo.isHost());
         assertTrue(playerInfo.isActivePlayer());
         assertTrue(playerInfo.canRollDice());
+        assertTrue(playerInfo.isSetupRound());
         assertEquals(3, playerInfo.resources().get(TileType.WHEAT));
         assertEquals(1, playerInfo.resources().get(TileType.SHEEP));
         assertEquals(0, playerInfo.resources().get(TileType.ORE));
@@ -129,6 +130,14 @@ class PlayerMapperTest {
 
         PlayerInfo playerInfo = playerMapper.toDto(playerSpy, lobbyMock);
         assertNull(playerInfo.resources());
+    }
+
+    @Test
+    void isSetupRoundShouldBeFalseIfItIsNotSetupRound() {
+        Lobby lobbyMock = spy(new Lobby("1234", playerMock.getUniqueId()));
+        doReturn(3).when(lobbyMock).getRoundsPlayed();
+        PlayerInfo playerInfo = playerMapper.toDto(playerMock, lobbyMock);
+        assertFalse(playerInfo.isSetupRound());
     }
 
 }
