@@ -47,4 +47,9 @@ public class City extends Building {
                 TileType.ORE, 3
         );
     }
+
+    @Override
+    public int getBuildLimit() {
+        return 4;
+    }
 }

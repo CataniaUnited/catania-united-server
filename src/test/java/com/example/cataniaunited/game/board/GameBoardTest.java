@@ -1,10 +1,12 @@
 package com.example.cataniaunited.game.board;
 
 import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.exception.ui.BuildableLimitReachedException;
 import com.example.cataniaunited.exception.ui.InsufficientResourcesException;
 import com.example.cataniaunited.game.board.ports.Port;
 import com.example.cataniaunited.game.board.tile_list_builder.Tile;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
+import com.example.cataniaunited.game.buildings.City;
 import com.example.cataniaunited.game.buildings.Settlement;
 import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerColor;
@@ -28,7 +30,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @QuarkusTest
@@ -224,6 +230,34 @@ class GameBoardTest {
     }
 
     @Test
+    void placeSettlementShouldThrowExceptionIfMaxLimitIsReached() {
+        GameBoard gameBoard = spy(new GameBoard(2));
+        int positionId = gameBoard.getBuildingSitePositionGraph().size() + 1;
+        Player player = new Player("Player1");
+        doReturn(5L).when(gameBoard).getPlayerStructureCount(player.getUniqueId(), Settlement.class);
+
+        GameException ge = assertThrows(BuildableLimitReachedException.class, () -> gameBoard.placeSettlement(player, PlayerColor.BLUE, positionId));
+
+        assertEquals("You've reached the %s limit of %s!".formatted(Settlement.class.getSimpleName(), 5), ge.getMessage());
+        verify(gameBoard).getPlayerStructureCount(player.getUniqueId(), Settlement.class);
+    }
+
+    @Test
+    void placeCityShouldThrowExceptionIfMaxLimitIsReached() {
+        GameBoard gameBoard = spy(new GameBoard(2));
+        int positionId = gameBoard.getBuildingSitePositionGraph().size() + 1;
+        Player player = new Player("Player1");
+        player.receiveResource(TileType.ORE, 3);
+        player.receiveResource(TileType.WHEAT, 2);
+        doReturn(4L).when(gameBoard).getPlayerStructureCount(player.getUniqueId(), City.class);
+
+        GameException ge = assertThrows(BuildableLimitReachedException.class, () -> gameBoard.placeCity(player, PlayerColor.BLUE, positionId));
+
+        assertEquals("You've reached the %s limit of %s!".formatted(City.class.getSimpleName(), 4), ge.getMessage());
+        verify(gameBoard).getPlayerStructureCount(player.getUniqueId(), City.class);
+    }
+
+    @Test
     void placeBuildingShouldThrowExceptionIfPlayerDoesNotHaveResources() {
         GameBoard gameBoard = new GameBoard(2);
         int positionId = gameBoard.getBuildingSitePositionGraph().get(0).getId();
@@ -264,6 +298,89 @@ class GameBoardTest {
         var road = gameBoard.roadList.get(0);
         GameException ge = assertThrows(GameException.class, () -> gameBoard.placeRoad(null, PlayerColor.BLUE, road.getId()));
         assertEquals("Player must not be null", ge.getMessage());
+    }
+
+    @Test
+    void placeRoadShouldThrowExceptionIfMaxLimitIsReached() {
+        GameBoard gameBoard = spy(new GameBoard(2));
+        var road = gameBoard.roadList.get(0);
+        doReturn((long) road.getBuildLimit()).when(gameBoard).getPlayerStructureCount(anyString(), eq(Road.class));
+        GameException ge = assertThrows(BuildableLimitReachedException.class, () -> gameBoard.placeRoad(new Player("Player1"), PlayerColor.BLUE, road.getId()));
+        assertEquals("You've reached the %s limit of %s!".formatted(Road.class.getSimpleName(), road.getBuildLimit()), ge.getMessage());
+    }
+
+    @Test
+    void testUpdateOfPlayerStructures() throws GameException {
+        GameBoard gameBoard = spy(new GameBoard(2));
+        BuildingSite buildingSite1 = gameBoard.getBuildingSitePositionGraph().get(0);
+        BuildingSite buildingSite2 = gameBoard.getBuildingSitePositionGraph().get(9);
+        Road road1 = buildingSite1.getRoads().get(0);
+        Road road2 = buildingSite2.getRoads().get(1);
+        int buildingSite1Id = buildingSite1.getId();
+        int buildingSite2Id = buildingSite2.getId();
+        Player player = new Player("Player1");
+        player.receiveResource(TileType.ORE, 3);
+        player.receiveResource(TileType.WHEAT, 2);
+
+        var roadCount = gameBoard.getPlayerStructureCount(player.getUniqueId(), Road.class);
+        var cityCount = gameBoard.getPlayerStructureCount(player.getUniqueId(), City.class);
+        var settlementCount = gameBoard.getPlayerStructureCount(player.getUniqueId(), Settlement.class);
+
+        assertEquals(0, roadCount);
+        assertEquals(0, cityCount);
+        assertEquals(0, settlementCount);
+
+        gameBoard.placeRoad(player, PlayerColor.BLUE, road1.getId());
+
+        roadCount = gameBoard.getPlayerStructureCount(player.getUniqueId(), Road.class);
+        cityCount = gameBoard.getPlayerStructureCount(player.getUniqueId(), City.class);
+        settlementCount = gameBoard.getPlayerStructureCount(player.getUniqueId(), Settlement.class);
+
+        assertEquals(1, roadCount);
+        assertEquals(0, cityCount);
+        assertEquals(0, settlementCount);
+
+        gameBoard.placeSettlement(player, PlayerColor.BLUE, buildingSite1Id);
+
+        roadCount = gameBoard.getPlayerStructureCount(player.getUniqueId(), Road.class);
+        cityCount = gameBoard.getPlayerStructureCount(player.getUniqueId(), City.class);
+        settlementCount = gameBoard.getPlayerStructureCount(player.getUniqueId(), Settlement.class);
+
+        assertEquals(1, roadCount);
+        assertEquals(0, cityCount);
+        assertEquals(1, settlementCount);
+
+        gameBoard.placeRoad(player, PlayerColor.BLUE, road2.getId());
+
+        roadCount = gameBoard.getPlayerStructureCount(player.getUniqueId(), Road.class);
+        cityCount = gameBoard.getPlayerStructureCount(player.getUniqueId(), City.class);
+        settlementCount = gameBoard.getPlayerStructureCount(player.getUniqueId(), Settlement.class);
+
+        assertEquals(2, roadCount);
+        assertEquals(0, cityCount);
+        assertEquals(1, settlementCount);
+
+        gameBoard.placeSettlement(player, PlayerColor.BLUE, buildingSite2Id);
+
+        roadCount = gameBoard.getPlayerStructureCount(player.getUniqueId(), Road.class);
+        cityCount = gameBoard.getPlayerStructureCount(player.getUniqueId(), City.class);
+        settlementCount = gameBoard.getPlayerStructureCount(player.getUniqueId(), Settlement.class);
+
+        assertEquals(2, roadCount);
+        assertEquals(0, cityCount);
+        assertEquals(2, settlementCount);
+
+        gameBoard.placeCity(player, PlayerColor.BLUE, buildingSite1Id);
+
+        roadCount = gameBoard.getPlayerStructureCount(player.getUniqueId(), Road.class);
+        cityCount = gameBoard.getPlayerStructureCount(player.getUniqueId(), City.class);
+        settlementCount = gameBoard.getPlayerStructureCount(player.getUniqueId(), Settlement.class);
+
+        assertEquals(2, roadCount);
+        assertEquals(1, cityCount);
+        assertEquals(1, settlementCount);
+
+
     }
 
 
