@@ -165,31 +165,6 @@ class ResourceDistributionIntegrationTest {
     }
 
     @Test
-    @Order(9)
-    void rollingSevenTriggersRobberPhase() throws NoSuchFieldException, IllegalAccessException, GameException {
-        Field diceRollerField = GameBoard.class.getDeclaredField("diceRoller");
-        diceRollerField.setAccessible(true);
-        DiceRoller roller = (DiceRoller) diceRollerField.get(gameBoard);
-
-        mockDice1 = Mockito.mock(Dice.class);
-        mockDice2 = Mockito.mock(Dice.class);
-        Mockito.when(mockDice1.roll()).thenReturn(3);
-        Mockito.when(mockDice2.roll()).thenReturn(4);
-
-        // Use reflection to replace the Dice instances in the actualDiceRoller
-        Field d1FieldInRoller = DiceRoller.class.getDeclaredField("dice1");
-        d1FieldInRoller.setAccessible(true);
-        d1FieldInRoller.set(roller, mockDice1);
-
-        Field d2FieldInRoller = DiceRoller.class.getDeclaredField("dice2");
-        d2FieldInRoller.setAccessible(true);
-        d2FieldInRoller.set(roller, mockDice2);
-
-        gameService.rollDice(lobbyId, testPlayer.getUniqueId());
-        assertTrue(gameService.isRobberPlaced(lobbyId));
-    }
-
-    @Test
     @Order(5)
     void getWheatAmountBeforeTargetRoll() {
         wheatAmountBeforeTargetRoll = testPlayer.getResourceCount(TileType.WHEAT);
@@ -240,5 +215,30 @@ class ResourceDistributionIntegrationTest {
                 "Player should not receive additional resources on a non-matching roll.");
 
         System.out.printf("Player has now %d Wheat%n", testPlayer.getResourceCount(TileType.WHEAT));
+    }
+
+    @Test
+    @Order(9)
+    void rollingSevenTriggersRobberPhase() throws NoSuchFieldException, IllegalAccessException, GameException {
+        Field diceRollerField = GameBoard.class.getDeclaredField("diceRoller");
+        diceRollerField.setAccessible(true);
+        DiceRoller roller = (DiceRoller) diceRollerField.get(gameBoard);
+
+        mockDice1 = Mockito.mock(Dice.class);
+        mockDice2 = Mockito.mock(Dice.class);
+        Mockito.when(mockDice1.roll()).thenReturn(3);
+        Mockito.when(mockDice2.roll()).thenReturn(4);
+
+        // Use reflection to replace the Dice instances in the actualDiceRoller
+        Field d1FieldInRoller = DiceRoller.class.getDeclaredField("dice1");
+        d1FieldInRoller.setAccessible(true);
+        d1FieldInRoller.set(roller, mockDice1);
+
+        Field d2FieldInRoller = DiceRoller.class.getDeclaredField("dice2");
+        d2FieldInRoller.setAccessible(true);
+        d2FieldInRoller.set(roller, mockDice2);
+
+        gameService.rollDice(lobbyId, testPlayer.getUniqueId());
+        assertTrue(gameService.isRobberPlaced(lobbyId));
     }
 }
