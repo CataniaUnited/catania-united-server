@@ -3,7 +3,7 @@ package com.example.cataniaunited.game.board.ports;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import java.util.List;
+import java.util.Map;
 
 /**
  * Represents a specific resource trading port, allowing a 2:1 exchange
@@ -20,7 +20,7 @@ public class SpecificResourcePort extends Port {
      * Constructs a new SpecificResourcePort.
      *
      * @param tradeAbleResource The specific {@link TileType} this port trades (e.g., WOOD, SHEEP).
-     *                          Cannot be null or {@link TileType#WASTE}.
+     * Cannot be null or {@link TileType#WASTE}.
      * @throws IllegalArgumentException if tradeAbleResource is null or {@link TileType#WASTE}.
      */
     public SpecificResourcePort(TileType tradeAbleResource) {
@@ -36,20 +36,16 @@ public class SpecificResourcePort extends Port {
      * For this type of port, it means checking if all offered resources
      * are of the port's specific {@link #tradeAbleResource} type.
      *
-     * @param offeredResources A list of {@link TileType} representing the resources the player is offering.
-     * @param desiredResources A list of {@link TileType} representing the resources the player wishes to receive (not used by this specific check).
-     * @return {@code true} if all offered resources match the port's {@code tradeAbleResource}, {@code false} otherwise.
+     * @param offeredResources A map of resource types and quantities being offered.
+     * @param desiredResources A map of resource types and quantities being desired (not used by this check).
+     * @return {@code true} if the offered resources consist of a single, correct type, {@code false} otherwise.
      */
     @Override
-    public boolean arePortSpecificRulesSatisfied(List<TileType> offeredResources, List<TileType> desiredResources) {
-        // For specific ports, all offered resources must be of the tradeAbleResource type.
-        for (TileType offered : offeredResources) {
-            if (offered != this.tradeAbleResource) {
-                return false; // Found an offered resource that is not the port's specific tradeable type
-            }
-        }
-        // All offered resources are of the correct type
-        return true;
+    public boolean arePortSpecificRulesSatisfied(Map<TileType, Integer> offeredResources, Map<TileType, Integer> desiredResources) {
+        // For a specific port, the trade is only valid if:
+        // 1. Exactly one type of resource is being offered.
+        // 2. That one type is the specific resource this port accepts.
+        return offeredResources.size() == 1 && offeredResources.containsKey(this.tradeAbleResource);
     }
 
     /**

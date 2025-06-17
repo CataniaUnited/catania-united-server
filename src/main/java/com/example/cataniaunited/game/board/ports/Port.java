@@ -9,7 +9,9 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -41,24 +43,14 @@ public abstract class Port implements Placable {
     }
 
     /**
-     * Determines if a proposed trade is valid for this port, considering both general
-     * trading rules and rules specific to the port type (e.g., general vs. specific resource).
-     * <p>
-     * This method validates:
-     * <ol>
-     *     <li>Basic trade ratios:</li>
-     *     <li>Port-specific rules: Handled by the {@link #arePortSpecificRulesSatisfied(List, List)} method,
-     *         which varies between {@link GeneralPort} and {@link SpecificResourcePort}. This includes checks like:
-     *     </li>
-     *     <li>No self-trading: The player is not trying to trade for resource types they are also offering.</li>
-     * </ol>
+     * Determines if a proposed trade is valid for this port, using Maps.
      *
-     * @param offeredResources A list of {@link TileType} representing the resources the player is offering.
-     * @param desiredResources A list of {@link TileType} representing the resources the player wishes to receive.
+     * @param offeredResources A map of resource types and quantities the player is offering.
+     * @param desiredResources A map of resource types and quantities the player wishes to receive.
      * @return {@code true} if the trade is valid according to all rules, {@code false} otherwise.
      */
-    public boolean canTrade(List<TileType> offeredResources, List<TileType> desiredResources) {
-        // 1. Basic trade ratios (includes check for empty lists)
+    public boolean canTrade(Map<TileType, Integer> offeredResources, Map<TileType, Integer> desiredResources) {
+        // 1. Basic trade ratios (includes check for empty maps)
         if (tradeRatioIsInvalid(offeredResources, desiredResources)) {
             return false;
         }
@@ -73,63 +65,43 @@ public abstract class Port implements Placable {
     }
 
     /**
-     * Abstract method to be implemented by subclasses ({@link GeneralPort}, {@link SpecificResourcePort})
-     * to validate trade rules that are specific to that type of port.
-     * <br>
-     * This method is called by {@link #canTrade(List, List)} after general ratio checks
-     * but before checking for self-trading.
+     * Abstract method for subclasses to validate trade rules specific to that port type.
      *
-     * @param offeredResources A list of {@link TileType} representing the resources the player is offering.
-     * @param desiredResources A list of {@link TileType} representing the resources the player wishes to receive
-     *                         (often not directly used by this specific check but provided for consistency).
-     * @return {@code true} if the port-specific rules are satisfied for the given trade, {@code false} otherwise.
+     * @param offeredResources A map of resource types and quantities being offered.
+     * @param desiredResources A map of resource types and quantities being desired.
+     * @return {@code true} if the port-specific rules are satisfied, {@code false} otherwise.
      */
-    public abstract boolean arePortSpecificRulesSatisfied(List<TileType> offeredResources, List<TileType> desiredResources);
+    public abstract boolean arePortSpecificRulesSatisfied(Map<TileType, Integer> offeredResources, Map<TileType, Integer> desiredResources);
 
     /**
-     * Checks if the fundamental trade ratios of a proposed trade are invalid.
-     * This includes checks for:
-     * <ul>
-     *     <li>Empty offered or desired resource lists.</li>
-     *     <li>The total number of offered resources not being a multiple of {@link #inputResourceAmount}.</li>
-     *     <li>The number of desired resources not matching the expected output based on the offered amount and ratio.</li>
-     * </ul>
-     *
-     * @param offeredResources The list of resources being offered.
-     * @param desiredResources The list of resources being desired.
-     * @return {@code true} if any of the basic ratio rules are violated, {@code false} otherwise.
+     * Checks if the fundamental trade ratios are invalid using maps.
      */
-    protected boolean tradeRatioIsInvalid(List<TileType> offeredResources, List<TileType> desiredResources) {
+    protected boolean tradeRatioIsInvalid(Map<TileType, Integer> offeredResources, Map<TileType, Integer> desiredResources) {
         if (Util.isEmpty(offeredResources) || Util.isEmpty(desiredResources)) {
-            return true; // Invalid if either list is empty
+            return true; // Invalid if either map is empty
         }
-        if (offeredResources.size() % this.inputResourceAmount != 0) {
-            return true; // Total offered must be a multiple of the port's input amount (else invalid)
+
+        // Calculate total number of resources offered and desired
+        int totalOffered = offeredResources.values().stream().mapToInt(Integer::intValue).sum();
+        int totalDesired = desiredResources.values().stream().mapToInt(Integer::intValue).sum();
+
+        if (totalOffered % this.inputResourceAmount != 0) {
+            return true; // Total offered must be a multiple of the port's input amount
         }
-        // Expected number of desired items based on offered items and ratio (must match, else invalid)
-        return (offeredResources.size() / this.inputResourceAmount) != desiredResources.size();
+        // Expected number of desired items must match the actual number of desired items
+        return (totalOffered / this.inputResourceAmount) != totalDesired;
     }
 
     /**
-     * Checks if any of the desired resource types are also present in the offered resources.
-     * A trade is generally invalid if an entity attempts to exchange a resource for the same type of resource
-     * through a port (e.g., offering Wood to receive Wood).
-     *
-     * @param offeredResources The list of resources being offered.
-     * @param desiredResources The list of resources being desired.
-     * @return {@code true} if there is no overlap between offered and desired resource types (i.e., not trading for offered resources),
-     * {@code false} if an overlap exists (attempting to trade a resource for itself) or if either list is empty.
+     * Checks if any desired resource types are also being offered using map keys.
      */
-    protected boolean isNotTradingForOfferedResources(List<TileType> offeredResources, List<TileType> desiredResources) {
+    protected boolean isNotTradingForOfferedResources(Map<TileType, Integer> offeredResources, Map<TileType, Integer> desiredResources) {
         if (Util.isEmpty(offeredResources) || Util.isEmpty(desiredResources)) {
             return false; // An empty trade is invalid
         }
-        for (TileType desired : desiredResources) {
-            if (offeredResources.contains(desired)) {
-                return false; // Attempting to acquire a resource type also being offered
-            }
-        }
-        return true; // No trying to get a resource that's also offered
+        // Use Collections.disjoint to check for any overlap in the keys (resource types).
+        // It returns true if there are NO common elements, which is what we want.
+        return Collections.disjoint(offeredResources.keySet(), desiredResources.keySet());
     }
 
     public void setAssociatedBuildingSites(BuildingSite s1, BuildingSite s2) {
@@ -142,90 +114,61 @@ public abstract class Port implements Placable {
             return;
         }
 
-        // It's good practice to check if positions have valid coordinates.
         double[] sp1CoordsArray = buildingSite1.getCoordinates();
         double[] sp2CoordsArray = buildingSite2.getCoordinates();
 
-        // --- Existing Coordinate Extraction ---
         double x1 = sp1CoordsArray[0];
         double y1 = sp1CoordsArray[1];
         double x2 = sp2CoordsArray[0];
         double y2 = sp2CoordsArray[1];
 
-        // --- Step 1: Midpoint of the two building sites ---
         double midX = (x1 + x2) / 2.0;
         double midY = (y1 + y2) / 2.0;
 
-        // --- Step 2: Vector representing the coastline segment between building sites ---
         double coastVecX = x2 - x1;
         double coastVecY = y2 - y1;
 
-        // --- Step 3: Port Structure Rotation ---
-        // The port structure itself (e.g., the dock building) aligns with the coastline.
         double calculatedPortRotation = Math.atan2(coastVecY, coastVecX);
 
-        // --- Step 4 & 5: Outward Normal Vector ---
-        // This vector points perpendicularly outwards from the coastline,
-        // determining the direction in which the port structure extends from the coast.
-        double normalX = -coastVecY; // Initial perpendicular vector (rotated 90 degrees counter-clockwise)
+        double normalX = -coastVecY;
         double normalY = coastVecX;
 
-        // Ensure the normal vector points "outward" from the general center of the board. (0, 0)
-        if ((normalX * midX + normalY * midY) < 0) { // Dot product of normal with midpoint's position vector
-            normalX = -normalX; // Flip normal if it points inward towards the origin
+        if ((normalX * midX + normalY * midY) < 0) {
+            normalX = -normalX;
             normalY = -normalY;
         }
 
-        // Normalize the outward normal vector
         double lengthNormal = Math.sqrt(normalX * normalX + normalY * normalY);
         double unitNormalX = 0;
         double unitNormalY = 0;
-        if (lengthNormal > 0.0001) { // Avoid division by zero for very short (or zero length) coastlines
+        if (lengthNormal > 0.0001) {
             unitNormalX = normalX / lengthNormal;
             unitNormalY = normalY / lengthNormal;
         }
 
-        // --- Step 6: Port Structure Position (Center of the port building) ---
-        // Position the port structure along the unit normal vector, at PORT_DISTANCE from the midpoint.
         double currentPortCenterX = midX + unitNormalX * PORT_DISTANCE;
         double currentPortCenterY = midY + unitNormalY * PORT_DISTANCE;
 
-        // Assign the calculated transform to the port structure
         this.portStructureTransform = new Transform(currentPortCenterX, currentPortCenterY, calculatedPortRotation);
     }
 
-    /**
-     * Gets the 2D coordinates of this port on the game board.
-     *
-     * @return A double array `[x, y]`;
-     */
     @Override
     public double[] getCoordinates() {
         return Objects.requireNonNullElse(this.portStructureTransform, Transform.ORIGIN).getCoordinatesArray();
     }
 
-    /**
-     * Converts this port's state to a JSON representation.
-     * Needs to be called by subClasses to add specific Information
-     *
-     * @return An {@link ObjectNode} representing the port.
-     */
     @Override
     public ObjectNode toJson() {
         JsonNodeFactory factory = JsonNodeFactory.instance;
         ObjectNode node = JsonNodeFactory.instance.objectNode();
         ArrayNode coordinates1Node = factory.arrayNode(2);
         ArrayNode coordinates2Node = factory.arrayNode(2);
-        node.put("inputResourceAmount", this.inputResourceAmount); // e.g. 3 for 3:1
+        node.put("inputResourceAmount", this.inputResourceAmount);
 
-        // Create a parent node for all visual/transformational aspects of the port
         ObjectNode portNode = node.putObject("portVisuals");
 
-        // Add the transform for the main port structure
-        // The toJson method in the Transform record will handle its own serialization
         portNode.set("portTransform", this.portStructureTransform.toJson(factory));
 
-        // Include IDs of associated building sites if they exist
         if (buildingSite1 != null && buildingSite2 != null) {
             portNode.put("settlementPosition1Id", buildingSite1.getId());
             portNode.put("settlementPosition2Id", buildingSite2.getId());

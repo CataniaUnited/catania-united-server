@@ -1,6 +1,7 @@
 package com.example.cataniaunited.util;
 
 import java.util.Collection;
+import java.util.Map;
 
 public class Util {
 
@@ -32,4 +33,13 @@ public class Util {
     public static boolean isEmpty(Collection<?> l) {
         return l == null || l.isEmpty();
     }
+
+
+    /**
+     * Checks if a Map is null or empty
+     *
+     * @param m The map to check.
+     * @return true if the object is null or empty; false otherwise.
+     */
+    public static boolean isEmpty(Map<?, ?> m){return m == null || m.isEmpty();}
 }

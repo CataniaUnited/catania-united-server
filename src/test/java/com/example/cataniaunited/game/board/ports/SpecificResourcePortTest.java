@@ -8,10 +8,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
-
-import java.util.List;
-import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -21,7 +20,7 @@ class SpecificResourcePortTest {
     void constructorWithValidResourceShouldCreatePort() {
         SpecificResourcePort woodPort = new SpecificResourcePort(TileType.WOOD);
         assertEquals(2, woodPort.inputResourceAmount, "SpecificResourcePort should have an inputResourceAmount of 2.");
-        assertEquals(TileType.WOOD, woodPort.tradeAbleResource, "Port resource should be WOOD.");
+        assertEquals(TileType.WOOD, woodPort.getTradeAbleResource(), "Port resource should be WOOD.");
     }
 
     @Test
@@ -36,14 +35,15 @@ class SpecificResourcePortTest {
         assertEquals("Specific port must trade a valid resource type.", exception.getMessage());
     }
 
-    // Helper Method to avoid complications
-    private TileType getDifferentResource(TileType typeToAvoid) {
+    // Helper Method to find a resource that is different from the given one.
+    private TileType getDifferentResource(List<TileType> typesToAvoid) {
         for (TileType t : TileType.values()) {
-            if (t != typeToAvoid && t != TileType.WASTE) {
+            if (!typesToAvoid.contains(t) && t != TileType.WASTE) {
                 return t;
             }
         }
-        return TileType.WASTE;
+        // Should not happen in a normal Catan game context
+        throw new IllegalStateException("No other resource type found to trade for.");
     }
 
 
@@ -51,8 +51,8 @@ class SpecificResourcePortTest {
     @EnumSource(value = TileType.class, names = {"WOOD", "SHEEP", "WHEAT", "CLAY", "ORE"})
     void canTradeWithTwoCorrectResourcesForOneDifferentShouldReturnTrue(TileType portResource) {
         SpecificResourcePort port = new SpecificResourcePort(portResource);
-        List<TileType> offered = Arrays.asList(portResource, portResource);
-        List<TileType> desired = Collections.singletonList(getDifferentResource(portResource));
+        Map<TileType, Integer> offered = Map.of(portResource, 2);
+        Map<TileType, Integer> desired = Map.of(getDifferentResource(List.of(portResource)), 1);
         assertTrue(port.canTrade(offered, desired), "Trading 2 " + portResource + " for 1 other should be valid.");
     }
 
@@ -60,83 +60,74 @@ class SpecificResourcePortTest {
     @EnumSource(value = TileType.class, names = {"WOOD", "SHEEP", "WHEAT", "CLAY", "ORE"})
     void canTradeWithFourCorrectResourcesForTwoDifferentShouldReturnTrue(TileType portResource) {
         SpecificResourcePort port = new SpecificResourcePort(portResource);
-        List<TileType> offered = Arrays.asList(portResource, portResource, portResource, portResource);
+        Map<TileType, Integer> offered = Map.of(portResource, 4);
 
-        TileType desired1 = getDifferentResource(portResource);
-        TileType desired2 = getDifferentResource(portResource);
-        if (desired1 == desired2) { // ensure they are different
-            for (TileType t : TileType.values()) {
-                if (t != portResource && t != TileType.WASTE && t != desired1) {
-                    desired2 = t;
-                    break;
-                }
-            }
-        }
+        TileType desired1 = getDifferentResource(List.of(portResource));
+        TileType desired2 = getDifferentResource(List.of(portResource, desired1));
 
-        List<TileType> desired = Arrays.asList(desired1, desired2);
+        Map<TileType, Integer> desired = Map.of(desired1, 1, desired2, 1);
         assertTrue(port.canTrade(offered, desired), "Trading 4 " + portResource + " for 2 others should be valid.");
     }
 
     @Test
     void canTradeWithNullOfferedResourcesShouldReturnFalse() {
         SpecificResourcePort port = new SpecificResourcePort(TileType.WOOD);
-        List<TileType> desired = Collections.singletonList(TileType.SHEEP);
+        Map<TileType, Integer> desired = Map.of(TileType.SHEEP, 1);
         assertFalse(port.canTrade(null, desired), "Trade with null offered resources should be invalid.");
     }
 
     @Test
     void canTradeWithNullDesiredResourcesShouldReturnFalse() {
         SpecificResourcePort port = new SpecificResourcePort(TileType.WOOD);
-        List<TileType> offered = Arrays.asList(TileType.WOOD, TileType.WOOD);
+        Map<TileType, Integer> offered = Map.of(TileType.WOOD, 2);
         assertFalse(port.canTrade(offered, null), "Trade with null desired resources should be invalid.");
     }
 
     @Test
     void canTradeWithEmptyOfferedResourcesShouldReturnFalse() {
         SpecificResourcePort port = new SpecificResourcePort(TileType.WOOD);
-        List<TileType> offered = Collections.emptyList();
-        List<TileType> desired = Collections.singletonList(TileType.SHEEP);
+        Map<TileType, Integer> offered = Collections.emptyMap();
+        Map<TileType, Integer> desired = Map.of(TileType.SHEEP, 1);
         assertFalse(port.canTrade(offered, desired), "Trade with empty offered resources should be invalid.");
     }
 
     @Test
     void canTradeWithEmptyDesiredResourcesShouldReturnFalse() {
         SpecificResourcePort port = new SpecificResourcePort(TileType.WOOD);
-        List<TileType> offered = Arrays.asList(TileType.WOOD, TileType.WOOD);
-        List<TileType> desired = Collections.emptyList();
+        Map<TileType, Integer> offered = Map.of(TileType.WOOD, 2);
+        Map<TileType, Integer> desired = Collections.emptyMap();
         assertFalse(port.canTrade(offered, desired), "Trade with empty desired resources should be invalid.");
     }
-
 
     @Test
     void canTradeWhenOfferedAmountIsNotMultipleOfRatioShouldReturnFalse() {
         SpecificResourcePort port = new SpecificResourcePort(TileType.WOOD);
-        List<TileType> offered = Collections.singletonList(TileType.WOOD); // Only 1 offered for 2:1
-        List<TileType> desired = Collections.singletonList(TileType.SHEEP);
+        Map<TileType, Integer> offered = Map.of(TileType.WOOD, 1); // Only 1 offered for 2:1
+        Map<TileType, Integer> desired = Map.of(TileType.SHEEP, 1);
         assertFalse(port.canTrade(offered, desired), "Offering 1 for 1 at 2:1 port should be invalid.");
     }
 
     @Test
     void canTradeWhenDesiredAmountDoesNotMatchRatioShouldReturnFalse() {
         SpecificResourcePort port = new SpecificResourcePort(TileType.WOOD);
-        List<TileType> offered = Arrays.asList(TileType.WOOD, TileType.WOOD); // Offering 2
-        List<TileType> desired = Arrays.asList(TileType.SHEEP, TileType.ORE);  // Eypecting 2
+        Map<TileType, Integer> offered = Map.of(TileType.WOOD, 2); // Offering 2
+        Map<TileType, Integer> desired = Map.of(TileType.SHEEP, 1, TileType.ORE, 1);  // Desiring 2
         assertFalse(port.canTrade(offered, desired), "Offering 2 for 2 at 2:1 port should be invalid.");
     }
 
     @Test
     void canTradeOfferingWrongResourceTypeForWoodPortShouldReturnFalse() {
         SpecificResourcePort port = new SpecificResourcePort(TileType.WOOD);
-        List<TileType> offered = Arrays.asList(TileType.SHEEP, TileType.SHEEP); // Offering sheep to wood port
-        List<TileType> desired = Collections.singletonList(TileType.CLAY);
+        Map<TileType, Integer> offered = Map.of(TileType.SHEEP, 2); // Offering sheep to wood port
+        Map<TileType, Integer> desired = Map.of(TileType.CLAY, 1);
         assertFalse(port.canTrade(offered, desired), "Offering sheep to WOOD port should be invalid.");
     }
 
     @Test
     void canTradeOfferingMixedResourceTypesWhenSpecificIsRequiredShouldReturnFalse() {
         SpecificResourcePort port = new SpecificResourcePort(TileType.ORE);
-        List<TileType> offered = Arrays.asList(TileType.ORE, TileType.WOOD); // Mixed, but port needs only ORE
-        List<TileType> desired = Collections.singletonList(TileType.SHEEP);
+        Map<TileType, Integer> offered = Map.of(TileType.ORE, 1, TileType.WOOD, 1); // Mixed, but port needs only ORE
+        Map<TileType, Integer> desired = Map.of(TileType.SHEEP, 1);
         assertFalse(port.canTrade(offered, desired), "Offering mixed types to ORE port should be invalid.");
     }
 
@@ -144,8 +135,8 @@ class SpecificResourcePortTest {
     @EnumSource(value = TileType.class, names = {"WOOD", "SHEEP", "WHEAT", "CLAY", "ORE"})
     void canTradeWhenDesiredResourceIsTheSameAsPortTypeShouldReturnFalse(TileType portResource) {
         SpecificResourcePort port = new SpecificResourcePort(portResource);
-        List<TileType> offered = Arrays.asList(portResource, portResource);
-        List<TileType> desired = Collections.singletonList(portResource);
+        Map<TileType, Integer> offered = Map.of(portResource, 2);
+        Map<TileType, Integer> desired = Map.of(portResource, 1);
         assertFalse(port.canTrade(offered, desired), "Trading " + portResource + " for " + portResource + " should be invalid.");
     }
 

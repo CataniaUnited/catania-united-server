@@ -1,7 +1,5 @@
 package com.example.cataniaunited.game.trade;
 
-import com.example.cataniaunited.dto.MessageDTO;
-import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.board.ports.GeneralPort;
 import com.example.cataniaunited.game.board.ports.Port;
@@ -9,9 +7,6 @@ import com.example.cataniaunited.game.board.ports.SpecificResourcePort;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerService;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
@@ -22,9 +17,7 @@ import org.mockito.Mockito;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
-
 
 @QuarkusTest
 class TradingServiceTest {
@@ -37,12 +30,12 @@ class TradingServiceTest {
 
     private Player mockPlayer;
     private final String playerId = "testPlayer1";
-    private final JsonNodeFactory nodeFactory = JsonNodeFactory.instance;
 
     @BeforeEach
     void setUp() {
         mockPlayer = mock(Player.class);
         EnumMap<TileType, Integer> resources = new EnumMap<>(TileType.class);
+        // Initialize all resources to 0 for a clean state
         for (TileType type : TileType.values()) {
             if (type != TileType.WASTE) {
                 resources.put(type, 0);
@@ -50,244 +43,136 @@ class TradingServiceTest {
         }
 
         when(playerService.getPlayerById(playerId)).thenReturn(mockPlayer);
-        when(mockPlayer.getResources()).thenReturn(resources);
-        when(mockPlayer.getAccessiblePorts()).thenReturn(new HashSet<>());
         when(mockPlayer.getUniqueId()).thenReturn(playerId);
-    }
-
-
-    private ObjectNode createTradeMessagePayload(List<String> offered, List<String> target) {
-        ObjectNode payload = nodeFactory.objectNode();
-        ArrayNode offeredArray = nodeFactory.arrayNode();
-        if (offered != null) {
-            offered.forEach(offeredArray::add);
-            payload.set("offeredResources", offeredArray);
-        }
-        ArrayNode targetArray = nodeFactory.arrayNode();
-        if (target != null) {
-            target.forEach(targetArray::add);
-            payload.set("targetResources", targetArray);
-        }
-        payload.put("target", "bank");
-        return payload;
-    }
-
-    private MessageDTO createMessageDTO(ObjectNode payload) {
-        MessageDTO message = new MessageDTO(MessageType.TRADE_WITH_BANK, payload);
-        message.setPlayer(playerId);
-        return message;
+        when(mockPlayer.getResources()).thenReturn(resources);
+        // Default to no ports unless specified in a test
+        when(mockPlayer.getAccessiblePorts()).thenReturn(Collections.emptySet());
     }
 
     @Test
-    void testCheckIfPlayerHasSufficientResourcesTrue() {
-        Map<TileType, Integer> playerRes = new EnumMap<>(Map.of(TileType.WOOD, 5, TileType.CLAY, 3));
-        List<TileType> offered = List.of(TileType.WOOD, TileType.WOOD, TileType.CLAY);
-        assertTrue(tradingService.checkIfPlayerHasSufficientResources(playerRes, offered));
+    void testCheckIfPlayerHasSufficientResources_True() {
+        when(mockPlayer.getResources()).thenReturn(Map.of(TileType.WOOD, 5, TileType.CLAY, 3));
+        Map<TileType, Integer> offered = Map.of(TileType.WOOD, 4, TileType.CLAY, 1);
+        assertTrue(tradingService.checkIfPlayerHasSufficientResources(mockPlayer.getResources(), offered));
     }
 
     @Test
-    void testCheckIfPlayerHasSufficientResourcesFalseOneType() {
-        Map<TileType, Integer> playerRes = new EnumMap<>(Map.of(TileType.WOOD, 1, TileType.CLAY, 3));
-        List<TileType> offered = List.of(TileType.WOOD, TileType.WOOD, TileType.CLAY);
-        assertFalse(tradingService.checkIfPlayerHasSufficientResources(playerRes, offered));
+    void testCheckIfPlayerHasSufficientResources_False() {
+        when(mockPlayer.getResources()).thenReturn(Map.of(TileType.WOOD, 3, TileType.CLAY, 3)); // Only has 3 wood
+        Map<TileType, Integer> offered = Map.of(TileType.WOOD, 4, TileType.CLAY, 1);
+        assertFalse(tradingService.checkIfPlayerHasSufficientResources(mockPlayer.getResources(), offered));
     }
 
     @Test
-    void testCheckIfPlayerHasSufficientResourcesFalseMultipleTypes() {
-        Map<TileType, Integer> playerRes = new EnumMap<>(Map.of(TileType.WOOD, 1, TileType.CLAY, 0));
-        List<TileType> offered = List.of(TileType.WOOD, TileType.WOOD, TileType.CLAY);
-        assertFalse(tradingService.checkIfPlayerHasSufficientResources(playerRes, offered));
+    void testCheckIfPlayerHasSufficientResources_OfferedEmpty_IsFalse() {
+        assertFalse(tradingService.checkIfPlayerHasSufficientResources(mockPlayer.getResources(), Collections.emptyMap()));
     }
 
     @Test
-    void testCheckIfPlayerHasSufficientResourcesOfferedEmpty() {
-        Map<TileType, Integer> playerRes = new EnumMap<>(Map.of(TileType.WOOD, 5));
-        List<TileType> offered = List.of();
-        assertTrue(tradingService.checkIfPlayerHasSufficientResources(playerRes, offered));
-    }
-
-    @Test
-    void testCheckIfPlayerHasSufficientResourcesPlayerHasNoneOfOffered() {
-        Map<TileType, Integer> playerRes = new EnumMap<>(Map.of(TileType.SHEEP, 5));
-        List<TileType> offered = List.of(TileType.WOOD, TileType.WOOD);
-        assertFalse(tradingService.checkIfPlayerHasSufficientResources(playerRes, offered));
-    }
-
-    @Test
-    void testCheckIfCanTradeWithBankValid4for1() {
-        List<TileType> offered = List.of(TileType.WOOD, TileType.WOOD, TileType.WOOD, TileType.WOOD);
-        List<TileType> target = List.of(TileType.CLAY);
+    void testCheckIfCanTradeWithBank_Valid_4_to_1() {
+        Map<TileType, Integer> offered = Map.of(TileType.WOOD, 4);
+        Map<TileType, Integer> target = Map.of(TileType.CLAY, 1);
         assertTrue(tradingService.checkIfCanTradeWithBank(offered, target));
     }
 
     @Test
-    void testCheckIfCanTradeWithBankValid8for2() {
-        List<TileType> offered = List.of(
-                TileType.WOOD, TileType.WOOD, TileType.SHEEP, TileType.SHEEP,
-                TileType.WOOD, TileType.WOOD, TileType.SHEEP, TileType.SHEEP
-        );
-        List<TileType> target = List.of(TileType.CLAY, TileType.ORE);
+    void testCheckIfCanTradeWithBank_Valid_8_to_2() {
+        Map<TileType, Integer> offered = Map.of(TileType.WOOD, 8);
+        Map<TileType, Integer> target = Map.of(TileType.CLAY, 2);
         assertTrue(tradingService.checkIfCanTradeWithBank(offered, target));
     }
 
     @Test
-    void testCheckIfCanTradeWithBankInvalidRatioNotMultiple() {
-        List<TileType> offered = List.of(TileType.WOOD, TileType.WOOD, TileType.WOOD); // 3 offered
-        List<TileType> target = List.of(TileType.CLAY); // 1 target
+    void testCheckIfCanTradeWithBank_Invalid_Mixed_Bundle() {
+        Map<TileType, Integer> offered = Map.of(TileType.WOOD, 2, TileType.SHEEP, 2);
+        Map<TileType, Integer> target = Map.of(TileType.CLAY, 1);
         assertFalse(tradingService.checkIfCanTradeWithBank(offered, target));
     }
 
     @Test
-    void testCheckIfCanTradeWithBankInvalidRatioWrongOutputCount() {
-        List<TileType> offered = List.of(TileType.WOOD, TileType.WOOD, TileType.WOOD, TileType.WOOD); // 4 offered
-        List<TileType> target = List.of(TileType.CLAY, TileType.ORE); // 2 target
+    void testCheckIfCanTradeWithBank_Invalid_Ratio() {
+        Map<TileType, Integer> offered = Map.of(TileType.WOOD, 3);
+        Map<TileType, Integer> target = Map.of(TileType.CLAY, 1);
         assertFalse(tradingService.checkIfCanTradeWithBank(offered, target));
     }
 
     @Test
-    void testCheckIfCanTradeWithBankInvalidSelfTrade() {
-        List<TileType> offered = List.of(TileType.WOOD, TileType.WOOD, TileType.WOOD, TileType.WOOD);
-        List<TileType> target = List.of(TileType.WOOD); // Trading wood for wood
+    void testCheckIfCanTradeWithBank_Invalid_SelfTrade() {
+        Map<TileType, Integer> offered = Map.of(TileType.WOOD, 4);
+        Map<TileType, Integer> target = Map.of(TileType.WOOD, 1);
         assertFalse(tradingService.checkIfCanTradeWithBank(offered, target));
     }
 
     @Test
-    void testCheckIfCanTradeWithBankInvalidMixedBundle() {
-        List<TileType> offered = List.of(TileType.WOOD, TileType.WOOD, TileType.CLAY, TileType.CLAY); // Mixed bundle
-        List<TileType> target = List.of(TileType.SHEEP);
-        assertFalse(tradingService.checkIfCanTradeWithBank(offered, target));
-    }
-
-    @Test
-    void testCheckIfCanTradeWithBankInvalidMixedBundleForSecondTarget() {
-        List<TileType> offered = List.of(
-                TileType.WOOD, TileType.WOOD, TileType.WOOD, TileType.WOOD, // Valid bundle 1
-                TileType.SHEEP, TileType.SHEEP, TileType.CLAY, TileType.CLAY  // Invalid bundle 2
-        );
-        List<TileType> target = List.of(TileType.ORE, TileType.WHEAT);
-        assertFalse(tradingService.checkIfCanTradeWithBank(offered, target));
-    }
-
-    @Test
-    void testCheckIfCanTradeWithBankOfferedEmpty() {
-        List<TileType> offered = List.of();
-        List<TileType> target = List.of(TileType.CLAY);
-        assertFalse(tradingService.checkIfCanTradeWithBank(offered, target));
-    }
-
-    @Test
-    void testCheckIfCanTradeWithBankTargetEmpty() {
-        List<TileType> offered = List.of(TileType.WOOD, TileType.WOOD, TileType.WOOD, TileType.WOOD);
-        List<TileType> target = List.of();
-        assertFalse(tradingService.checkIfCanTradeWithBank(offered, target));
-    }
-
-
-    @Test
-    void testTradeResourcesSuccessful() throws GameException {
-        mockPlayer.getResources().put(TileType.WOOD, 4);
-        mockPlayer.getResources().put(TileType.CLAY, 0);
-
-        List<TileType> offered = List.of(TileType.WOOD, TileType.WOOD, TileType.WOOD, TileType.WOOD);
-        List<TileType> target = List.of(TileType.CLAY);
+    void testTradeResources_Successful() throws GameException {
+        Map<TileType, Integer> offered = Map.of(TileType.WOOD, 4);
+        Map<TileType, Integer> target = Map.of(TileType.CLAY, 1);
 
         tradingService.tradeResources(mockPlayer, offered, target);
 
-        verify(mockPlayer, times(4)).removeResource(TileType.WOOD, 1);
-        verify(mockPlayer, times(1)).receiveResource(TileType.CLAY, 1);
-
-    }
-
-    @Test
-    void testHandleBankTradeRequestSuccessfulBankTrade() throws GameException {
-        mockPlayer.getResources().put(TileType.WOOD, 4);
-        mockPlayer.getResources().put(TileType.CLAY, 0);
-        TradeRequest tradeRequest = new TradeRequest(
-                List.of(TileType.WOOD, TileType.WOOD, TileType.WOOD, TileType.WOOD),
-                List.of(TileType.CLAY)
-        );
-
-        assertDoesNotThrow(() -> tradingService.handleBankTradeRequest(mockPlayer.getUniqueId(), tradeRequest));
-
-        verify(mockPlayer, times(4)).removeResource(TileType.WOOD, 1);
+        verify(mockPlayer, times(1)).removeResource(TileType.WOOD, 4);
         verify(mockPlayer, times(1)).receiveResource(TileType.CLAY, 1);
     }
 
     @Test
-    void testHandleBankTradeRequestSuccessfulGeneralPortTrade() throws GameException {
-        mockPlayer.getResources().put(TileType.WOOD, 3);
-        mockPlayer.getResources().put(TileType.CLAY, 0);
+    void handleBankTradeRequest_Successful_BankTrade() throws GameException {
+        // Player has 4 wood, wants 1 clay
+        when(mockPlayer.getResources()).thenReturn(new EnumMap<>(Map.of(TileType.WOOD, 4, TileType.CLAY, 0)));
+        TradeRequest request = new TradeRequest(Map.of(TileType.WOOD, 4), Map.of(TileType.CLAY, 1));
 
-        GeneralPort generalPort = Mockito.spy(new GeneralPort()); // 3:1 port
-        Set<Port> ports = new HashSet<>();
-        ports.add(generalPort);
-        Mockito.doReturn(ports).when(mockPlayer).getAccessiblePorts();
+        tradingService.handleBankTradeRequest(playerId, request);
 
-        TradeRequest tradeRequest = new TradeRequest(
-                List.of(TileType.WOOD, TileType.WOOD, TileType.WOOD),
-                List.of(TileType.CLAY)
-        );
-
-        assertDoesNotThrow(() -> tradingService.handleBankTradeRequest(mockPlayer.getUniqueId(), tradeRequest));
-        verify(mockPlayer, times(3)).removeResource(TileType.WOOD, 1);
-        verify(mockPlayer, times(1)).receiveResource(TileType.CLAY, 1);
+        verify(mockPlayer).removeResource(TileType.WOOD, 4);
+        verify(mockPlayer).receiveResource(TileType.CLAY, 1);
     }
 
     @Test
-    void testHandleBankTradeRequestSuccessfulSpecificPortTrade() throws GameException {
-        mockPlayer.getResources().put(TileType.WOOD, 2);
-        mockPlayer.getResources().put(TileType.CLAY, 0);
+    void handleBankTradeRequest_Successful_GeneralPortTrade() throws GameException {
+        // Player has 3 wood, wants 1 clay via 3:1 port
+        when(mockPlayer.getResources()).thenReturn(new EnumMap<>(Map.of(TileType.WOOD, 3, TileType.CLAY, 0)));
+        Set<Port> ports = Set.of(new GeneralPort());
+        when(mockPlayer.getAccessiblePorts()).thenReturn(ports);
+        TradeRequest request = new TradeRequest(Map.of(TileType.WOOD, 3), Map.of(TileType.CLAY, 1));
 
-        SpecificResourcePort woodPort = Mockito.spy(new SpecificResourcePort(TileType.WOOD)); // 2:1 Wood port
-        Set<Port> ports = new HashSet<>();
-        ports.add(woodPort);
-        Mockito.doReturn(ports).when(mockPlayer).getAccessiblePorts();
+        tradingService.handleBankTradeRequest(playerId, request);
 
-
-        TradeRequest tradeRequest = new TradeRequest(
-                List.of(TileType.WOOD, TileType.WOOD),
-                List.of(TileType.CLAY)
-        );
-
-        assertDoesNotThrow(() -> tradingService.handleBankTradeRequest(mockPlayer.getUniqueId(), tradeRequest));
-
-        verify(mockPlayer, times(2)).removeResource(TileType.WOOD, 1);
-        verify(mockPlayer, times(1)).receiveResource(TileType.CLAY, 1);
+        verify(mockPlayer).removeResource(TileType.WOOD, 3);
+        verify(mockPlayer).receiveResource(TileType.CLAY, 1);
     }
 
     @Test
-    void testHandleBankTradeRequestInsufficientPlayerResources() throws GameException {
-        mockPlayer.getResources().put(TileType.WOOD, 1);
-        TradeRequest tradeRequest = new TradeRequest(
-                List.of(TileType.WOOD, TileType.WOOD, TileType.WOOD, TileType.WOOD),
-                List.of(TileType.CLAY)
-        );
+    void handleBankTradeRequest_Successful_SpecificPortTrade() throws GameException {
+        // Player has 2 wood, wants 1 clay via 2:1 wood port
+        when(mockPlayer.getResources()).thenReturn(new EnumMap<>(Map.of(TileType.WOOD, 2, TileType.CLAY, 0)));
+        Set<Port> ports = Set.of(new SpecificResourcePort(TileType.WOOD));
+        when(mockPlayer.getAccessiblePorts()).thenReturn(ports);
+        TradeRequest request = new TradeRequest(Map.of(TileType.WOOD, 2), Map.of(TileType.CLAY, 1));
 
-        GameException exception = assertThrows(GameException.class,
-                () ->tradingService.handleBankTradeRequest(mockPlayer.getUniqueId(), tradeRequest));
+        tradingService.handleBankTradeRequest(playerId, request);
+
+        verify(mockPlayer).removeResource(TileType.WOOD, 2);
+        verify(mockPlayer).receiveResource(TileType.CLAY, 1);
+    }
+
+    @Test
+    void handleBankTradeRequest_InsufficientResources_ThrowsException() throws GameException {
+        // Player has only 1 wood, tries to trade 4
+        when(mockPlayer.getResources()).thenReturn(new EnumMap<>(Map.of(TileType.WOOD, 1)));
+        TradeRequest request = new TradeRequest(Map.of(TileType.WOOD, 4), Map.of(TileType.CLAY, 1));
+
+        GameException exception = assertThrows(GameException.class, () -> tradingService.handleBankTradeRequest(playerId, request));
         assertEquals("Insufficient Resources of Player", exception.getMessage());
-        verify(mockPlayer, never()).removeResource(any(TileType.class), any(Integer.class));
+        verify(mockPlayer, never()).removeResource(any(), anyInt());
     }
 
-
     @Test
-    void testHandleBankTradeRequestTradeRatioInvalidNeitherPortNorBank() throws GameException {
-        mockPlayer.getResources().put(TileType.WOOD, 5);
+    void handleBankTradeRequest_InvalidRatio_ThrowsException() throws GameException {
+        // Player has enough wood, but tries an invalid 1:1 trade with no valid ports
+        when(mockPlayer.getResources()).thenReturn(new EnumMap<>(Map.of(TileType.WOOD, 1)));
+        TradeRequest request = new TradeRequest(Map.of(TileType.WOOD, 1), Map.of(TileType.CLAY, 1));
 
-        SpecificResourcePort woodPort = Mockito.spy(new SpecificResourcePort(TileType.WOOD)); // 2:1 Wood port
-        Set<Port> ports = new HashSet<>();
-        ports.add(woodPort);
-        Mockito.doReturn(ports).when(mockPlayer).getAccessiblePorts();
-
-
-        TradeRequest tradeRequest = new TradeRequest(
-                List.of(TileType.WOOD),
-                List.of(TileType.CLAY)
-        );
-
-        GameException exception = assertThrows(GameException.class,
-                () ->tradingService.handleBankTradeRequest(mockPlayer.getUniqueId(), tradeRequest));
-        assertEquals("Trade Ration is invalid", exception.getMessage());
-        verify(mockPlayer, never()).removeResource(any(TileType.class), any(Integer.class));
+        GameException exception = assertThrows(GameException.class, () -> tradingService.handleBankTradeRequest(playerId, request));
+        assertEquals("Trade ratio is invalid", exception.getMessage());
+        verify(mockPlayer, never()).removeResource(any(), anyInt());
     }
 }

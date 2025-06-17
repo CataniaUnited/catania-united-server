@@ -11,8 +11,6 @@ import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
 import java.util.*;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 @ApplicationScoped
 public class TradingService {
@@ -36,107 +34,107 @@ public class TradingService {
             throw new GameException("Player not found, cannot process trade.");
         }
 
-        List<TileType> offeredResources = tradeRequest.offeredResources();
-        List<TileType> targetResources = tradeRequest.targetResources();
+        Map<TileType, Integer> offeredResources = tradeRequest.offeredResources();
+        Map<TileType, Integer> targetResources = tradeRequest.targetResources();
 
-        // Check if player has sufficient resources as in offeredResources
+        // Check if player has sufficient resources for the trade.
         if (!checkIfPlayerHasSufficientResources(player.getResources(), offeredResources)) {
             logger.errorf("Player %s has insufficient Resources for Trade. Has: %s, Offered: %s",
-                    playerId, player.getResources(), offeredResources.toString());
+                    playerId, player.getResources(), offeredResources);
             throw new GameException("Insufficient Resources of Player");
         }
 
         // Check If Any Port approves this trade request
         boolean canTrade = false;
         Set<Port> ports = player.getAccessiblePorts();
-        for (Port port: ports){
-            if (port.canTrade(offeredResources, targetResources)){
-                // Port Accepts Trade
+        for (Port port : ports) {
+            if (port.canTrade(offeredResources, targetResources)) {
                 canTrade = true;
                 break;
             }
         }
 
-        // Else check if Normal Trade is possible
-        if (!canTrade){
+        // If no port trade was possible, check for standard 4:1 bank trade
+        if (!canTrade) {
             canTrade = checkIfCanTradeWithBank(offeredResources, targetResources);
         }
 
-        // If yes trade, else throw exception
-        if (!canTrade){
-            throw new GameException("Trade Ration is invalid");
+        // If a valid trade path was found, execute it. Otherwise, throw an exception.
+        if (!canTrade) {
+            throw new GameException("Trade ratio is invalid");
         }
 
         tradeResources(player, offeredResources, targetResources);
     }
 
-     boolean checkIfPlayerHasSufficientResources(Map<TileType, Integer> playerResources, List<TileType> offeredResources){
-         // 1. Count the occurrences of each TileType in the offeredResources list
-         EnumMap<TileType, Integer> offeredResourceMap = new EnumMap<>(TileType.class);
-         for (TileType resource : offeredResources) {
-             offeredResourceMap.put(resource, offeredResourceMap.getOrDefault(resource, 0) + 1);
-         }
-
-         // 2. Iterate through the "offered quantities" map
-         for (Map.Entry<TileType, Integer> entry : offeredResourceMap.entrySet()) {
-             TileType resourceToOffer = entry.getKey();
-             int quantityOffered = entry.getValue();
-
-             // 3. Check if the playerResources map contains at least that quantity
-             int playerHasQuantity = playerResources.getOrDefault(resourceToOffer, 0);
-
-             if (playerHasQuantity < quantityOffered) {
-                 // Player does not have enough of this specific resource
-                 logger.infof("Insufficient resources for %s. Player has: %d, Offered: %d", resourceToOffer, playerHasQuantity, quantityOffered);
-                 return false;
-             }
-         }
-
-         // 4. If all checks pass, the player has sufficient resources
-         return true;
-     }
-
-     boolean checkIfCanTradeWithBank(List<TileType> offeredResources, List<TileType> targetResources){
-         if (Util.isEmpty(offeredResources) || Util.isEmpty(targetResources)) {
-             logger.infof("offered or target resources is empty (Offered: %s; Target: %s)", offeredResources, targetResources);
-             return false;
-         }
-
-         if (offeredResources.size() % STANDARD_TRADE_RATIO != 0 || (offeredResources.size() / STANDARD_TRADE_RATIO) != targetResources.size()) {
-             logger.infof("Trade Ratio is Invalid (Offered: %s; count %d, ratio: %d)", offeredResources, offeredResources.size(), STANDARD_TRADE_RATIO);
-             return false;
-         }
-
-         for (TileType desired : targetResources) {
-             if (offeredResources.contains(desired)) {
-                 logger.infof("Cant trade for Resource that's offered (Offered: %s; Target: %s)", offeredResources, targetResources);
-                 return false;
-             }
-         }
-
-         Map<TileType, Long> offeredResourceMap = offeredResources.stream()
-                 .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
-
-         // For each type of resource offered, check if its count is a multiple of the port's inputResourceAmount
-         for (Map.Entry<TileType, Long> entry : offeredResourceMap.entrySet()) {
-             long countOfEntryType = entry.getValue();
-             if (countOfEntryType % STANDARD_TRADE_RATIO != 0) {
-                 logger.info("Bank trade bundle not uniform.");
-                 return false;
-             }
-         }
-
-         // can Trade with Bank
-         return true;
-     }
-
-     void tradeResources(Player player, List<TileType> offeredResources, List<TileType> targetResources) throws GameException {
-        for (TileType resource: targetResources){
-            player.receiveResource(resource, 1);
+    /**
+     * Checks if the player has the required resources based on a map of offered quantities.
+     */
+    boolean checkIfPlayerHasSufficientResources(Map<TileType, Integer> playerResources, Map<TileType, Integer> offeredResources) {
+        if (Util.isEmpty(offeredResources)) {
+            return false; // Cannot offer nothing.
         }
 
-         for (TileType resource: offeredResources){
-             player.removeResource(resource, 1);
-         }
-     }
+        for (Map.Entry<TileType, Integer> offer : offeredResources.entrySet()) {
+            TileType resourceToOffer = offer.getKey();
+            int quantityOffered = offer.getValue();
+            int playerHasQuantity = playerResources.getOrDefault(resourceToOffer, 0);
+
+            if (playerHasQuantity < quantityOffered) {
+                logger.infof("Insufficient resources for %s. Player has: %d, Offered: %d", resourceToOffer, playerHasQuantity, quantityOffered);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Checks if a standard 4:1 bank trade is valid using maps.
+     */
+    boolean checkIfCanTradeWithBank(Map<TileType, Integer> offeredResources, Map<TileType, Integer> targetResources) {
+        if (Util.isEmpty(offeredResources) || Util.isEmpty(targetResources)) {
+            logger.infof("Offered or target resources is empty.");
+            return false;
+        }
+
+        // Ensure the player is not trying to trade for a resource they are also offering.
+        if (!Collections.disjoint(offeredResources.keySet(), targetResources.keySet())) {
+            logger.infof("Cannot trade for a resource that is also being offered.");
+            return false;
+        }
+
+        // For a standard bank trade, a player must offer a single type of resource.
+        if (offeredResources.size() != 1) {
+            logger.info("Bank trade bundle must be of a single resource type.");
+            return false;
+        }
+
+        // Get the single offered resource type and its amount.
+        Map.Entry<TileType, Integer> offer = offeredResources.entrySet().iterator().next();
+        int offeredAmount = offer.getValue();
+        int targetAmount = targetResources.values().stream().mapToInt(Integer::intValue).sum();
+
+        // Check if the amounts conform to the 4:1 ratio.
+        if (offeredAmount % STANDARD_TRADE_RATIO != 0 || (offeredAmount / STANDARD_TRADE_RATIO) != targetAmount) {
+            logger.infof("Trade Ratio is Invalid. Offered: %d, Target: %d, Ratio: %d:1", offeredAmount, targetAmount, STANDARD_TRADE_RATIO);
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Executes the trade by removing/adding resources based on maps.
+     */
+    void tradeResources(Player player, Map<TileType, Integer> offeredResources, Map<TileType, Integer> targetResources) throws GameException {
+        // Add all target resources
+        for (Map.Entry<TileType, Integer> entry : targetResources.entrySet()) {
+            player.receiveResource(entry.getKey(), entry.getValue());
+        }
+
+        // Remove all offered resources
+        for (Map.Entry<TileType, Integer> entry : offeredResources.entrySet()) {
+            player.removeResource(entry.getKey(), entry.getValue());
+        }
+    }
 }
