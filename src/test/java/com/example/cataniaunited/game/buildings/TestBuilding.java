@@ -8,17 +8,22 @@ import com.example.cataniaunited.player.PlayerColor;
 import java.util.Map;
 
 public class TestBuilding extends Building {
-protected TestBuilding(Player player, PlayerColor color) throws GameException {
+    protected TestBuilding(Player player, PlayerColor color) throws GameException {
         super(player, color);
-        }
+    }
 
-@Override
-public int getResourceDistributionAmount() {
+    @Override
+    public int getResourceDistributionAmount() {
         return 1;
-        }
+    }
 
-@Override
-public Map<TileType, Integer> getRequiredResources() {
+    @Override
+    public Map<TileType, Integer> getRequiredResources() {
         return Map.of();
-        }
+    }
+
+    @Override
+    public int getBuildLimit() {
+        return 1;
+    }
 }

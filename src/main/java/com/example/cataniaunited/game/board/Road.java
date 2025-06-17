@@ -9,7 +9,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -54,6 +56,13 @@ public class Road implements Placable, Buildable {
             throw new GameException("Road cannot be placed twice: roadId = %s, playerId = %s", id, owner.getUniqueId());
         }
         this.owner = owner;
+    }
+
+    public List<Road> getAdjacentRoads() {
+        List<Road> adjacentRoads = new ArrayList<>();
+        adjacentRoads.addAll(positionA.getRoads().stream().filter(road -> !road.equals(this)).toList());
+        adjacentRoads.addAll(positionB.getRoads().stream().filter(road -> !road.equals(this)).toList());
+        return adjacentRoads;
     }
 
     /**
@@ -216,5 +225,10 @@ public class Road implements Placable, Buildable {
         return Map.of(
                 TileType.WOOD, 1,
                 TileType.CLAY, 1);
+    }
+
+    @Override
+    public int getBuildLimit() {
+        return 15;
     }
 }

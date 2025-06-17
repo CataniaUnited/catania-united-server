@@ -17,4 +17,6 @@ public interface Buildable {
      *         and values are integers representing the amount required.
      */
     Map<TileType, Integer> getRequiredResources();
+
+    int getBuildLimit();
 }

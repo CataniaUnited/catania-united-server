@@ -1,7 +1,10 @@
 package com.example.cataniaunited.game.board;
 
 import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.exception.ui.BuildableLimitReachedException;
 import com.example.cataniaunited.exception.ui.InsufficientResourcesException;
+import com.example.cataniaunited.exception.ui.NoAdjacentRoadException;
+import com.example.cataniaunited.game.BuildRequest;
 import com.example.cataniaunited.game.Buildable;
 import com.example.cataniaunited.game.board.ports.Port;
 import com.example.cataniaunited.game.board.tile_list_builder.StandardTileListBuilder;
@@ -20,6 +23,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.jboss.logging.Logger;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -31,8 +35,10 @@ public class GameBoard {
     private static final Logger logger = Logger.getLogger(GameBoard.class);
     static final int DEFAULT_TILES_PER_PLAYER_GOAL = 6;
     static final int SIZE_OF_HEX = 10; // Size parameter for graphical representation of hexes
+
     final int sizeOfBoard; // Number of rings/layers of tiles from the center
     private final DiceRoller diceRoller;
+    private final Map<String, Map<Placable, Class<? extends Buildable>>> playerStructures = new HashMap<>();
 
     List<BuildingSite> buildingSiteGraph;
     List<Tile> tileList;
@@ -117,66 +123,81 @@ public class GameBoard {
     /**
      * Places a building site for a player at the specified position on the board.
      *
-     * @param player     The {@link Player} placing the settlement.
-     * @param color      The {@link PlayerColor} of the settlement.
-     * @param positionId The ID of the {@link BuildingSite} to place the settlement on.
      * @throws GameException if the placement is invalid (e.g., position occupied, rules violated).
      */
-    public void placeSettlement(Player player, PlayerColor color, int positionId) throws GameException {
-        placeBuilding(positionId, new Settlement(player, color));
+    public void placeSettlement(BuildRequest buildRequest) throws GameException {
+        placeBuilding(buildRequest, new Settlement(buildRequest.player(), buildRequest.color()));
     }
 
     /**
      * Places a city for a player at the specified position on the board, upgrading an existing settlement.
      *
-     * @param player     The {@link Player} placing the city.
-     * @param color      The {@link PlayerColor} of the city.
-     * @param positionId The ID of the {@link BuildingSite} to place the city on.
      * @throws GameException if the placement is invalid (e.g., no settlement to upgrade, rules violated).
      */
-    public void placeCity(Player player, PlayerColor color, int positionId) throws GameException {
-        placeBuilding(positionId, new City(player, color));
+    public void placeCity(BuildRequest buildRequest) throws GameException {
+        placeBuilding(buildRequest, new City(buildRequest.player(), buildRequest.color()));
     }
 
     /**
      * Internal helper method to place a generic building (settlement or city) on the board.
      * Checks for required resources and updates the building site.
      *
-     * @param positionId The ID of the building site.
-     * @param building   The {@link Building} to be placed.
+     * @param building The {@link Building} to be placed.
      * @throws GameException if resources are insufficient, position is invalid, or other rules are violated.
      */
-    private void placeBuilding(int positionId, Building building) throws GameException {
+    private void placeBuilding(BuildRequest buildRequest, Building building) throws GameException {
         try {
-            checkRequiredResources(building.getPlayer(), building);
-            logger.debugf("Placing building: playerId = %s, positionId = %s, type = %s", building.getPlayer().getUniqueId(), positionId, building.getClass().getSimpleName());
+            Player player = building.getPlayer();
+            if (!buildRequest.isSetupRound()) {
+                checkRequiredResources(player, building);
+            }
+            checkBuildableCount(player.getUniqueId(), building);
+            int positionId = buildRequest.positionId();
+            logger.debugf("Placing building: playerId = %s, positionId = %s, type = %s", player.getUniqueId(), positionId, building.getClass().getSimpleName());
             BuildingSite buildingSite = buildingSiteGraph.get(positionId - 1);
             buildingSite.setBuilding(building);
-            removeRequiredResources(building.getPlayer(), building);
+            if (!buildRequest.isSetupRound()) {
+                removeRequiredResources(player, building);
+            }
+
+            updatePlayerStructures(player.getUniqueId(), buildingSite, building);
         } catch (IndexOutOfBoundsException e) {
-            throw new GameException("Settlement position not found: id = %s", positionId);
+            throw new GameException("Settlement position not found: id = %s", buildRequest.positionId());
         }
     }
 
     /**
      * Places a road for a player at the specified road ID on the board.
      *
-     * @param player The {@link Player} placing the road.
-     * @param color  The {@link PlayerColor} of the road.
-     * @param roadId The ID of the {@link Road} to be placed.
      * @throws GameException if the placement is invalid (e.g., road ID not found, rules violated).
      */
-    public void placeRoad(Player player, PlayerColor color, int roadId) throws GameException {
+    public void placeRoad(BuildRequest buildRequest) throws GameException {
         try {
+            Player player = buildRequest.player();
+            PlayerColor color = buildRequest.color();
+            int roadId = buildRequest.positionId();
             Road road = roadList.get(roadId - 1);
-            checkRequiredResources(player, road);
+            if (!buildRequest.isSetupRound()) {
+                checkRequiredResources(player, road);
+                if (!hasAdjacentRoads(road, player)) {
+                    throw new NoAdjacentRoadException();
+                }
+            }
+            checkBuildableCount(player.getUniqueId(), road);
             logger.debugf("Placing road: playerId = %s, roadId = %s", player.getUniqueId(), roadId);
             road.setOwner(player);
             road.setColor(color);
-            removeRequiredResources(player, road);
+            if (!buildRequest.isSetupRound()) {
+                removeRequiredResources(player, road);
+            }
+            updatePlayerStructures(player.getUniqueId(), road, road);
         } catch (IndexOutOfBoundsException e) {
-            throw new GameException("Road not found: id = %s", roadId);
+            throw new GameException("Road not found: id = %s", buildRequest.positionId());
         }
+    }
+
+    private boolean hasAdjacentRoads(Road road, Player player) {
+        return road.getAdjacentRoads().stream().anyMatch(r -> r.getOwner() == player);
     }
 
     /**
@@ -184,7 +205,7 @@ public class GameBoard {
      *
      * @param player    The {@link Player} whose resources are to be removed.
      * @param buildable The {@link Buildable} item for which resources are required.
-     * @throws GameException if the player is null or an error occurs during resource removal.
+     * @throws GameException                  if the player is null or an error occurs during resource removal.
      * @throws InsufficientResourcesException if the player does not have enough resources.
      */
     private void removeRequiredResources(Player player, Buildable buildable) throws GameException {
@@ -201,7 +222,7 @@ public class GameBoard {
      *
      * @param player    The {@link Player} to check.
      * @param buildable The {@link Buildable} item.
-     * @throws GameException if the player is null.
+     * @throws GameException                  if the player is null.
      * @throws InsufficientResourcesException if the player does not have enough of any required resource.
      */
     private void checkRequiredResources(Player player, Buildable buildable) throws GameException {
@@ -216,6 +237,24 @@ public class GameBoard {
             if (player.getResourceCount(tileType) < amount) {
                 throw new InsufficientResourcesException();
             }
+        }
+    }
+
+    public long getPlayerStructureCount(String playerId, Class<? extends Buildable> buildableClass) {
+        Map<Placable, Class<? extends Buildable>> structures = playerStructures.getOrDefault(playerId, new HashMap<>());
+        return structures.values().stream().filter(b -> b == buildableClass).count();
+    }
+
+    private void updatePlayerStructures(String playerId, Placable placable, Buildable buildable) {
+        Map<Placable, Class<? extends Buildable>> structures = playerStructures.getOrDefault(playerId, new HashMap<>());
+        structures.put(placable, buildable.getClass());
+        playerStructures.put(playerId, structures);
+    }
+
+    private void checkBuildableCount(String playerId, Buildable buildable) throws GameException {
+        long buildableCount = getPlayerStructureCount(playerId, buildable.getClass());
+        if (buildableCount >= buildable.getBuildLimit()) {
+            throw new BuildableLimitReachedException(buildable);
         }
     }
 
@@ -246,7 +285,7 @@ public class GameBoard {
         return roadList;
     }
 
-    public Port getPortOfBuildingSite(int buildingSitePositionId){
+    public Port getPortOfBuildingSite(int buildingSitePositionId) {
         return buildingSiteGraph.get(buildingSitePositionId).getPort();
     }
 
@@ -283,7 +322,7 @@ public class GameBoard {
         }
 
         // Add Ports
-        for (Port port : this.portList){
+        for (Port port : this.portList) {
             portsNode.add(port.toJson());
         }
 

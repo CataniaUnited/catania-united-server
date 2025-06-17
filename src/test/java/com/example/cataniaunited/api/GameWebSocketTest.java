@@ -532,18 +532,21 @@ public class GameWebSocketTest {
         when(mockPlayer1.getUsername()).thenReturn(player1);
         when(mockPlayer1.getResources()).thenReturn(new EnumMap<>(TileType.class));
         when(mockPlayer1.getResourceCount(any(TileType.class))).thenReturn(10);
+        when(playerService.getPlayerById(player1)).thenReturn(mockPlayer1);
 
         Player mockPlayer2 = mock(Player.class);
         when(mockPlayer2.getUniqueId()).thenReturn(player2);
         when(mockPlayer2.getUsername()).thenReturn(player2);
         when(mockPlayer2.getResources()).thenReturn(new EnumMap<>(TileType.class));
         when(mockPlayer2.getResourceCount(any(TileType.class))).thenReturn(10);
+        when(playerService.getPlayerById(player2)).thenReturn(mockPlayer2);
 
         Player mockPlayer3 = mock(Player.class);
         when(mockPlayer3.getUniqueId()).thenReturn(player3);
         when(mockPlayer3.getUsername()).thenReturn(player3);
         when(mockPlayer3.getResources()).thenReturn(new EnumMap<>(TileType.class));
         when(mockPlayer3.getResourceCount(any(TileType.class))).thenReturn(10);
+        when(playerService.getPlayerById(player3)).thenReturn(mockPlayer3);
 
         lobbyService.toggleReady(lobbyId, player1);
         lobbyService.toggleReady(lobbyId, player2);
@@ -1480,6 +1483,7 @@ public class GameWebSocketTest {
         Player player1 = new Player("player1");
         Player player2 = playerService.getPlayerById(playerIds.get(0));
 
+        when(playerService.getPlayerById(player1.getUniqueId())).thenReturn(player1);
         String lobbyId = lobbyService.createLobby(player1.getUniqueId());
         lobbyService.joinLobbyByCode(lobbyId, player2.getUniqueId());
 
@@ -1579,6 +1583,9 @@ public class GameWebSocketTest {
         Lobby lobby = lobbyService.getLobbyById(actualLobbyId);
         lobby.setPlayerOrder(List.of(player1ActualId, player2ActualId));
         lobby.setActivePlayer(player1ActualId);
+
+        gameService.placeRoad(actualLobbyId, player1ActualId, 1);
+        gameService.placeSettlement(actualLobbyId, player1ActualId, 1);
 
         MessageDTO messageDTO = new MessageDTO(MessageType.END_TURN, player1ActualId, actualLobbyId);
         client1WebSocketClientConnection.sendTextAndAwait(messageDTO);
