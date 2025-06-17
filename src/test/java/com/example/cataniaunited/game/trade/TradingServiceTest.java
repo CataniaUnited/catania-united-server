@@ -12,11 +12,15 @@ import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.EnumMap;
+import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.*;
 
 @QuarkusTest
@@ -47,6 +51,15 @@ class TradingServiceTest {
         when(mockPlayer.getResources()).thenReturn(resources);
         // Default to no ports unless specified in a test
         when(mockPlayer.getAccessiblePorts()).thenReturn(Collections.emptySet());
+    }
+    @Test
+    void handleBankTradeRequest_PlayerNotFound_ThrowsException() {
+        when(playerService.getPlayerById(playerId)).thenReturn(null);
+        TradeRequest request = new TradeRequest(Map.of(TileType.WOOD, 4), Map.of(TileType.CLAY, 1));
+
+        GameException exception = assertThrows(GameException.class,
+                () -> tradingService.handleBankTradeRequest(playerId, request));
+        assertEquals("Player not found, cannot process trade.", exception.getMessage());
     }
 
     @Test
@@ -97,6 +110,22 @@ class TradingServiceTest {
     }
 
     @Test
+    void testCheckIfCanTradeWithBank_InvalidRatio_WrongOutputCount() {
+        Map<TileType, Integer> offered = Map.of(TileType.WOOD, 4);
+        Map<TileType, Integer> target = Map.of(TileType.CLAY, 2);
+        assertFalse(tradingService.checkIfCanTradeWithBank(offered, target));
+    }
+
+    @Test
+    void testCheckIfCanTradeWithBank_EmptyOrNullMaps_ReturnsFalse() {
+        Map<TileType, Integer> validMap = Map.of(TileType.WOOD, 4);
+        assertFalse(tradingService.checkIfCanTradeWithBank(null, validMap));
+        assertFalse(tradingService.checkIfCanTradeWithBank(validMap, null));
+        assertFalse(tradingService.checkIfCanTradeWithBank(Collections.emptyMap(), validMap));
+        assertFalse(tradingService.checkIfCanTradeWithBank(validMap, Collections.emptyMap()));
+    }
+
+    @Test
     void testCheckIfCanTradeWithBank_Invalid_SelfTrade() {
         Map<TileType, Integer> offered = Map.of(TileType.WOOD, 4);
         Map<TileType, Integer> target = Map.of(TileType.WOOD, 1);
@@ -124,6 +153,22 @@ class TradingServiceTest {
 
         verify(mockPlayer).removeResource(TileType.WOOD, 4);
         verify(mockPlayer).receiveResource(TileType.CLAY, 1);
+    }
+
+    @Test
+    void handleBankTradeRequest_SuccessfulBankTrade_WithUnusedPort() throws GameException {
+        // Player has a sheep port, but wants to trade wood 4:1
+        when(mockPlayer.getResources()).thenReturn(new EnumMap<>(Map.of(TileType.WOOD, 4, TileType.ORE, 0)));
+        Set<Port> ports = Set.of(new SpecificResourcePort(TileType.SHEEP)); // Port is irrelevant to the trade
+        when(mockPlayer.getAccessiblePorts()).thenReturn(ports);
+
+        TradeRequest request = new TradeRequest(Map.of(TileType.WOOD, 4), Map.of(TileType.ORE, 1));
+
+        tradingService.handleBankTradeRequest(playerId, request);
+
+        // Verify the trade was successful, meaning it passed the port check and used the bank logic
+        verify(mockPlayer).removeResource(TileType.WOOD, 4);
+        verify(mockPlayer).receiveResource(TileType.ORE, 1);
     }
 
     @Test
