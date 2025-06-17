@@ -3,7 +3,7 @@ package com.example.cataniaunited.game.board.ports;
 
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 
-import java.util.List;
+import java.util.Map;
 
 class TestablePort extends Port {
     protected TestablePort(int inputResourceAmount) {
@@ -11,12 +11,7 @@ class TestablePort extends Port {
     }
 
     @Override
-    public boolean canTrade(List<TileType> offeredResources, List<TileType> desiredResources) {
-        return false;
-    }
-
-    @Override
-    public boolean arePortSpecificRulesSatisfied(List<TileType> offeredResources, List<TileType> desiredResources) {
+    public boolean arePortSpecificRulesSatisfied(Map<TileType, Integer> offeredResources, Map<TileType, Integer> desiredResources) {
         return false;
     }
 }
