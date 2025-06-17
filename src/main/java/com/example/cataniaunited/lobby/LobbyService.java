@@ -101,6 +101,8 @@ public interface LobbyService {
 
     String nextTurn(String lobbyId, String playerId) throws GameException;
 
+    int getRoundsPlayed(String lobbyId) throws GameException;
+
     void toggleReady(String lobbyId, String playerId) throws GameException;
 
 }
