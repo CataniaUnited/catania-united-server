@@ -1,5 +1,6 @@
 package com.example.cataniaunited.game.board;
 
+import com.example.cataniaunited.game.BuildRequest;
 import com.example.cataniaunited.game.GameService;
 import com.example.cataniaunited.game.board.tile_list_builder.Tile;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
@@ -11,6 +12,8 @@ import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerColor;
 import com.example.cataniaunited.player.PlayerService;
 import java.lang.reflect.Field;
+import java.util.Optional;
+
 import jakarta.inject.Inject;
 import io.quarkus.test.junit.mockito.InjectSpy;
 import org.junit.jupiter.api.Test;
@@ -50,9 +53,10 @@ public class RobberTest {
                 .orElseThrow();
         BuildingSite bs = targetTile.getBuildingSitesOfTile().get(0);
         Player player = new Player();
+        BuildRequest buildRequest = new BuildRequest(player, PlayerColor.LAVENDER, bs.getId(), true, Optional.of(1));
         Road road = bs.getRoads().get(0);
         road.setOwner(player);
-        board.placeSettlement(player, PlayerColor.LAVENDER, bs.getId());
+        board.placeSettlement(buildRequest);
 
         int before = player.getResourceCount(targetTile.getType());
 
