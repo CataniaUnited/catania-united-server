@@ -37,7 +37,6 @@ public class Player {
         this.uniqueId = UUID.randomUUID().toString();
         this.username = "RandomPlayer_" + new Random().nextInt(10000);
         this.connection = null;
-        initializeResources();
     }
 
     /**
@@ -50,7 +49,6 @@ public class Player {
         this.uniqueId = UUID.randomUUID().toString();
         this.username = "RandomPlayer_" + new Random().nextInt(10000);
         this.connection = connection;
-        initializeResources();
     }
 
     /**
@@ -64,7 +62,6 @@ public class Player {
         this.username = username;
         this.uniqueId = UUID.randomUUID().toString();
         this.connection = null;
-        initializeResources();
     }
 
     /**
@@ -79,18 +76,6 @@ public class Player {
         this.username = username;
         this.uniqueId = UUID.randomUUID().toString();
         this.connection = connection;
-        initializeResources();
-    }
-
-    /**
-     * Initializes the player's resources with default starting amounts for each {@link TileType}.
-     */
-    void initializeResources() {
-        for (TileType resource : TileType.values()) {
-            if (resource == TileType.DESERT)
-                continue; // No DESERT resource
-            resources.put(resource, resource.getInitialAmount());
-        }
     }
 
     public String getUsername() {

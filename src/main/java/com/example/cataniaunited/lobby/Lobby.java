@@ -272,12 +272,20 @@ public class Lobby {
         int currentIdx = playerOrder.indexOf(activePlayer);
         int nextIdx;
         if ((currentIdx == playerOrder.size() - 1 && roundsPlayed == 0)) {
-            //After the first round, the next round is played in reverse and
+            //After the first round, the next round is played in reverse, and
             //it is again the turn of the last player
             nextIdx = currentIdx;
             roundsPlayed++;
+        } else if (roundsPlayed == 1) {
+            //Special handling when starting the second round to ensure the last/first player also
+            //gets his second setup round
+            nextIdx = currentIdx - 1;
+            if (nextIdx < 0) {
+                nextIdx = 1;
+                roundsPlayed++;
+            }
         } else {
-            nextIdx = roundsPlayed == 1 ? Math.max(0, currentIdx - 1) : (currentIdx + 1) % playerOrder.size();
+            nextIdx = (currentIdx + 1) % playerOrder.size();
             if (nextIdx == 0) {
                 roundsPlayed++;
             }

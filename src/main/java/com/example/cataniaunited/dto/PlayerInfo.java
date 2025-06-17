@@ -12,6 +12,7 @@ public record PlayerInfo(
         boolean isReady,
         boolean isActivePlayer,
         boolean canRollDice,
+        boolean isSetupRound,
         int victoryPoints,
         Map<TileType, Integer> resources) {
 }
