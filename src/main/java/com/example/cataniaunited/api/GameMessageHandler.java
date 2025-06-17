@@ -400,7 +400,7 @@ public class GameMessageHandler {
 
         TradeRequest tradeRequest;
         try {
-            // Deserialize the JSON payload into our new TradeRequest record.
+            // Deserialize the JSON payload into the TradeRequest record.
             tradeRequest = objectMapper.treeToValue(message.getMessage(), TradeRequest.class);
         } catch (JsonProcessingException | IllegalArgumentException e) {
             logger.errorf("Failed to parse trade request: %s", e.getMessage());

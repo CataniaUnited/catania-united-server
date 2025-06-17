@@ -45,14 +45,8 @@ public class TradingService {
         }
 
         // Check If Any Port approves this trade request
-        boolean canTrade = false;
         Set<Port> ports = player.getAccessiblePorts();
-        for (Port port : ports) {
-            if (port.canTrade(offeredResources, targetResources)) {
-                canTrade = true;
-                break;
-            }
-        }
+        boolean canTrade = ports.stream().anyMatch(p -> p.canTrade(offeredResources, targetResources));
 
         // If no port trade was possible, check for standard 4:1 bank trade
         if (!canTrade) {
