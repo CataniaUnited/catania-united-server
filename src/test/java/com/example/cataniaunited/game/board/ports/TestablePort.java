@@ -3,7 +3,6 @@ package com.example.cataniaunited.game.board.ports;
 
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 
-import java.util.List;
 import java.util.Map;
 
 class TestablePort extends Port {

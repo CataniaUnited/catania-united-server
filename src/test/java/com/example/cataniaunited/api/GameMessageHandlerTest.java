@@ -149,7 +149,7 @@ class GameMessageHandlerTest {
         );
 
         verify(lobbyService).checkPlayerTurn(lobbyId, player1Id);
-        verify(tradingService).handleBankTradeRequest(eq(player1Id), eq(expectedRequest));
+        verify(tradingService).handleBankTradeRequest(player1Id, expectedRequest);
 
         assertEquals(0, player.getResourceCount(TileType.WOOD));
         assertEquals(1, player.getResourceCount(TileType.SHEEP));
