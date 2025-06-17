@@ -16,4 +16,8 @@ public record BuildRequest(
     public BuildRequest(Player player, PlayerColor color, int positionId, boolean isSetupRound, int maximumStructureCount) {
         this(player, color, positionId, isSetupRound, Optional.of(maximumStructureCount));
     }
+
+    public BuildRequest(Player player, PlayerColor color, int positionId) {
+        this(player, color, positionId, false, Optional.empty());
+    }
 }

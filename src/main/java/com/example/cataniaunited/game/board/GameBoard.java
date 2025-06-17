@@ -3,6 +3,7 @@ package com.example.cataniaunited.game.board;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.exception.ui.BuildableLimitReachedException;
 import com.example.cataniaunited.exception.ui.InsufficientResourcesException;
+import com.example.cataniaunited.exception.ui.NoAdjacentRoadException;
 import com.example.cataniaunited.game.BuildRequest;
 import com.example.cataniaunited.game.Buildable;
 import com.example.cataniaunited.game.board.ports.Port;
@@ -178,6 +179,9 @@ public class GameBoard {
             Road road = roadList.get(roadId - 1);
             if (!buildRequest.isSetupRound()) {
                 checkRequiredResources(player, road);
+                if (!hasAdjacentRoads(road, player)) {
+                    throw new NoAdjacentRoadException();
+                }
             }
             checkBuildableCount(player.getUniqueId(), road);
             logger.debugf("Placing road: playerId = %s, roadId = %s", player.getUniqueId(), roadId);
@@ -190,6 +194,10 @@ public class GameBoard {
         } catch (IndexOutOfBoundsException e) {
             throw new GameException("Road not found: id = %s", buildRequest.positionId());
         }
+    }
+
+    private boolean hasAdjacentRoads(Road road, Player player) {
+        return road.getAdjacentRoads().stream().anyMatch(r -> r.getOwner() == player);
     }
 
     /**
