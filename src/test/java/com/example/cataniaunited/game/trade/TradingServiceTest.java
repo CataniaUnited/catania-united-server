@@ -41,7 +41,7 @@ class TradingServiceTest {
         EnumMap<TileType, Integer> resources = new EnumMap<>(TileType.class);
         // Initialize all resources to 0 for a clean state
         for (TileType type : TileType.values()) {
-            if (type != TileType.WASTE) {
+            if (type != TileType.DESERT) {
                 resources.put(type, 0);
             }
         }
