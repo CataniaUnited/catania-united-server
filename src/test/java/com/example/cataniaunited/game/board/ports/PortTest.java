@@ -11,7 +11,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
@@ -49,96 +51,65 @@ class PortTest {
 
     @Test
     void isNotTradingForOfferedResourcesWithNullOfferedShouldReturnFalse() {
-        Port customTestPort = new TestablePort(3);
-        assertFalse(customTestPort.isNotTradingForOfferedResources(null, List.of(TileType.CLAY)));
+        assertFalse(port.isNotTradingForOfferedResources(null, Map.of(TileType.CLAY, 1)));
     }
 
     @Test
     void isNotTradingForOfferedResourcesWithNullDesiredShouldReturnFalse() {
-        Port customTestPort = new TestablePort(3);
-        assertFalse(customTestPort.isNotTradingForOfferedResources(List.of(TileType.WOOD), null));
+        assertFalse(port.isNotTradingForOfferedResources(Map.of(TileType.WOOD, 1), null));
     }
     @Test
     void isNotTradingForOfferedResourcesWithEmptyOfferedShouldReturnFalse() {
-        Port customTestPort = new TestablePort(3);
-        assertFalse(customTestPort.isNotTradingForOfferedResources(List.of(), List.of(TileType.CLAY)));
+        assertFalse(port.isNotTradingForOfferedResources(Collections.emptyMap(), Map.of(TileType.CLAY, 1)));
     }
 
     @Test
     void isNotTradingForOfferedResourcesWithEmptyDesiredShouldReturnFalse() {
-        Port customTestPort = new TestablePort(3);
-        assertFalse(customTestPort.isNotTradingForOfferedResources(List.of(TileType.WOOD), List.of()));
+        assertFalse(port.isNotTradingForOfferedResources(Map.of(TileType.WOOD, 1), Collections.emptyMap()));
     }
 
     @Test
-    void isNotTradingForOfferedResourcesWithOfferedResourcesInDesiredShouldReturnFalse(){
-        Port customTestPort = new TestablePort(3);
-        assertFalse(customTestPort.isNotTradingForOfferedResources(List.of(TileType.WOOD, TileType.WOOD, TileType.WOOD), List.of(TileType.WOOD)));
+    void isNotTradingForOfferedResourcesWithOverlapShouldReturnFalse() {
+        assertFalse(port.isNotTradingForOfferedResources(Map.of(TileType.WOOD, 3), Map.of(TileType.WOOD, 1)));
     }
 
     @Test
-    void isNotTradingForOfferedResourcesWithOneOfferedResourcesInDesiredShouldReturnFalse(){
-        Port customTestPort = new TestablePort(3);
-        assertFalse(customTestPort.isNotTradingForOfferedResources(List.of(TileType.WOOD, TileType.WOOD, TileType.WOOD, TileType.WOOD, TileType.WOOD, TileType.WOOD, TileType.WOOD, TileType.WOOD, TileType.WOOD), List.of(TileType.WHEAT, TileType.WHEAT, TileType.WOOD)));
+    void isNotTradingForOfferedResourcesWithPartialOverlapShouldReturnFalse() {
+        assertFalse(port.isNotTradingForOfferedResources(Map.of(TileType.WOOD, 6, TileType.SHEEP, 3), Map.of(TileType.WHEAT, 2, TileType.WOOD, 1)));
     }
 
     @Test
-    void isNotTradingForOfferedResourcesWithNoOfferedResourcesInDesiredShouldReturnTrue(){
-        Port customTestPort = new TestablePort(3);
-        assertTrue(customTestPort.isNotTradingForOfferedResources(List.of(TileType.WOOD, TileType.WOOD, TileType.WOOD), List.of(TileType.WHEAT)));
+    void isNotTradingForOfferedResourcesWithNoOverlapShouldReturnTrue() {
+        assertTrue(port.isNotTradingForOfferedResources(Map.of(TileType.WOOD, 3), Map.of(TileType.WHEAT, 1)));
     }
 
 
     @Test
     void tradeRatioIsInvalidWithNullOfferedShouldReturnTrue() {
-        assertTrue(port.tradeRatioIsInvalid(null, List.of(TileType.CLAY)));
-    }
-
-    @Test
-    void tradeRatioIsInvalidWithNullDesiredShouldReturnTrue() {
-        assertTrue(port.tradeRatioIsInvalid(List.of(TileType.WOOD), null));
+        assertTrue(port.tradeRatioIsInvalid(null, Map.of(TileType.CLAY, 1)));
     }
 
     @Test
     void tradeRatioIsInvalidWithEmptyOfferedShouldReturnTrue() {
-        assertTrue(port.tradeRatioIsInvalid(List.of(), List.of(TileType.CLAY)));
-    }
-
-    @Test
-    void tradeRatioIsInvalidWithEmptyDesiredShouldReturnTrue() {
-        assertTrue(port.tradeRatioIsInvalid(List.of(TileType.WOOD, TileType.WOOD, TileType.WOOD), List.of()));
+        assertTrue(port.tradeRatioIsInvalid(Collections.emptyMap(), Map.of(TileType.CLAY, 1)));
     }
 
     @Test
     void tradeRatioIsInvalidWhenOfferedSizeNotMultipleOfInputAmountShouldReturnTrue() {
-        // Port is 3:1, offering 2 resources
-        assertTrue(port.tradeRatioIsInvalid(List.of(TileType.WOOD, TileType.SHEEP), List.of(TileType.CLAY)));
+        // Port is 3:1, offering 2 resources total
+        assertTrue(port.tradeRatioIsInvalid(Map.of(TileType.WOOD, 1, TileType.SHEEP, 1), Map.of(TileType.CLAY, 1)));
     }
 
     @Test
-    void tradeRatioIsInvalidWhenOfferedSizeIsMultipleButDesiredSizeDoesNotMatchRatioShouldReturnTrue() {
-        // Port is 3:1, offering 3, expecting 1, but desired is 2
-        assertTrue(port.tradeRatioIsInvalid(List.of(TileType.WOOD, TileType.WOOD, TileType.WOOD), List.of(TileType.CLAY, TileType.ORE)));
+    void tradeRatioIsInvalidWhenDesiredAmountDoesNotMatchRatioShouldReturnTrue() {
+        // Port is 3:1, offering 3, expecting 1, but desiring 2
+        assertTrue(port.tradeRatioIsInvalid(Map.of(TileType.WOOD, 3), Map.of(TileType.CLAY, 2)));
     }
 
     @Test
-    void tradeRatioIsInvalidWhenOfferedSizeIsMultipleAndDesiredSizeMatchesRatioShouldReturnFalse() {
-        // Port is 3:1, offering 3, desiring 1
-        assertFalse(port.tradeRatioIsInvalid(List.of(TileType.WOOD, TileType.WOOD, TileType.WOOD), List.of(TileType.CLAY)));
-    }
-
-    @Test
-    void tradeRatioIsInvalidWithDifferentPortRatioShouldReturnFalse() {
-        TestablePort port2To1 = new TestablePort(2);
-        // Port is 2:1, offering 4, desiring 2
-        assertFalse(port2To1.tradeRatioIsInvalid(List.of(TileType.WOOD, TileType.WOOD, TileType.SHEEP, TileType.SHEEP), List.of(TileType.CLAY, TileType.ORE)));
-    }
-
-    @Test
-    void tradeRatioIsInvalidWithDifferentPortRatioAndIncorrectDesiredShouldReturnTrue() {
-        TestablePort port2To1 = new TestablePort(2);
-        // Port is 2:1, offering 4, desiring 1
-        assertTrue(port2To1.tradeRatioIsInvalid(List.of(TileType.WOOD, TileType.WOOD, TileType.SHEEP, TileType.SHEEP), List.of(TileType.CLAY)));
+    void tradeRatioIsInvalidWithValidRatioShouldReturnFalse() {
+        // Port is 3:1, offering 6 total, desiring 2 total
+        assertFalse(port.tradeRatioIsInvalid(Map.of(TileType.WOOD, 6), Map.of(TileType.CLAY, 2)));
     }
 
 

@@ -7,13 +7,17 @@ import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.fi.BuildingAction;
 import com.example.cataniaunited.game.GameService;
 import com.example.cataniaunited.game.board.GameBoard;
+import com.example.cataniaunited.game.trade.TradeRequest;
+import com.example.cataniaunited.game.trade.TradingService;
 import com.example.cataniaunited.lobby.Lobby;
 import com.example.cataniaunited.lobby.LobbyService;
 import com.example.cataniaunited.mapper.PlayerMapper;
 import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerColor;
 import com.example.cataniaunited.player.PlayerService;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -46,6 +50,13 @@ public class GameMessageHandler {
     @Inject
     PlayerMapper playerMapper;
 
+    @Inject
+    TradingService tradingService;
+
+    @Inject
+    ObjectMapper objectMapper;
+
+
     public Uni<MessageDTO> handleInitialConnection(WebSocketConnection connection) {
         Player player = playerService.addPlayer(connection);
         ObjectNode message = JsonNodeFactory.instance.objectNode().put("playerId", player.getUniqueId());
@@ -73,8 +84,10 @@ public class GameMessageHandler {
                 case PLACE_ROBBER -> placeRobber(message);
                 case START_GAME -> handleStartGame(message);
                 case SET_READY -> setReady(message);
+                case TRADE_WITH_BANK -> handleTradeWithBank(message);
+                case TRADE_WITH_PLAYER -> throw new GameException("Not yet implemented");
                 case ERROR, CONNECTION_SUCCESSFUL, CLIENT_DISCONNECTED, LOBBY_CREATED, LOBBY_UPDATED, PLAYER_JOINED,
-                        GAME_BOARD_JSON, GAME_WON, DICE_RESULT, ROBBER_PHASE, NEXT_TURN, GAME_STARTED ->
+                        GAME_BOARD_JSON, GAME_WON, DICE_RESULT, ROBBER_PHASE, NEXT_TURN, GAME_STARTED, PLAYER_RESOURCE_UPDATE ->
                         throw new GameException("Invalid client command");
                 case END_TURN -> endTurn(message);
             };
@@ -410,5 +423,50 @@ public class GameMessageHandler {
                                 playerInfo -> playerInfo
                         )
                 );
+    }
+
+    /**
+     * Handles a request from a player to trade resources with the bank.
+     * This method now deserializes the message payload into a TradeRequest object
+     * before passing it to the TradingService.
+     *
+     * @param message The {@link MessageDTO} containing trade details.
+     * @return A Uni emitting a {@link MessageDTO} of type {@link MessageType#PLAYER_RESOURCE_UPDATE}
+     *         containing the updated player information, broadcast to all players in the lobby.
+     * @throws GameException if the trade is invalid (e.g., bad format, not player's turn,
+     *                       insufficient resources, or other issues from {@link TradingService}).
+     */
+    Uni<MessageDTO> handleTradeWithBank(MessageDTO message) throws GameException {
+        // Check if player is active player -> else can't trade
+        lobbyService.checkPlayerTurn(message.getLobbyId(), message.getPlayer());
+
+        TradeRequest tradeRequest;
+        try {
+            // Deserialize the JSON payload into the TradeRequest record.
+            tradeRequest = objectMapper.treeToValue(message.getMessage(), TradeRequest.class);
+        } catch (JsonProcessingException | IllegalArgumentException e) {
+            logger.errorf("Failed to parse trade request: %s", e.getMessage());
+            throw new GameException("Invalid trade request format.");
+        }
+
+        // Try to trade with the clean TradeRequest object -> if not successful GameException
+        tradingService.handleBankTradeRequest(message.getPlayer(), tradeRequest);
+
+        // Trade successful, get updated player information (which includes resources)
+        Map<String, PlayerInfo> updatedPlayerInfos = getLobbyPlayerInformation(message.getLobbyId());
+
+
+        MessageDTO updateResponse = new MessageDTO(
+                MessageType.PLAYER_RESOURCE_UPDATE,
+                message.getPlayer(),
+                message.getLobbyId(),
+                updatedPlayerInfos
+        );
+
+        logger.infof("Player %s completed trade with bank in lobby %s. Broadcasting PLAYER_RESOURCE_UPDATE.", message.getPlayer(), message.getLobbyId());
+
+        // Notify all players in the lobby about the new Resource Distribution
+        return lobbyService.notifyPlayers(message.getLobbyId(), updateResponse)
+                .chain(() -> Uni.createFrom().item(updateResponse));
     }
 }

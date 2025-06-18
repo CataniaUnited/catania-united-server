@@ -3,6 +3,7 @@ package com.example.cataniaunited.game.board;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.exception.ui.BuildableLimitReachedException;
 import com.example.cataniaunited.exception.ui.InsufficientResourcesException;
+import com.example.cataniaunited.exception.ui.NoAdjacentRoadException;
 import com.example.cataniaunited.game.BuildRequest;
 import com.example.cataniaunited.game.board.ports.Port;
 import com.example.cataniaunited.game.board.tile_list_builder.Tile;
@@ -290,14 +291,24 @@ class GameBoardTest {
 
     @Test
     void testPlaceRoad() throws GameException {
-        GameBoard gameBoard = new GameBoard(2);
-        var road = gameBoard.roadList.get(0);
+        GameBoard gameBoard = spy(new GameBoard(2));
         Player player = new Player("Player1");
-        player.receiveResource(TileType.WOOD, 1);
-        player.receiveResource(TileType.CLAY, 1);
-        var buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, road.getId(), false, 2);
+
+        //Place first road with isSetupRound true
+        var road = gameBoard.roadList.get(0);
+        var buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, road.getId(), true, 2);
         gameBoard.placeRoad(buildRequest);
         assertEquals(player, road.getOwner());
+        assertEquals(PlayerColor.LIGHT_ORANGE, road.getColor());
+
+        //Place second road with isSetupRound false
+        player.receiveResource(TileType.WOOD, 1);
+        player.receiveResource(TileType.CLAY, 1);
+        var road2 = gameBoard.roadList.get(1);
+        buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, road2.getId());
+        gameBoard.placeRoad(buildRequest);
+        assertEquals(player, road2.getOwner());
+        assertEquals(PlayerColor.LIGHT_ORANGE, road2.getColor());
     }
 
     @Test
@@ -334,9 +345,21 @@ class GameBoardTest {
         player.receiveResource(TileType.WOOD, 1);
         player.receiveResource(TileType.CLAY, 1);
         doReturn((long) road.getBuildLimit()).when(gameBoard).getPlayerStructureCount(anyString(), eq(Road.class));
-        var buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, road.getId(), false, 2);
+        var buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, road.getId(), true, 2);
         GameException ge = assertThrows(BuildableLimitReachedException.class, () -> gameBoard.placeRoad(buildRequest));
         assertEquals("You've reached the %s limit of %s!".formatted(Road.class.getSimpleName(), road.getBuildLimit()), ge.getMessage());
+    }
+
+    @Test
+    void placeRoadShouldThrowExceptionIfNoRoadIsAdjacent() {
+        GameBoard gameBoard = spy(new GameBoard(2));
+        var road = gameBoard.roadList.get(0);
+        var player = new Player("Player1");
+        player.receiveResource(TileType.WOOD, 1);
+        player.receiveResource(TileType.CLAY, 1);
+        var buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, road.getId());
+        GameException ge = assertThrows(NoAdjacentRoadException.class, () -> gameBoard.placeRoad(buildRequest));
+        assertEquals("No adjacent roads found", ge.getMessage());
     }
 
     @Test
@@ -363,7 +386,7 @@ class GameBoardTest {
         assertEquals(0, cityCount);
         assertEquals(0, settlementCount);
 
-        var buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, road1.getId(), false, 2);
+        var buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, road1.getId(), true, 2);
         gameBoard.placeRoad(buildRequest);
 
         roadCount = gameBoard.getPlayerStructureCount(player.getUniqueId(), Road.class);
@@ -374,7 +397,7 @@ class GameBoardTest {
         assertEquals(0, cityCount);
         assertEquals(0, settlementCount);
 
-        buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, buildingSite1Id, false, 2);
+        buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, buildingSite1Id, true, 2);
         gameBoard.placeSettlement(buildRequest);
 
         roadCount = gameBoard.getPlayerStructureCount(player.getUniqueId(), Road.class);
@@ -385,7 +408,7 @@ class GameBoardTest {
         assertEquals(0, cityCount);
         assertEquals(1, settlementCount);
 
-        buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, road2.getId(), false, 2);
+        buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, road2.getId(), true, 2);
         gameBoard.placeRoad(buildRequest);
 
         roadCount = gameBoard.getPlayerStructureCount(player.getUniqueId(), Road.class);
@@ -396,7 +419,7 @@ class GameBoardTest {
         assertEquals(0, cityCount);
         assertEquals(1, settlementCount);
 
-        buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, buildingSite2Id, false, 2);
+        buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, buildingSite2Id, true, 2);
         gameBoard.placeSettlement(buildRequest);
 
         roadCount = gameBoard.getPlayerStructureCount(player.getUniqueId(), Road.class);
@@ -407,7 +430,7 @@ class GameBoardTest {
         assertEquals(0, cityCount);
         assertEquals(2, settlementCount);
 
-        buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, buildingSite1Id, false, 2);
+        buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, buildingSite1Id, true, 2);
         gameBoard.placeCity(buildRequest);
 
         roadCount = gameBoard.getPlayerStructureCount(player.getUniqueId(), Road.class);
@@ -417,8 +440,6 @@ class GameBoardTest {
         assertEquals(2, roadCount);
         assertEquals(1, cityCount);
         assertEquals(1, settlementCount);
-
-
     }
 
 

@@ -10,9 +10,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.util.List;
-import java.util.Arrays;
 import java.util.Collections;
+import java.util.Map;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -34,167 +33,124 @@ class GeneralPortTest {
 
     @Test
     void canTradeValidSingleTypeTradeShouldReturnTrue() {
-        List<TileType> offered = Arrays.asList(TileType.WOOD, TileType.WOOD, TileType.WOOD);
-        List<TileType> desired = Collections.singletonList(TileType.SHEEP);
+        Map<TileType, Integer> offered = Map.of(TileType.WOOD, 3);
+        Map<TileType, Integer> desired = Map.of(TileType.SHEEP, 1);
         assertTrue(generalPort.canTrade(offered, desired));
     }
 
     @Test
     void canTradeValidMultipleTypesTradeShouldReturnTrue() {
-        List<TileType> offered = Arrays.asList(
-                TileType.WOOD, TileType.WOOD, TileType.WOOD,
-                TileType.CLAY, TileType.CLAY, TileType.CLAY
-        );
-        List<TileType> desired = Arrays.asList(TileType.SHEEP, TileType.ORE);
+        Map<TileType, Integer> offered = Map.of(TileType.WOOD, 3, TileType.CLAY, 3);
+        Map<TileType, Integer> desired = Map.of(TileType.SHEEP, 1, TileType.ORE, 1);
         assertTrue(generalPort.canTrade(offered, desired));
     }
 
     @Test
     void canTradeValidSixForTwoShouldReturnTrue() {
-        List<TileType> offered = Arrays.asList(
-                TileType.WHEAT, TileType.WHEAT, TileType.WHEAT,
-                TileType.WHEAT, TileType.WHEAT, TileType.WHEAT
-        );
-        List<TileType> desired = Arrays.asList(TileType.ORE, TileType.SHEEP);
+        Map<TileType, Integer> offered = Map.of(TileType.WHEAT, 6);
+        Map<TileType, Integer> desired = Map.of(TileType.ORE, 1, TileType.SHEEP, 1);
         assertTrue(generalPort.canTrade(offered, desired));
     }
 
-
     @Test
-    void canTradeEmptyOfferedListShouldReturnFalse() {
-        List<TileType> offered = Collections.emptyList();
-        List<TileType> desired = Collections.singletonList(TileType.SHEEP);
+    void canTradeEmptyOfferedMapShouldReturnFalse() {
+        Map<TileType, Integer> offered = Collections.emptyMap();
+        Map<TileType, Integer> desired = Map.of(TileType.SHEEP, 1);
         assertFalse(generalPort.canTrade(offered, desired));
     }
 
     @Test
-    void canTradeEmptyOfferedNullShouldReturnFalse() {
-        List<TileType> desired = Collections.singletonList(TileType.SHEEP);
+    void canTradeNullOfferedMapShouldReturnFalse() {
+        Map<TileType, Integer> desired = Map.of(TileType.SHEEP, 1);
         assertFalse(generalPort.canTrade(null, desired));
     }
 
     @Test
-    void canTradeEmptyDesiredListShouldReturnFalse() {
-        List<TileType> offered = Arrays.asList(TileType.WOOD, TileType.WOOD, TileType.WOOD);
-        List<TileType> desired = Collections.emptyList();
+    void canTradeEmptyDesiredMapShouldReturnFalse() {
+        Map<TileType, Integer> offered = Map.of(TileType.WOOD, 3);
+        Map<TileType, Integer> desired = Collections.emptyMap();
         assertFalse(generalPort.canTrade(offered, desired));
     }
 
     @Test
-    void canTradeNullDesiredListShouldReturnFalse() {
-        List<TileType> offered = Arrays.asList(TileType.WOOD, TileType.WOOD, TileType.WOOD);
+    void canTradeNullDesiredMapShouldReturnFalse() {
+        Map<TileType, Integer> offered = Map.of(TileType.WOOD, 3);
         assertFalse(generalPort.canTrade(offered, null));
     }
 
     @Test
     void canTradeOfferedNotMultipleOfRatioShouldReturnFalse() {
-        List<TileType> offered = Arrays.asList(TileType.WOOD, TileType.WOOD);
-        List<TileType> desired = Collections.singletonList(TileType.SHEEP);
+        Map<TileType, Integer> offered = Map.of(TileType.WOOD, 2);
+        Map<TileType, Integer> desired = Map.of(TileType.SHEEP, 1);
         assertFalse(generalPort.canTrade(offered, desired));
     }
 
     @Test
     void canTradeDesiredAmountMismatchShouldReturnFalse() {
-        List<TileType> offered = Arrays.asList(TileType.WOOD, TileType.WOOD, TileType.WOOD);
-        List<TileType> desired = Arrays.asList(TileType.SHEEP, TileType.ORE);
+        Map<TileType, Integer> offered = Map.of(TileType.WOOD, 3);
+        Map<TileType, Integer> desired = Map.of(TileType.SHEEP, 1, TileType.ORE, 1);
         assertFalse(generalPort.canTrade(offered, desired));
     }
 
     @Test
     void canTradeOfferedSixButWantsOneShouldReturnFalse() {
-        List<TileType> offered = Arrays.asList(
-                TileType.WHEAT, TileType.WHEAT, TileType.WHEAT,
-                TileType.WHEAT, TileType.WHEAT, TileType.WHEAT
-        );
-        List<TileType> desired = Collections.singletonList(TileType.ORE);
+        Map<TileType, Integer> offered = Map.of(TileType.WHEAT, 6);
+        Map<TileType, Integer> desired = Map.of(TileType.ORE, 1);
         assertFalse(generalPort.canTrade(offered, desired));
     }
 
-
     @Test
     void canTradeInvalidBundleSingleTypeShouldReturnFalse() {
-        List<TileType> offered = Arrays.asList(TileType.WOOD, TileType.WOOD, TileType.WOOD, TileType.WOOD);
-        List<TileType> desired = Collections.singletonList(TileType.SHEEP);
-        assertFalse(generalPort.canTrade(offered, desired), "Should fail on overall ratio first");
+        Map<TileType, Integer> offered = Map.of(TileType.WOOD, 4);
+        Map<TileType, Integer> desired = Map.of(TileType.SHEEP, 1);
+        assertFalse(generalPort.canTrade(offered, desired), "Should fail because 4 is not a multiple of 3");
+    }
 
-        List<TileType> offeredMixedInvalid = Arrays.asList(
-                TileType.WOOD, TileType.WOOD, TileType.WOOD,
-                TileType.CLAY, TileType.CLAY,
-                TileType.SHEEP
-        );
-        List<TileType> desiredForMixedInvalid = Arrays.asList(TileType.ORE, TileType.WHEAT);
+    @Test
+    void canTradeInvalidMixedBundleShouldReturnFalse() {
+        Map<TileType, Integer> offeredMixedInvalid = Map.of(TileType.WOOD, 3, TileType.CLAY, 2, TileType.SHEEP, 1);
+        Map<TileType, Integer> desiredForMixedInvalid = Map.of(TileType.ORE, 1, TileType.WHEAT, 1);
         assertFalse(generalPort.canTrade(offeredMixedInvalid, desiredForMixedInvalid));
     }
 
-
     @Test
     void canTradeTradingForOfferedResourceShouldReturnFalse() {
-        List<TileType> offered = Arrays.asList(TileType.WOOD, TileType.WOOD, TileType.WOOD);
-        List<TileType> desired = Collections.singletonList(TileType.WOOD);
+        Map<TileType, Integer> offered = Map.of(TileType.WOOD, 3);
+        Map<TileType, Integer> desired = Map.of(TileType.WOOD, 1);
         assertFalse(generalPort.canTrade(offered, desired));
     }
 
     @Test
     void canTradeTradingForOneOfMultipleOfferedResourcesShouldReturnFalse() {
-        List<TileType> offered = Arrays.asList(
-                TileType.WOOD, TileType.WOOD, TileType.WOOD,
-                TileType.CLAY, TileType.CLAY, TileType.CLAY
-        );
-        List<TileType> desired = Arrays.asList(TileType.SHEEP, TileType.CLAY);
+        Map<TileType, Integer> offered = Map.of(TileType.WOOD, 3, TileType.CLAY, 3);
+        Map<TileType, Integer> desired = Map.of(TileType.SHEEP, 1, TileType.CLAY, 1);
         assertFalse(generalPort.canTrade(offered, desired));
     }
 
     @ParameterizedTest
     @MethodSource("validTradeScenarios")
-    void canTradeVariousValidScenariosShouldReturnTrue(List<TileType> offered, List<TileType> desired, String description) {
+    void canTradeVariousValidScenariosShouldReturnTrue(Map<TileType, Integer> offered, Map<TileType, Integer> desired, String description) {
         assertTrue(generalPort.canTrade(offered, desired), "Failed: " + description);
     }
 
     static Stream<Arguments> validTradeScenarios() {
         return Stream.of(
-                Arguments.of(
-                        Arrays.asList(TileType.ORE, TileType.ORE, TileType.ORE),
-                        Collections.singletonList(TileType.WHEAT),
-                        "3 Ore for 1 Wheat"
-                ),
-                Arguments.of(
-                        Arrays.asList(
-                                TileType.SHEEP, TileType.SHEEP, TileType.SHEEP,
-                                TileType.SHEEP, TileType.SHEEP, TileType.SHEEP
-                        ),
-                        Arrays.asList(TileType.WOOD, TileType.CLAY),
-                        "6 Sheep for 1 Wood and 1 Clay"
-                ),
-                Arguments.of(
-                        Arrays.asList(
-                                TileType.WOOD, TileType.WOOD, TileType.WOOD,
-                                TileType.CLAY, TileType.CLAY, TileType.CLAY,
-                                TileType.ORE, TileType.ORE, TileType.ORE
-                        ),
-                        Arrays.asList(TileType.SHEEP, TileType.WHEAT, TileType.SHEEP),
-                        "3W, 3C, 3O for 2S, 1Wh"
-                )
+                Arguments.of(Map.of(TileType.ORE, 3), Map.of(TileType.WHEAT, 1), "3 Ore for 1 Wheat"),
+                Arguments.of(Map.of(TileType.SHEEP, 6), Map.of(TileType.WOOD, 1, TileType.CLAY, 1), "6 Sheep for 1 Wood and 1 Clay"),
+                Arguments.of(Map.of(TileType.WOOD, 3, TileType.CLAY, 3, TileType.ORE, 3), Map.of(TileType.SHEEP, 2, TileType.WHEAT, 1), "3W, 3C, 3O for 2S, 1Wh")
         );
     }
 
     @ParameterizedTest
     @MethodSource("invalidBundleScenarios")
-    void canTradeVariousInvalidBundleScenariosShouldReturnFalse(List<TileType> offered, List<TileType> desired, String description) {
+    void canTradeVariousInvalidBundleScenariosShouldReturnFalse(Map<TileType, Integer> offered, Map<TileType, Integer> desired, String description) {
         assertFalse(generalPort.canTrade(offered, desired), "Failed: " + description);
     }
 
     static Stream<Arguments> invalidBundleScenarios() {
         return Stream.of(
-                Arguments.of(
-                        Arrays.asList(TileType.WOOD, TileType.WOOD, TileType.WOOD, TileType.CLAY, TileType.CLAY),
-                        Arrays.asList(TileType.SHEEP, TileType.ORE),
-                        "3W, 2C (total 5) for 2 resources - fails overall ratio"
-                ),
-                Arguments.of(
-                        Arrays.asList(TileType.WOOD, TileType.WOOD, TileType.CLAY, TileType.CLAY, TileType.SHEEP, TileType.SHEEP),
-                        Arrays.asList(TileType.ORE, TileType.WHEAT),
-                        "2W, 2C, 2S for 2 resources - fails specific bundle check"
-                )
+                Arguments.of(Map.of(TileType.WOOD, 3, TileType.CLAY, 2), Map.of(TileType.SHEEP, 1, TileType.ORE, 1), "3W, 2C (total 5) for 2 resources - fails overall ratio"),
+                Arguments.of(Map.of(TileType.WOOD, 2, TileType.CLAY, 2, TileType.SHEEP, 2), Map.of(TileType.ORE, 2), "2W, 2C, 2S for 2 resources - fails specific bundle check")
         );
     }
 

@@ -15,6 +15,7 @@ public enum MessageType {
     DICE_RESULT,
     ROBBER_PHASE,
     NEXT_TURN,
+    PLAYER_RESOURCE_UPDATE,
 
     //Client Messages
     CREATE_LOBBY,
@@ -28,5 +29,8 @@ public enum MessageType {
     ROLL_DICE,
     PLACE_ROBBER,
     END_TURN,
-    SET_READY
+    SET_READY,
+    TRADE_WITH_BANK,
+    TRADE_WITH_PLAYER
+
 }

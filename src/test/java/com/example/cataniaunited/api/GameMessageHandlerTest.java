@@ -4,16 +4,19 @@ import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.dto.PlayerInfo;
 import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.exception.ui.InvalidTurnException;
 import com.example.cataniaunited.game.GameService;
 import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
+import com.example.cataniaunited.game.trade.TradeRequest;
+import com.example.cataniaunited.game.trade.TradingService;
 import com.example.cataniaunited.lobby.Lobby;
 import com.example.cataniaunited.lobby.LobbyService;
+import com.example.cataniaunited.mapper.PlayerMapper;
 import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerColor;
 import com.example.cataniaunited.player.PlayerService;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.mockito.InjectSpy;
@@ -21,19 +24,13 @@ import io.quarkus.websockets.next.WebSocketConnection;
 import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
 import java.util.Map;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @QuarkusTest
 class GameMessageHandlerTest {
@@ -48,7 +45,10 @@ class GameMessageHandlerTest {
     LobbyService lobbyService;
 
     @InjectSpy
-    GameService gameService;
+    PlayerMapper playerMapper;
+
+    @InjectSpy
+    TradingService tradingService;
 
     @Test
     void getLobbyPlayerInfoShouldNotMapNullValues() throws GameException {
@@ -113,6 +113,109 @@ class GameMessageHandlerTest {
         assertFalse(player2Info.isHost());
     }
 
+
+    @Test
+    void handleTradeWithBankInvocedFromMainSwitchCaseSuccess() throws GameException {
+        WebSocketConnection connection = mock(WebSocketConnection.class);
+        WebSocketConnection connection2 = mock(WebSocketConnection.class);
+        when(connection.id()).thenReturn("1234");
+        when(connection2.id()).thenReturn("5678");
+        Player player = playerService.addPlayer(connection);
+        Player player2 = playerService.addPlayer(connection2);
+        String player1Id = player.getUniqueId();
+        String lobbyId = lobbyService.createLobby(player1Id);
+        lobbyService.joinLobbyByCode(lobbyId, player2.getUniqueId());
+
+        // Initial state for the player
+        player.getResources().clear();
+        player.getResources().put(TileType.WOOD, 4);
+        player.getResources().put(TileType.SHEEP, 0);
+
+
+        // Prepare trade request: 4 WOOD for 1 SHEEP
+        ObjectNode tradePayload = JsonNodeFactory.instance.objectNode();
+        tradePayload.putObject("offeredResources").put(TileType.WOOD.name(), 4);
+        tradePayload.putObject("targetResources").put(TileType.SHEEP.name(), 1);
+
+        MessageDTO inputMessage = new MessageDTO(MessageType.TRADE_WITH_BANK, player1Id, lobbyId, tradePayload);
+
+        // Mock LobbyService to pass checkTurn
+        doNothing().when(lobbyService).checkPlayerTurn(lobbyId, player1Id);
+        Lobby mockLobby = mock(Lobby.class);
+        when(lobbyService.getLobbyById(lobbyId)).thenReturn(mockLobby);
+
+        gameMessageHandler.handleGameMessage(inputMessage);
+
+        TradeRequest expectedRequest = new TradeRequest(
+                Map.of(TileType.WOOD, 4),
+                Map.of(TileType.SHEEP, 1)
+        );
+
+        verify(lobbyService).checkPlayerTurn(lobbyId, player1Id);
+        verify(tradingService).handleBankTradeRequest(player1Id, expectedRequest);
+
+        assertEquals(0, player.getResourceCount(TileType.WOOD));
+        assertEquals(1, player.getResourceCount(TileType.SHEEP));
+    }
+
+    @Test
+    void handleTradeWithBankPlayerNotActiveThrowsInvalidTurnException() throws GameException {
+        WebSocketConnection connection = mock(WebSocketConnection.class);
+        when(connection.id()).thenReturn("1234");
+        Player player = playerService.addPlayer(connection);
+        String player1Id = player.getUniqueId();
+        String lobbyId = lobbyService.createLobby(player1Id);
+        // The active player is the host (player1Id) by default, so we set it to someone else
+        lobbyService.getLobbyById(lobbyId).setActivePlayer("anotherPlayer");
+
+        MessageDTO inputMessage = new MessageDTO(MessageType.TRADE_WITH_BANK, player1Id, lobbyId, JsonNodeFactory.instance.objectNode());
+
+        // We check the error from the handler, as it's the one catching the exception
+        Uni<MessageDTO> resultUni = gameMessageHandler.handleGameMessage(inputMessage);
+        MessageDTO resultDto = resultUni.await().indefinitely();
+
+        assertEquals(MessageType.ERROR, resultDto.getType());
+        assertEquals(new InvalidTurnException().getMessage(), resultDto.getMessageNode("error").asText());
+
+        verify(tradingService, never()).handleBankTradeRequest(any(String.class), any(TradeRequest.class));
+        verify(lobbyService, never()).notifyPlayers(anyString(), any(MessageDTO.class));
+    }
+
+    @Test
+    void handleTradeWithBankTradeServiceFailsThrowsGameException() throws GameException {
+        WebSocketConnection connection = mock(WebSocketConnection.class);
+        when(connection.id()).thenReturn("1234");
+        Player player = playerService.addPlayer(connection);
+        String player1Id = player.getUniqueId();
+        String lobbyId = lobbyService.createLobby(player1Id);
+        lobbyService.getLobbyById(lobbyId).setActivePlayer(player1Id);
+
+        // Initial state for the player
+        player.getResources().clear();
+        player.getResources().put(TileType.WOOD, 1); // Not enough for a 4:1 trade
+        player.getResources().put(TileType.SHEEP, 0);
+
+
+        // Prepare invalid trade request (1 WOOD for 1 SHEEP)
+        ObjectNode tradePayload = JsonNodeFactory.instance.objectNode();
+        tradePayload.putObject("offeredResources").put(TileType.WOOD.name(), 1);
+        tradePayload.putObject("targetResources").put(TileType.SHEEP.name(), 1);
+
+        MessageDTO inputMessage = new MessageDTO(MessageType.TRADE_WITH_BANK, player1Id, lobbyId, tradePayload);
+
+        // Mock LobbyService to pass checkTurn
+        doNothing().when(lobbyService).checkPlayerTurn(lobbyId, player1Id);
+
+        // The handler will catch the exception and create an error DTO
+        Uni<MessageDTO> resultUni = gameMessageHandler.handleGameMessage(inputMessage);
+        MessageDTO resultDto = resultUni.await().indefinitely();
+
+        assertEquals(MessageType.ERROR, resultDto.getType());
+        assertEquals("Trade ratio is invalid", resultDto.getMessageNode("error").asText());
+
+        verify(lobbyService, never()).notifyPlayers(anyString(), any(MessageDTO.class));
+    }
+
     /*@Test
     void testPlaceRobber_ValidTileId_NotifiesPlayers() throws Exception {
         String lobbyId = "123abc";
@@ -148,4 +251,31 @@ class GameMessageHandlerTest {
         assertEquals(MessageType.PLACE_ROBBER, resultDTO.getType());
     }*/
 
+    @Test
+    void handleTradeWithBankWhenPayloadIsMalformedReturnsErrorDto() throws GameException {
+        WebSocketConnection connection = mock(WebSocketConnection.class);
+        when(connection.id()).thenReturn("test-connection-id");
+        Player player = playerService.addPlayer(connection);
+        String playerId = player.getUniqueId();
+        String lobbyId = lobbyService.createLobby(playerId);
+        lobbyService.getLobbyById(lobbyId).setActivePlayer(playerId);
+
+
+        ObjectNode malformedPayload = JsonNodeFactory.instance.objectNode();
+        malformedPayload.put("offeredResources", "this-is-not-a-map"); // Invalid type
+        malformedPayload.putObject("targetResources").put(TileType.SHEEP.name(), 1);
+
+        MessageDTO inputMessage = new MessageDTO(MessageType.TRADE_WITH_BANK, playerId, lobbyId, malformedPayload);
+
+        Uni<MessageDTO> resultUni = gameMessageHandler.handleGameMessage(inputMessage);
+
+        MessageDTO resultDto = resultUni.await().indefinitely();
+
+        assertNotNull(resultDto);
+        assertEquals(MessageType.ERROR, resultDto.getType());
+        assertEquals("Invalid trade request format.", resultDto.getMessageNode("error").asText());
+
+        verify(tradingService, never()).handleBankTradeRequest(anyString(), any(TradeRequest.class));
+        verify(lobbyService, never()).notifyPlayers(anyString(), any(MessageDTO.class));
+    }
 }
