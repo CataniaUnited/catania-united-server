@@ -40,7 +40,7 @@ class GraphBuilderTest {
         int expectedTileCount = CatanBoardUtils.calculateAmountOfTilesForLayerK(validSizeOfBoard);
         validTileList = new ArrayList<>();
         for (int i = 0; i < expectedTileCount; i++) {
-            validTileList.add(new Tile(TileType.WASTE));
+            validTileList.add(new Tile(TileType.DESERT));
         }
     }
 
@@ -73,7 +73,7 @@ class GraphBuilderTest {
     void constructorWithIncorrectTileListSizeShouldThrowException() {
         List<Tile> incorrectTileList = new ArrayList<>();
         for (int i = 0; i < validTileList.size() - 1; i++) {
-            incorrectTileList.add(new Tile(TileType.WASTE));
+            incorrectTileList.add(new Tile(TileType.DESERT));
         }
 
         assertThrows(IllegalArgumentException.class, () -> new GraphBuilder(incorrectTileList, validSizeOfBoard),
@@ -279,7 +279,7 @@ class GraphBuilderTest {
                 .collect(Collectors.groupingBy(SpecificResourcePort::getTradeAbleResource, Collectors.counting()));
 
         for (TileType type : TileType.values()) {
-            if (type != TileType.WASTE) {
+            if (type != TileType.DESERT) {
                 assertTrue(resourceCounts.containsKey(type), "Specific port for " + type + " should be present.");
                 assertEquals(1L, resourceCounts.get(type), "Should be exactly one specific port for " + type);
             }

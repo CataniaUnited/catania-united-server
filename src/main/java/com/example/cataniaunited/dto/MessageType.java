@@ -13,6 +13,7 @@ public enum MessageType {
     GAME_BOARD_JSON,
     GAME_STARTED,
     DICE_RESULT,
+    ROBBER_PHASE,
     NEXT_TURN,
     PLAYER_RESOURCE_UPDATE,
 
@@ -26,6 +27,7 @@ public enum MessageType {
     UPGRADE_SETTLEMENT,
     PLACE_ROAD,
     ROLL_DICE,
+    PLACE_ROBBER,
     END_TURN,
     SET_READY,
     TRADE_WITH_BANK,

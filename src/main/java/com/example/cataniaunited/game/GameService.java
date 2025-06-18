@@ -141,6 +141,20 @@ public class GameService {
         );
     }
 
+    public void placeRobber(String lobbyId, String playerId, int robberTileId) throws GameException {
+        lobbyService.checkPlayerTurn(lobbyId, playerId);
+        if (!lobbyService.isRobberPlaced(lobbyId)){
+            throw new GameException("Robber can only be placed after rolling 7");
+        }
+        GameBoard gameBoard = getGameboardByLobbyId(lobbyId);
+        gameBoard.placeRobber(robberTileId);
+        lobbyService.setRobberPlaced(lobbyId, false);
+    }
+
+    public boolean isRobberPlaced(String lobbyId) throws GameException {
+        return lobbyService.isRobberPlaced(lobbyId);
+    }
+
     /**
      * Starts the game in the specified lobby.
      * This involves creating a game board, setting player order, and notifying players.
@@ -214,6 +228,9 @@ public class GameService {
         lobbyService.checkPlayerDiceRoll(lobbyId, playerId);
         GameBoard gameboard = getGameboardByLobbyId(lobbyId);
         ObjectNode result = gameboard.rollDice();
+        if (result.get("total").asInt() == 7){
+            lobbyService.setRobberPlaced(lobbyId, true);
+        }
         lobbyService.updateLatestDiceRoll(lobbyId, playerId);
         return result;
     }

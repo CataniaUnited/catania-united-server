@@ -185,8 +185,8 @@ public class PlayerService {
         }
 
         for (TileType resource : TileType.values()) {
-            if (resource == TileType.WASTE)
-                continue; // No waste resource
+            if (resource == TileType.DESERT)
+                continue; // No desert resource
 
             //Set the amount of each resource to 0
             int resourceCount = player.getResourceCount(resource);

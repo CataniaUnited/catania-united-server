@@ -30,15 +30,15 @@ class SpecificResourcePortTest {
     }
 
     @Test
-    void constructorWithWasteResourceShouldThrowIllegalArgumentException() {
-        Exception exception = assertThrows(IllegalArgumentException.class, () -> new SpecificResourcePort(TileType.WASTE));
+    void constructorWithDesertResourceShouldThrowIllegalArgumentException() {
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> new SpecificResourcePort(TileType.DESERT));
         assertEquals("Specific port must trade a valid resource type.", exception.getMessage());
     }
 
     // Helper Method to find a resource that is different from the given one.
     private TileType getDifferentResource(List<TileType> typesToAvoid) {
         for (TileType t : TileType.values()) {
-            if (!typesToAvoid.contains(t) && t != TileType.WASTE) {
+            if (!typesToAvoid.contains(t) && t != TileType.DESERT) {
                 return t;
             }
         }

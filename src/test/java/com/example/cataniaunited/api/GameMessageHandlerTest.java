@@ -2,8 +2,11 @@ package com.example.cataniaunited.api;
 
 import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.dto.MessageType;
+import com.example.cataniaunited.dto.PlayerInfo;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.exception.ui.InvalidTurnException;
+import com.example.cataniaunited.game.GameService;
+import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.example.cataniaunited.game.trade.TradeRequest;
 import com.example.cataniaunited.game.trade.TradingService;
@@ -213,6 +216,40 @@ class GameMessageHandlerTest {
         verify(lobbyService, never()).notifyPlayers(anyString(), any(MessageDTO.class));
     }
 
+    /*@Test
+    void testPlaceRobber_ValidTileId_NotifiesPlayers() throws Exception {
+        String lobbyId = "123abc";
+        String playerId = "player1";
+        int tileId = 5;
+
+        MessageDTO message = Mockito.mock(MessageDTO.class);
+        JsonNode tileIdNode = new ObjectMapper().readTree("{\"tileId\": " + tileId + "}").get("tileId");
+
+        Mockito.when(message.getMessageNode("tileId")).thenReturn(tileIdNode);
+        Mockito.when(message.getLobbyId()).thenReturn(lobbyId);
+        Mockito.when(message.getPlayer()).thenReturn(playerId);
+
+        ObjectNode gameBoardInfo = new ObjectMapper().createObjectNode();
+        ObjectNode playerInfo = new ObjectMapper().createObjectNode();
+
+        GameBoard board = Mockito.mock(GameBoard.class);
+        Mockito.when(gameService.getGameboardByLobbyId(lobbyId)).thenReturn(board);
+        Mockito.when(gameMessageHandler.getLobbyPlayerInformation(lobbyId)).thenReturn((Map<String, PlayerInfo>) playerInfo);
+        Mockito.when(lobbyService.notifyPlayers(Mockito.eq(lobbyId), Mockito.any()))
+                .thenReturn(Uni.createFrom().nullItem());
+
+        Uni <MessageDTO> result = gameMessageHandler.placeRobber(message);
+        MessageDTO resultDTO = result.await().indefinitely();
+
+        Mockito.verify(gameService).placeRobber(lobbyId, playerId, tileId);
+        Mockito.verify(lobbyService).notifyPlayers(Mockito.eq(lobbyId), Mockito.argThat(dto ->
+                dto.getType() == MessageType.PLACE_ROBBER &&
+                dto.getLobbyId().equals(lobbyId) &&
+                dto.getPlayer().equals(playerId)
+        ));
+
+        assertEquals(MessageType.PLACE_ROBBER, resultDTO.getType());
+    }*/
 
     @Test
     void handleTradeWithBankWhenPayloadIsMalformedReturnsErrorDto() throws GameException {

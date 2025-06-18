@@ -1947,6 +1947,38 @@ public class GameWebSocketTest {
         assertFalse(lobby.isGameStarted());
         assertFalse(lobby.isReady(player1ActualId));
     }
+    /*@Test
+    void testPlaceRobberSendsUpdate() throws Exception {
+        // Arrange
+        String lobbyId = "test-lobby";
+        String playerName = "player1";
+        int tileId = 5;
 
+        // Simuliere das JSON für die Nachricht
+        ObjectNode messageData = objectMapper.createObjectNode();
+        messageData.put("tileId", tileId);
+
+        MessageDTO message = new MessageDTO();
+        message.setType(MessageType.PLACE_ROBBER);
+        message.setLobbyId(lobbyId);
+        message.setPlayer(playerName);
+        message.setMessage(messageData);
+
+        // Simuliere Spiel und Spielerinformationen
+        GameBoard gameBoard = new GameBoard();
+        when(gameService.getGameBoard(anyString())).thenReturn(gameBoard);
+        when(gameService.getLobbyPlayerInformation(eq(lobbyId))).thenReturn(objectMapper.createObjectNode());
+
+        // Act
+        gameMessageHandler.placeRobber(message).subscribe().with(result -> {
+            // Assert
+            assertEquals(MessageType.PLACE_ROBBER, result.getType());
+            assertEquals(lobbyId, result.getLobbyId());
+            assertEquals(playerName, result.getPlayer());
+            assertNotNull(result.getMessage());
+            verify(gameService).placeRobber(eq(lobbyId), eq(playerName), eq(tileId));
+            verify(lobbyService).notifyPlayers(eq(lobbyId), any(MessageDTO.class));
+        });
+    }*/
 
 }

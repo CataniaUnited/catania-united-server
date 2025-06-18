@@ -81,12 +81,13 @@ public class GameMessageHandler {
                 case UPGRADE_SETTLEMENT -> upgradeSettlement(message);
                 case PLACE_ROAD -> placeRoad(message);
                 case ROLL_DICE -> handleDiceRoll(message);
+                case PLACE_ROBBER -> placeRobber(message);
                 case START_GAME -> handleStartGame(message);
                 case SET_READY -> setReady(message);
                 case TRADE_WITH_BANK -> handleTradeWithBank(message);
                 case TRADE_WITH_PLAYER -> throw new GameException("Not yet implemented");
                 case ERROR, CONNECTION_SUCCESSFUL, CLIENT_DISCONNECTED, LOBBY_CREATED, LOBBY_UPDATED, PLAYER_JOINED,
-                        GAME_BOARD_JSON, GAME_WON, DICE_RESULT, NEXT_TURN, GAME_STARTED, PLAYER_RESOURCE_UPDATE ->
+                        GAME_BOARD_JSON, GAME_WON, DICE_RESULT, ROBBER_PHASE, NEXT_TURN, GAME_STARTED, PLAYER_RESOURCE_UPDATE ->
                         throw new GameException("Invalid client command");
                 case END_TURN -> endTurn(message);
             };
@@ -216,6 +217,30 @@ public class GameMessageHandler {
                 .chain(() -> Uni.createFrom().item(update));
     }
 
+    Uni<MessageDTO> placeRobber(MessageDTO message) throws GameException {
+        JsonNode tileId = message.getMessageNode("tileId");
+
+        try {
+            int robberTile = Integer.parseInt(tileId.toString());
+            gameService.placeRobber(message.getLobbyId(), message.getPlayer(), robberTile);
+        } catch (NumberFormatException e) {
+            throw new GameException("Invalid tile id = %s", tileId.toString());
+        }
+
+        ObjectNode root = getGameBoardInformation(message.getLobbyId());
+
+        MessageDTO update = new MessageDTO(
+                MessageType.PLACE_ROBBER,
+                message.getPlayer(),
+                message.getLobbyId(),
+                getLobbyPlayerInformation(message.getLobbyId()),
+                root
+        );
+
+        return lobbyService.notifyPlayers(message.getLobbyId(), update)
+                .chain(() -> Uni.createFrom().item(update));
+    }
+
     /**
      * Handles a request for a player to join an existing lobby.
      *
@@ -312,7 +337,25 @@ public class GameMessageHandler {
         );
 
         return lobbyService.notifyPlayers(message.getLobbyId(), diceResultMessage)
-                .chain(() -> Uni.createFrom().item(diceResultMessage));
+            .call(() -> {
+                try {
+                    if(gameService.isRobberPlaced(message.getLobbyId())){
+                        ObjectNode payload = getGameBoardInformation(message.getLobbyId());
+                        MessageDTO waitMessage = new MessageDTO(
+                                MessageType.ROBBER_PHASE,
+                                message.getPlayer(),
+                                message.getLobbyId(),
+                                getLobbyPlayerInformation(message.getLobbyId()),
+                                payload
+                        );
+                        return lobbyService.notifyPlayers(message.getLobbyId(), waitMessage);
+                    }
+                } catch (GameException e) {
+                    throw new RuntimeException(e);
+                }
+                return Uni.createFrom().voidItem();
+            })
+            .replaceWith(diceResultMessage);
     }
 
     /**
@@ -381,7 +424,6 @@ public class GameMessageHandler {
                         )
                 );
     }
-
 
     /**
      * Handles a request from a player to trade resources with the bank.

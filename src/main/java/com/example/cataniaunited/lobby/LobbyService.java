@@ -105,4 +105,7 @@ public interface LobbyService {
 
     void toggleReady(String lobbyId, String playerId) throws GameException;
 
+    boolean isRobberPlaced(String lobbyId) throws GameException;
+
+    void setRobberPlaced(String lobbyId, boolean placed) throws GameException;
 }
