@@ -322,7 +322,7 @@ public class GameMessageHandler {
 
                         return lobbyService.notifyPlayers(message.getLobbyId(), resultMessage);
                     } catch (GameException e) {
-                        throw new RuntimeException("Error rolling dice", e);
+                        return Uni.createFrom().failure(e);
                     }
                 });
     }
