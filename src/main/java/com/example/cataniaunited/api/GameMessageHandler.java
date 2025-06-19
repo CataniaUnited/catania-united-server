@@ -300,19 +300,44 @@ public class GameMessageHandler {
      * that was broadcast. The primary purpose of the returned Uni is to chain asynchronous operations.
      * @throws GameException if an error occurs during dice rolling or retrieving lobby/player information.
      */
-    Uni<MessageDTO> handleDiceRoll(MessageDTO message) throws GameException {
-        // Roll and broadcast dice
-        ObjectNode diceResult = gameService.rollDice(message.getLobbyId(), message.getPlayer());
-        MessageDTO diceResultMessage = new MessageDTO(
-                MessageType.DICE_RESULT,
+    public Uni<MessageDTO> handleDiceRoll(MessageDTO message) throws GameException {
+        Player rollingPlayer = playerService.getPlayerById(message.getPlayer());
+        String username = rollingPlayer.getUsername();
+        String playerId = rollingPlayer.getUniqueId();
+
+        ObjectNode rollingNode = JsonNodeFactory.instance.objectNode();
+        rollingNode.put("rollingUsername", username);
+        rollingNode.put("player", playerId);
+
+        MessageDTO rollingMessage = new MessageDTO(
+                MessageType.ROLL_DICE,
                 message.getPlayer(),
                 message.getLobbyId(),
                 getLobbyPlayerInformation(message.getLobbyId()),
-                diceResult
+                rollingNode
         );
 
-        return lobbyService.notifyPlayers(message.getLobbyId(), diceResultMessage)
-                .chain(() -> Uni.createFrom().item(diceResultMessage));
+        return lobbyService.notifyPlayers(message.getLobbyId(), rollingMessage)
+                .chain(() -> {
+                    try {
+                        ObjectNode diceResult = gameService.rollDice(message.getLobbyId(), message.getPlayer());
+
+                        diceResult.put("rollingUsername", username);
+                        diceResult.put("player", playerId);
+
+                        MessageDTO resultMessage = new MessageDTO(
+                                MessageType.DICE_RESULT,
+                                message.getPlayer(),
+                                message.getLobbyId(),
+                                getLobbyPlayerInformation(message.getLobbyId()),
+                                diceResult
+                        );
+
+                        return lobbyService.notifyPlayers(message.getLobbyId(), resultMessage);
+                    } catch (GameException e) {
+                        return Uni.createFrom().item(createErrorMessage(e.getMessage()));
+                    }
+                });
     }
 
     /**
