@@ -322,7 +322,7 @@ public class GameMessageHandler {
 
                         return lobbyService.notifyPlayers(message.getLobbyId(), resultMessage);
                     } catch (GameException e) {
-                        return Uni.createFrom().failure(e);
+                        return Uni.createFrom().item(createErrorMessage(e.getMessage()));
                     }
                 });
     }
