@@ -602,23 +602,13 @@ public class GameWebSocketTest {
     @Test
     void testUpgradeOfSettlement() throws GameException, JsonProcessingException, InterruptedException {
         Player player = new Player("Player1");
-        player.receiveResource(TileType.WHEAT, 2);
-        player.receiveResource(TileType.ORE, 3);
         String playerId = player.getUniqueId();
         when(playerService.getPlayerById(playerId)).thenReturn(player);
 
-        String lobbyId = lobbyService.createLobby("Host Player");
-        lobbyService.joinLobbyByCode(lobbyId, playerId);
+        String lobbyId = lobbyService.createLobby(playerId);
         Lobby lobby = lobbyService.getLobbyById(lobbyId);
-        lobby.setActivePlayer(playerId);
-        GameBoard gameBoard = gameService.createGameboard(lobbyId);
-        BuildingSite buildingSite = gameBoard.getBuildingSitePositionGraph().get(0);
-        buildingSite.getRoads().get(0).setOwner(player);
-        buildingSite.setBuilding(new Settlement(player, lobby.getPlayerColor(playerId)));
-
-        int positionId = buildingSite.getId();
-        ObjectNode placeSettlementMessageNode = objectMapper.createObjectNode().put("settlementPositionId", positionId);
-        var upgradeSettlementMessageDTO = new MessageDTO(MessageType.UPGRADE_SETTLEMENT, playerId, lobbyId, placeSettlementMessageNode);
+        doReturn(2).when(lobbyService).getRoundsPlayed(lobbyId);
+        lobby.toggleReady(playerId);
 
         List<String> receivedMessages = new CopyOnWriteArrayList<>();
         CountDownLatch messageLatch = new CountDownLatch(3);
@@ -637,7 +627,7 @@ public class GameWebSocketTest {
                                 actualPlayerIds.add(dto.getMessageNode("playerId").asText());
                                 connectionLatch.countDown();
                                 messageLatch.countDown();
-                            } else {
+                            } else if (dto.getType() == MessageType.UPGRADE_SETTLEMENT){
                                 receivedMessages.add(message);
                                 messageLatch.countDown();
                             }
@@ -649,6 +639,19 @@ public class GameWebSocketTest {
 
         assertTrue(connectionLatch.await(5, TimeUnit.SECONDS));
         lobbyService.joinLobbyByCode(lobbyId, actualPlayerIds.get(0));
+        lobbyService.toggleReady(lobbyId, actualPlayerIds.get(0));
+        gameService.startGame(lobbyId, lobby.getHostPlayer());
+        lobby.setPlayerOrder(List.of(playerId, lobby.getHostPlayer()));
+        player.receiveResource(TileType.WHEAT, 2);
+        player.receiveResource(TileType.ORE, 3);
+        lobby.setActivePlayer(playerId);
+        GameBoard gameBoard = gameService.getGameboardByLobbyId(lobbyId);
+        BuildingSite buildingSite = gameBoard.getBuildingSitePositionGraph().get(0);
+        buildingSite.getRoads().get(0).setOwner(player);
+        buildingSite.setBuilding(new Settlement(player, lobby.getPlayerColor(playerId)));
+        int positionId = buildingSite.getId();
+        ObjectNode placeSettlementMessageNode = objectMapper.createObjectNode().put("settlementPositionId", positionId);
+        var upgradeSettlementMessageDTO = new MessageDTO(MessageType.UPGRADE_SETTLEMENT, playerId, lobbyId, placeSettlementMessageNode);
 
         String sentMessage = objectMapper.writeValueAsString(upgradeSettlementMessageDTO);
         webSocketClientConnection.sendTextAndAwait(sentMessage);

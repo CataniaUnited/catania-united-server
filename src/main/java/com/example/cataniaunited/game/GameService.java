@@ -94,8 +94,11 @@ public class GameService {
      */
     public void upgradeSettlement(String lobbyId, String playerId, int settlementPositionId) throws GameException {
         lobbyService.checkPlayerTurn(lobbyId, playerId);
-        GameBoard gameboard = getGameboardByLobbyId(lobbyId);
         BuildRequest buildRequest = createBuildRequest(lobbyId, playerId, settlementPositionId);
+        if (buildRequest.isSetupRound()) {
+            throw new GameException("Settlements cannot be upgraded during setup round");
+        }
+        GameBoard gameboard = getGameboardByLobbyId(lobbyId);
         gameboard.placeCity(buildRequest);
         playerService.addVictoryPoints(playerId, 1); // Only add one additional Point
     }
