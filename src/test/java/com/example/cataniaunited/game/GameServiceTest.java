@@ -212,6 +212,25 @@ class GameServiceTest {
     }
 
     @Test
+    void upgradeSettlementShouldThrowExceptionIfCalledDuringSetupRound() throws GameException {
+        Player player = new Player("player1");
+        String playerId = player.getUniqueId();
+        int settlementPositionId = 15;
+        String lobbyId = lobbyMock.getLobbyId();
+        doReturn(lobbyMock).when(lobbyService).getLobbyById(lobbyId);
+        doReturn(true).when(lobbyMock).isPlayerTurn(playerId);
+        doReturn(PlayerColor.BLUE).when(lobbyMock).getPlayerColor(playerId);
+        doReturn(0).when(lobbyMock).getRoundsPlayed();
+        doReturn(gameboardMock).when(gameService).getGameboardByLobbyId(lobbyId);
+        doReturn(2L).when(gameboardMock).getPlayerStructureCount(playerId, Settlement.class);
+        doReturn(player).when(playerService).getPlayerById(playerId);
+        GameException ge = assertThrows(GameException.class, () -> gameService.upgradeSettlement(lobbyId, playerId, settlementPositionId));
+
+        assertEquals("Settlements cannot be upgraded during setup round", ge.getMessage());
+        verify(gameService, never()).getGameboardByLobbyId(lobbyId);
+    }
+
+    @Test
     void placeRoadShouldThrowGameExceptionForNotPlayerTurn() throws GameException {
         String playerId = "playerId1";
         String lobbyId = lobbyMock.getLobbyId();
