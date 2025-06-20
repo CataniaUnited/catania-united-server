@@ -4,6 +4,7 @@ import com.example.cataniaunited.Publisher;
 import com.example.cataniaunited.game.board.tile_list_builder.Tile;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.quarkus.logging.Log;
 import org.jboss.logging.Logger;
 import java.util.ArrayList;
 import java.util.List;
@@ -50,7 +51,10 @@ public class DiceRoller implements Publisher<Tile, Integer> {
      */
     @Override
     public void addSubscriber(Tile subscriber) {
-        subscribers.add(subscriber);
+        if(!subscribers.contains(subscriber)){
+            subscribers.add(subscriber);
+        }
+        Log.debug("Tile " + subscriber.getId() + "subscribed.");
     }
 
     /**
@@ -60,7 +64,10 @@ public class DiceRoller implements Publisher<Tile, Integer> {
      */
     @Override
     public void removeSubscriber(Tile subscriber) {
-        subscribers.remove(subscriber);
+        if(subscribers.contains(subscriber)){
+            subscribers.remove(subscriber);
+        }
+        Log.debug("Tile " + subscriber.getId() + "not subscribed anymore.");
     }
 
     /**
@@ -71,5 +78,9 @@ public class DiceRoller implements Publisher<Tile, Integer> {
     @Override
     public void notifySubscribers(Integer total) {
         subscribers.forEach(s -> s.update(total));
+    }
+
+    public boolean isSubscribed(Tile tile) {
+        return subscribers.contains(tile);
     }
 }
