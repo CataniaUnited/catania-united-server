@@ -25,16 +25,10 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
-import io.smallrye.mutiny.Uni;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-
+import static org.mockito.ArgumentMatchers.anyString;
 import java.util.Map;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
 
 @QuarkusTest
 class GameMessageHandlerTest {
