@@ -326,10 +326,6 @@ public class GameBoard {
         return robberTileId;
     }
 
-    public void setRobberTileId(int robberTileId){
-        this.robberTileId = robberTileId;
-    }
-
     public boolean isTileProducing(Tile tile){
         return diceRoller.isSubscribed(tile);
     }

@@ -6,6 +6,7 @@ import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.GameService;
 import com.example.cataniaunited.game.board.BuildingSite;
 import com.example.cataniaunited.game.board.GameBoard;
+import com.example.cataniaunited.game.board.tile_list_builder.Tile;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.example.cataniaunited.game.buildings.City;
 import com.example.cataniaunited.game.buildings.Settlement;
@@ -43,6 +44,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -1273,6 +1275,108 @@ class GameWebSocketTest {
 
         client1.closeAndAwait();
         client2.closeAndAwait();
+    }
+
+    @Test
+    void testHandlePlaceRobber_BroadcastToAllClients() throws Exception {
+        final String[] client1PlayerIdHolder = new String[1];
+        final String[] client2PlayerIdHolder = new String[1];
+
+        CountDownLatch connectionLatch = new CountDownLatch(2);
+        List<MessageDTO> client1ReceivedMessages = new CopyOnWriteArrayList<>();
+        CountDownLatch placeRobberLatch = new CountDownLatch(1);
+
+        // === Client 1 Setup ===
+        BasicWebSocketConnector client1Connector = BasicWebSocketConnector.create()
+                .baseUri(serverUri).path("/game")
+                .onTextMessage((conn, msg) -> {
+                    try {
+                        MessageDTO dto = objectMapper.readValue(msg, MessageDTO.class);
+                        System.out.println("Client1 RX: " + msg);
+
+                        if (dto.getType() == MessageType.CONNECTION_SUCCESSFUL) {
+                            client1PlayerIdHolder[0] = dto.getMessageNode("playerId").asText();
+                            connectionLatch.countDown();
+                        } else if (dto.getType() == MessageType.PLACE_ROBBER) {
+                            client1ReceivedMessages.add(dto);
+                            placeRobberLatch.countDown();
+                        }
+                    } catch (JsonProcessingException e) {
+                        fail("Client1: Failed to parse message", e);
+                    }
+                });
+        var client1Connection = client1Connector.connectAndAwait();
+
+        // === Client 2 Setup ===
+        BasicWebSocketConnector client2Connector = BasicWebSocketConnector.create()
+                .baseUri(serverUri).path("/game")
+                .onTextMessage((conn, msg) -> {
+                    try {
+                        MessageDTO dto = objectMapper.readValue(msg, MessageDTO.class);
+                        System.out.println("Client2 RX: " + msg);
+
+                        if (dto.getType() == MessageType.CONNECTION_SUCCESSFUL) {
+                            client2PlayerIdHolder[0] = dto.getMessageNode("playerId").asText();
+                            connectionLatch.countDown();
+                        }
+                    } catch (JsonProcessingException e) {
+                        fail("Client2: Failed to parse message", e);
+                    }
+                });
+        var client2Connection = client2Connector.connectAndAwait();
+
+        // === Setup Lobby & Spielstart ===
+        assertTrue(connectionLatch.await(10, TimeUnit.SECONDS));
+        String p1 = client1PlayerIdHolder[0];
+        String p2 = client2PlayerIdHolder[0];
+        String lobbyId = lobbyService.createLobby(p1);
+        lobbyService.joinLobbyByCode(lobbyId, p2);
+        lobbyService.toggleReady(lobbyId, p1);
+        lobbyService.toggleReady(lobbyId, p2);
+        gameService.startGame(lobbyId, p1);
+
+        GameBoard board = gameService.getGameboardByLobbyId(lobbyId);
+        int oldRobberId = board.getRobberTileId();
+        Tile newTile = board.getTileList().stream()
+                .filter(t -> t.getType() != TileType.WASTE)
+                .filter(t -> t.getId() != oldRobberId)
+                .findFirst().orElseThrow();
+
+        // === Send PLACE_ROBBER Message ===
+        ObjectNode msg = JsonNodeFactory.instance.objectNode();
+        msg.put("robberTileId", newTile.getId());
+
+        MessageDTO placeRobberMsg = new MessageDTO(
+                MessageType.PLACE_ROBBER,
+                p1,
+                lobbyId,
+                null,
+                msg
+        );
+
+        client1Connection.sendTextAndAwait(objectMapper.writeValueAsString(placeRobberMsg));
+
+        assertTrue(placeRobberLatch.await(3, TimeUnit.SECONDS), "Client 1 did not receive PLACE_ROBBER update");
+
+        // === Validate updated state ===
+        MessageDTO update = client1ReceivedMessages.get(0);
+        JsonNode tiles = update.getMessage().get("gameboard").get("tiles");
+
+        long robberCount = StreamSupport.stream(tiles.spliterator(), false)
+                .filter(t -> t.get("isRobbed").asBoolean())
+                .count();
+
+        assertEquals(1, robberCount, "Exactly one tile must have the robber");
+        int updatedId = StreamSupport.stream(tiles.spliterator(), false)
+                .filter(t -> t.get("isRobbed").asBoolean())
+                .findFirst().orElseThrow()
+                .get("id").asInt();
+
+        assertEquals(newTile.getId(), updatedId, "Robber must be placed on the requested tile");
+
+        // === Clean up ===
+        client1Connection.closeAndAwait();
+        client2Connection.closeAndAwait();
     }
 
     @Test
