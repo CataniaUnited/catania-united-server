@@ -512,7 +512,7 @@ class GameServiceTest {
     }
 
     @Test
-    void handleCheat_shouldThrowIfNoPlayerHasThatResource() throws GameException {
+    void handleCheat_shouldThrowIfNoPlayerHasThatResource(){
         String cheaterId = "cheater";
         String victimId = "victim";
         String lobbyId = lobbyService.createLobby(cheaterId);
