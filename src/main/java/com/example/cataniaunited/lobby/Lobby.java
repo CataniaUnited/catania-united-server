@@ -4,10 +4,7 @@ import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.player.PlayerColor;
 import org.jboss.logging.Logger;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -33,6 +30,7 @@ public class Lobby {
     private int roundsPlayed = 0;
     private final Map<String, Integer> latestDiceRollOfPlayer = new ConcurrentHashMap<>();
     private final Map<String, Boolean> readyState = new ConcurrentHashMap<>();
+    private Map<String, Integer> cheatCounts = new HashMap<>();
 
     /**
      * Constructs a new Lobby instance.
@@ -336,5 +334,18 @@ public class Lobby {
 
     public boolean isReady(String playerId) {
         return readyState.getOrDefault(playerId, false);
+    }
+
+    public Map<String, Integer> getCheatCounts() {
+        return cheatCounts;
+    }
+
+    public void recordCheat(String playerId) {
+        int current = cheatCounts.getOrDefault(playerId, 0);
+        cheatCounts.put(playerId, current + 1);
+    }
+
+    public int getCheatCount(String playerId) {
+        return cheatCounts.getOrDefault(playerId, 0);
     }
 }
