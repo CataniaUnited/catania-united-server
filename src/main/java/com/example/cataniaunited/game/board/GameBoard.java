@@ -218,17 +218,19 @@ public class GameBoard {
 
     public void placeRobber(int newRobberTileId) {
         Tile oldRobberTile = getTileById(getRobberTileId());
+        Tile newRobberTile = getTileById(newRobberTileId);
 
         //Release old robber tile
-        if(oldRobberTile.getType() != TileType.WASTE){
+        if(!diceRoller.isSubscribed(oldRobberTile)){
             diceRoller.addSubscriber(oldRobberTile);
         }
 
         //Block new robber tile
-        Tile newRobberTile = getTileById(newRobberTileId);
-        diceRoller.removeSubscriber(newRobberTile);
+        if(diceRoller.isSubscribed(newRobberTile)){
+            diceRoller.removeSubscriber(newRobberTile);
+        }
 
-        setRobberTileId(newRobberTileId);
+        this.robberTileId = newRobberTileId;
     }
 
     private boolean hasAdjacentRoads(Road road, Player player) {
@@ -328,6 +330,10 @@ public class GameBoard {
         this.robberTileId = robberTileId;
     }
 
+    public boolean isTileProducing(Tile tile){
+        return diceRoller.isSubscribed(tile);
+    }
+
     public Port getPortOfBuildingSite(int buildingSitePositionId) {
         return buildingSiteGraph.get(buildingSitePositionId).getPort();
     }
@@ -402,7 +408,9 @@ public class GameBoard {
      * This allows tiles to be notified when dice are rolled to distribute resources.
      */
     private void subscribeTilesToDice() {
-        tileList.forEach(tile -> tile.subscribeToDice(diceRoller));
+        tileList.stream()
+        .filter(tile -> tile.getType() != TileType.WASTE && tile.getId() != getRobberTileId())
+        .forEach(tile -> tile.subscribeToDice(diceRoller));
     }
 
     /**
