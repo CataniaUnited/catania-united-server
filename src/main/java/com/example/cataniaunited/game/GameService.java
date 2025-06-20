@@ -150,6 +150,11 @@ public class GameService {
         return new LongestRoadCalculator();
     }
 
+    public void placeRobber(String lobbyId, int newRobberTileId) throws GameException {
+        GameBoard gameBoard = getGameboardByLobbyId(lobbyId);
+        gameBoard.placeRobber(newRobberTileId);
+    }
+
     private boolean exceedsSetupLimit(BuildRequest buildRequest, long structureCount) {
         Optional<Integer> maximumStructureCount = buildRequest.maximumStructureCount();
         return buildRequest.isSetupRound()
