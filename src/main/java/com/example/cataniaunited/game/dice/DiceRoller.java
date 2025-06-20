@@ -64,9 +64,7 @@ public class DiceRoller implements Publisher<Tile, Integer> {
      */
     @Override
     public void removeSubscriber(Tile subscriber) {
-        if(subscribers.contains(subscriber)){
-            subscribers.remove(subscriber);
-        }
+        subscribers.remove(subscriber);
         Log.debug("Tile " + subscriber.getId() + "not subscribed anymore.");
     }
 
