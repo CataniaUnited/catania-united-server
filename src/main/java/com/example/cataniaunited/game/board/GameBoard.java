@@ -45,6 +45,8 @@ public class GameBoard {
     List<Road> roadList;
     List<Port> portList;
 
+    private int robberTileId;
+
     /**
      * Constructs a new GameBoard based on the number of players.
      * Initializes tiles, building sites, roads, and the dice roller.
@@ -63,10 +65,19 @@ public class GameBoard {
         long starttime = System.nanoTime();
 
         generateTileList();
+
+        this.robberTileId = tileList.stream()
+                .filter(tile -> tile.getType() == TileType.WASTE)
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("No desert tile found"))
+                .getId();
+
         generateBoard();
 
         this.diceRoller = new DiceRoller();
         subscribeTilesToDice();
+
+        diceRoller.removeSubscriber(getTileById(robberTileId));
 
         long endtime = System.nanoTime();
 
@@ -196,6 +207,28 @@ public class GameBoard {
         }
     }
 
+    private Tile getTileById(int tileId){
+        return tileList.stream()
+                .filter(tile -> tile.getId() == tileId)
+                .findFirst()
+                .orElseThrow(()-> new IllegalArgumentException("Tile not found: id=" + tileId));
+    }
+
+    public void placeRobber(int newRobberTileId) {
+        Tile oldRobberTile = getTileById(getRobberTileId());
+
+        //Release old robber tile
+        if(oldRobberTile.getType() != TileType.WASTE){
+            diceRoller.addSubscriber(oldRobberTile);
+        }
+
+        //Block new robber tile
+        Tile newRobberTile = getTileById(newRobberTileId);
+        diceRoller.removeSubscriber(newRobberTile);
+
+        setRobberTileId(newRobberTileId);
+    }
+
     private boolean hasAdjacentRoads(Road road, Player player) {
         return road.getAdjacentRoads().stream().anyMatch(r -> r.getOwner() == player);
     }
@@ -285,6 +318,14 @@ public class GameBoard {
         return roadList;
     }
 
+    public int getRobberTileId() {
+        return robberTileId;
+    }
+
+    public void setRobberTileId(int robberTileId){
+        this.robberTileId = robberTileId;
+    }
+
     public Port getPortOfBuildingSite(int buildingSitePositionId) {
         return buildingSiteGraph.get(buildingSitePositionId).getPort();
     }
@@ -308,7 +349,9 @@ public class GameBoard {
 
         // Add tiles
         for (Tile tile : this.tileList) {
-            tilesNode.add(tile.toJson());
+            ObjectNode tileJson = tile.toJson();
+            tileJson.put("isRobbed", tile.getId() == robberTileId);
+            tilesNode.add(tileJson);
         }
 
         // Add building sites

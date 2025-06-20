@@ -83,6 +83,7 @@ public class GameMessageHandler {
                 case ROLL_DICE -> handleDiceRoll(message);
                 case START_GAME -> handleStartGame(message);
                 case SET_READY -> setReady(message);
+                case PLACE_ROBBER -> placeRobber(message);
                 case TRADE_WITH_BANK -> handleTradeWithBank(message);
                 case TRADE_WITH_PLAYER -> throw new GameException("Not yet implemented");
                 case ERROR, CONNECTION_SUCCESSFUL, CLIENT_DISCONNECTED, LOBBY_CREATED, LOBBY_UPDATED, PLAYER_JOINED,
@@ -126,6 +127,30 @@ public class GameMessageHandler {
 
         MessageDTO update = new MessageDTO(
                 MessageType.PLACE_ROAD,
+                message.getPlayer(),
+                message.getLobbyId(),
+                getLobbyPlayerInformation(message.getLobbyId()),
+                root
+        );
+
+        return lobbyService.notifyPlayers(message.getLobbyId(), update)
+                .chain(() -> Uni.createFrom().item(update));
+    }
+
+    Uni<MessageDTO> placeRobber(MessageDTO message) throws GameException {
+        JsonNode robberTileId = message.getMessageNode("robberTileId");
+
+        try {
+            int newRobberTileId = Integer.parseInt(robberTileId.toString());
+            gameService.placeRobber(message.getLobbyId(), newRobberTileId);
+        } catch (NumberFormatException err) {
+            throw new GameException("Invalid robber tile id: %s", robberTileId.toString());
+        }
+
+        ObjectNode root = getGameBoardInformation(message.getLobbyId());
+
+        MessageDTO update = new MessageDTO(
+                MessageType.PLACE_ROBBER,
                 message.getPlayer(),
                 message.getLobbyId(),
                 getLobbyPlayerInformation(message.getLobbyId()),

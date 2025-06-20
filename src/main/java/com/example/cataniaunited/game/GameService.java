@@ -122,6 +122,11 @@ public class GameService {
         gameboard.placeRoad(buildRequest);
     }
 
+    public void placeRobber(String lobbyId, int newRobberTileId) throws GameException {
+        GameBoard gameBoard = getGameboardByLobbyId(lobbyId);
+        gameBoard.placeRobber(newRobberTileId);
+    }
+
     private boolean exceedsSetupLimit(BuildRequest buildRequest, long structureCount) {
         Optional<Integer> maximumStructureCount = buildRequest.maximumStructureCount();
         return buildRequest.isSetupRound()
