@@ -5,8 +5,14 @@ import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.dto.PlayerInfo;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.fi.BuildingAction;
+import com.example.cataniaunited.game.BuildingCosts;
+import com.example.cataniaunited.game.DevelopmentCardDeck;
+import com.example.cataniaunited.game.DevelopmentCardType;
 import com.example.cataniaunited.game.GameService;
 import com.example.cataniaunited.game.board.GameBoard;
+import com.example.cataniaunited.game.board.tile_list_builder.TileType;
+import com.example.cataniaunited.game.buildings.City;
+import com.example.cataniaunited.game.buildings.Settlement;
 import com.example.cataniaunited.game.trade.TradeRequest;
 import com.example.cataniaunited.game.trade.TradingService;
 import com.example.cataniaunited.lobby.Lobby;
@@ -85,6 +91,9 @@ public class GameMessageHandler {
                 case SET_READY -> setReady(message);
                 case TRADE_WITH_BANK -> handleTradeWithBank(message);
                 case TRADE_WITH_PLAYER -> throw new GameException("Not yet implemented");
+                case BUILDING_COST -> handleBuildingCostRequest(message);
+                               case DEVELOPMENT_CARD_DRAWN -> null;
+                case BUY_DEVELOPMENT_CARD -> handleBuyDevelopmentCard(message);
                 case ERROR, CONNECTION_SUCCESSFUL, CLIENT_DISCONNECTED, LOBBY_CREATED, LOBBY_UPDATED, PLAYER_JOINED,
                         GAME_BOARD_JSON, GAME_WON, DICE_RESULT, NEXT_TURN, GAME_STARTED, PLAYER_RESOURCE_UPDATE ->
                         throw new GameException("Invalid client command");
