@@ -1,10 +1,12 @@
 package com.example.cataniaunited.lobby;
 
 import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.game.DevelopmentCardDeck;
 import com.example.cataniaunited.player.PlayerColor;
 import org.jboss.logging.Logger;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -21,7 +23,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
 public class Lobby {
 
     private static final Logger logger = Logger.getLogger(Lobby.class);
-
+    private final Map<String, DevelopmentCardDeck> lobbyCardDecks = new HashMap<>();
     private final String lobbyId;
     private final String hostPlayer; // ID of the player who created the lobby
     private final Set<String> players = new CopyOnWriteArraySet<>(); // Set of player IDs in the lobby

@@ -2,6 +2,7 @@ package com.example.cataniaunited.lobby;
 
 import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerColor;
 import io.smallrye.mutiny.Uni;
 
@@ -104,5 +105,7 @@ public interface LobbyService {
     int getRoundsPlayed(String lobbyId) throws GameException;
 
     void toggleReady(String lobbyId, String playerId) throws GameException;
+
+    Player getPlayerById(String playerId);
 
 }

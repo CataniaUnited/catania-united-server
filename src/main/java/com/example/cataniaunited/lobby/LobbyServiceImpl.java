@@ -5,6 +5,7 @@ import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.exception.ui.DiceRollException;
 import com.example.cataniaunited.exception.ui.InvalidTurnException;
 import com.example.cataniaunited.fi.LobbyAction;
+import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerColor;
 import com.example.cataniaunited.player.PlayerService;
 import com.example.cataniaunited.util.Util;
@@ -33,6 +34,8 @@ public class LobbyServiceImpl implements LobbyService {
     private static final Logger logger = Logger.getLogger(LobbyServiceImpl.class);
     private final Map<String, Lobby> lobbies = new ConcurrentHashMap<>();
     private static final SecureRandom secureRandom = new SecureRandom();
+
+    private final Map<String, Player> playersById = new ConcurrentHashMap<>();
 
     @Inject
     PlayerService playerService;
@@ -287,5 +290,18 @@ public class LobbyServiceImpl implements LobbyService {
     public void clearLobbies() {
         lobbies.clear();
         logger.info("All lobbies have been cleared.");
+    }
+
+    @Override
+    public Player getPlayerById(String playerId) {
+        for (Lobby lobby : lobbies.values()) {
+            for (String playerName : lobby.getPlayers()) {
+                Player player = playersById.get(playerName);
+                if (player != null && player.getUniqueId().equals(playerId)) {
+                    return player;
+                }
+            }
+        }
+        throw new IllegalArgumentException("Player not found: " + playerId);
     }
 }

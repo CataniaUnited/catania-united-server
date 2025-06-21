@@ -2,12 +2,15 @@ package com.example.cataniaunited.player;
 
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.exception.ui.InsufficientResourcesException;
+import com.example.cataniaunited.game.DevelopmentCardType;
 import com.example.cataniaunited.game.board.ports.Port;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import io.quarkus.websockets.next.WebSocketConnection;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
@@ -26,6 +29,7 @@ public class Player {
     private final WebSocketConnection connection;
     private int victoryPoints = 0;
     HashMap<TileType, Integer> resources = new HashMap<>();
+    private final List<DevelopmentCardType> developmentCards = new ArrayList<>();
 
     final Set<Port> accessiblePorts = new HashSet<>();
 
@@ -202,6 +206,10 @@ public class Player {
     @Override
     public int hashCode() {
         return Objects.hashCode(uniqueId);
+    }
+
+    public List<DevelopmentCardType> getDevelopmentCards() {
+        return developmentCards;
     }
 
     public Set<Port> getAccessiblePorts() {
