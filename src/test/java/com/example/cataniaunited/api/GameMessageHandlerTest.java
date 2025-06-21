@@ -267,14 +267,14 @@ class GameMessageHandlerTest {
         PlayerInfo playerInfo = mock(PlayerInfo.class);
         when(playerMapper.toDto(player, lobby)).thenReturn(playerInfo);
 
-        MessageDTO expected = new MessageDTO(MessageType.LOBBY_UPDATED, playerId, lobbyId, Map.of(playerId, playerInfo));
+        MessageDTO expected = new MessageDTO(MessageType.PLAYER_RESOURCE_UPDATE, playerId, lobbyId, Map.of(playerId, playerInfo));
         when(lobbyService.notifyPlayers(eq(lobbyId), any(MessageDTO.class)))
                 .thenReturn(Uni.createFrom().item(expected));
 
         MessageDTO result = gameMessageHandler.handleCheatAttempt(inputMessage).await().indefinitely();
 
         assertNotNull(result);
-        assertEquals(MessageType.LOBBY_UPDATED, result.getType());
+        assertEquals(MessageType.PLAYER_RESOURCE_UPDATE, result.getType());
         assertEquals(playerId, result.getPlayer());
         verify(gameService, times(1)).handleCheat(lobbyId, playerId, resource);
         verify(lobbyService, times(1)).notifyPlayers(eq(lobbyId), any(MessageDTO.class));
