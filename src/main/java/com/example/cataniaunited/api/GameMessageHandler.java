@@ -145,6 +145,34 @@ public class GameMessageHandler {
                 .chain(() -> Uni.createFrom().item(update));
     }
 
+    Uni<MessageDTO> handleBuildingCostRequest(MessageDTO message) {
+        ObjectNode result = JsonNodeFactory.instance.objectNode();
+        ObjectNode costsNode = JsonNodeFactory.instance.objectNode();
+
+        Map<String, Map<TileType, Integer>> costs = BuildingCosts.getAllCosts();
+
+        for (Map.Entry<String, Map<TileType, Integer>> entry : costs.entrySet()) {
+            String buildingType = entry.getKey();
+            Map<TileType, Integer> resourceCosts = entry.getValue();
+
+            ObjectNode resourceNode = JsonNodeFactory.instance.objectNode();
+            for (Map.Entry<TileType, Integer> cost : resourceCosts.entrySet()) {
+                resourceNode.put(cost.getKey().name().toLowerCase(), cost.getValue());
+            }
+
+            costsNode.set(buildingType.toLowerCase(), resourceNode);
+        }
+
+        result.set("costs", costsNode);
+
+        return Uni.createFrom().item(new MessageDTO(
+                MessageType.BUILDING_COST,
+                message.getPlayer(),
+                message.getLobbyId(),
+                result
+        ));
+    }
+
     /**
      * Creates a JSON object representing the game board along with details of all players in the specified lobby.
      * The player details include their username, victory points, and assigned color.
