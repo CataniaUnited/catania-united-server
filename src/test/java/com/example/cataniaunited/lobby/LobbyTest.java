@@ -6,6 +6,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -305,5 +306,47 @@ class LobbyTest {
         PlayerColor got = colorLobby.assignAvailableColor();
         assertEquals(comeback, got, "restored color must come back immediately");
     }
+
+    @Test
+    void recordCheat_shouldIncrementCheatCountForPlayer() {
+        Lobby lobby = new Lobby("cheatLobby", "cheater");
+        String player = "cheater";
+
+        assertEquals(0, lobby.getCheatCount(player));
+        assertTrue(lobby.getCheatCounts().isEmpty());
+
+        lobby.recordCheat(player);
+        assertEquals(1, lobby.getCheatCount(player));
+        assertEquals(1, lobby.getCheatCounts().size());
+
+        lobby.recordCheat(player);
+        assertEquals(2, lobby.getCheatCount(player));
+        assertEquals(1, lobby.getCheatCounts().size());
+    }
+
+    @Test
+    void getCheatCounts_shouldReturnUnmodifiableMapWithCorrectValues() {
+        Lobby lobby = new Lobby("cheatLobby", "host");
+        String player1 = "host";
+        String player2 = "p2";
+
+        lobby.addPlayer(player2);
+
+        lobby.recordCheat(player1);
+        lobby.recordCheat(player1);
+        lobby.recordCheat(player2);
+
+        Map<String, Integer> cheats = lobby.getCheatCounts();
+        assertEquals(2, cheats.get(player1));
+        assertEquals(1, cheats.get(player2));
+        assertEquals(2, cheats.size());
+    }
+
+    @Test
+    void getCheatCount_returnsZeroForUnknownPlayer() {
+        Lobby lobby = new Lobby("cheatLobby", "host");
+        assertEquals(0, lobby.getCheatCount("unknown"));
+    }
+
 }
 //

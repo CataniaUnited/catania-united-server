@@ -7,6 +7,7 @@ import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.fi.BuildingAction;
 import com.example.cataniaunited.game.GameService;
 import com.example.cataniaunited.game.board.GameBoard;
+import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.example.cataniaunited.game.trade.TradeRequest;
 import com.example.cataniaunited.game.trade.TradingService;
 import com.example.cataniaunited.lobby.Lobby;
@@ -85,6 +86,7 @@ public class GameMessageHandler {
                 case SET_READY -> setReady(message);
                 case TRADE_WITH_BANK -> handleTradeWithBank(message);
                 case TRADE_WITH_PLAYER -> throw new GameException("Not yet implemented");
+                case CHEAT_ATTEMPT -> handleCheatAttempt(message);
                 case ERROR, CONNECTION_SUCCESSFUL, CLIENT_DISCONNECTED, LOBBY_CREATED, LOBBY_UPDATED, PLAYER_JOINED,
                         GAME_BOARD_JSON, GAME_WON, DICE_RESULT, NEXT_TURN, GAME_STARTED, PLAYER_RESOURCE_UPDATE ->
                         throw new GameException("Invalid client command");
@@ -451,5 +453,30 @@ public class GameMessageHandler {
         // Notify all players in the lobby about the new Resource Distribution
         return lobbyService.notifyPlayers(message.getLobbyId(), updateResponse)
                 .chain(() -> Uni.createFrom().item(updateResponse));
+    }
+
+    Uni<MessageDTO> handleCheatAttempt(MessageDTO message) {
+        try {
+            String lobbyId = message.getLobbyId();
+            String playerId = message.getPlayer();
+            String resourceStr = message.getMessageNode("resource").asText();
+            TileType resource = TileType.valueOf(resourceStr);
+
+            gameService.handleCheat(lobbyId, playerId, resource);
+
+            MessageDTO update = new MessageDTO(
+                    MessageType.PLAYER_RESOURCE_UPDATE,
+                    playerId,
+                    lobbyId,
+                    getLobbyPlayerInformation(lobbyId)
+            );
+
+            return lobbyService.notifyPlayers(lobbyId, update)
+                    .chain(() -> Uni.createFrom().item(update));
+        } catch (GameException e) {
+            return Uni.createFrom().item(createErrorMessage(e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            return Uni.createFrom().item(createErrorMessage("Invalid resource type"));
+        }
     }
 }
