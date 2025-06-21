@@ -465,7 +465,7 @@ public class GameMessageHandler {
             gameService.handleCheat(lobbyId, playerId, resource);
 
             MessageDTO update = new MessageDTO(
-                    MessageType.LOBBY_UPDATED,
+                    MessageType.PLAYER_RESOURCE_UPDATE,
                     playerId,
                     lobbyId,
                     getLobbyPlayerInformation(lobbyId)
@@ -475,7 +475,7 @@ public class GameMessageHandler {
                     .chain(() -> Uni.createFrom().item(update));
         } catch (GameException e) {
             return Uni.createFrom().item(createErrorMessage(e.getMessage()));
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
             return Uni.createFrom().item(createErrorMessage("Invalid resource type"));
         }
     }
