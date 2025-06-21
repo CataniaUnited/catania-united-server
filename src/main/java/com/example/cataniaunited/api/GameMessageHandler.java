@@ -444,7 +444,53 @@ public class GameMessageHandler {
                 );
     }
 
+    private Uni<MessageDTO> handleBuyDevelopmentCard(MessageDTO message) throws GameException {
+        String lobbyId = message.getLobbyId();
+        String playerId = message.getPlayer();
 
+
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+        Player player = playerService.getPlayerById(playerId);
+
+        DevelopmentCardDeck deck = gameService.getDeckForLobby(lobbyId);
+
+        Map<TileType, Integer> cost = Map.of(
+                TileType.SHEEP, 1,
+                TileType.WHEAT, 1,
+                TileType.ORE, 1
+        );
+
+        for (Map.Entry<TileType, Integer> entry : cost.entrySet()) {
+            if (player.getResourceCount(entry.getKey()) < entry.getValue()) {
+                throw new GameException("Not enough resources to buy development card");
+            }
+        }
+
+        for (Map.Entry<TileType, Integer> entry : cost.entrySet()) {
+            player.removeResource(entry.getKey(), entry.getValue());
+        }
+
+        DevelopmentCardType card = deck.drawCard();
+        if (card == null) {
+            throw new GameException("No development cards remaining");
+        }
+
+        player.getDevelopmentCards().add(card);
+
+        ObjectNode payload = JsonNodeFactory.instance.objectNode();
+        payload.put("cardType", card.name());
+
+        MessageDTO response = new MessageDTO(
+                MessageType.BUY_DEVELOPMENT_CARD,
+                playerId,
+                lobbyId,
+                null,
+                payload
+        );
+
+        return playerService.sendMessageToPlayer(playerId, response)
+                .replaceWith(response);
+    }
     /**
      * Handles a request from a player to trade resources with the bank.
      * This method now deserializes the message payload into a TradeRequest object

@@ -1,5 +1,6 @@
 package com.example.cataniaunited.game;
 
+import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.exception.ui.MissingRequiredStructuresException;
 import com.example.cataniaunited.exception.ui.SetupLimitExceededException;
@@ -12,11 +13,17 @@ import com.example.cataniaunited.lobby.LobbyService;
 import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerColor;
 import com.example.cataniaunited.player.PlayerService;
+import com.example.cataniaunited.util.WebSocketUtil;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -34,6 +41,7 @@ public class GameService {
 
     private static final Logger logger = Logger.getLogger(GameService.class);
     private static final ConcurrentHashMap<String, GameBoard> lobbyToGameboardMap = new ConcurrentHashMap<>();
+    private final Map<String, DevelopmentCardDeck> lobbyCardDecks = new HashMap<>();
 
     @Inject
     LobbyService lobbyService;
@@ -41,6 +49,8 @@ public class GameService {
     @Inject
     PlayerService playerService;
 
+    @Inject
+    ObjectMapper objectMapper;
 
     /**
      * Creates a new game board for the specified lobby.
@@ -55,6 +65,14 @@ public class GameService {
         GameBoard gameboard = new GameBoard(lobby.getPlayers().size());
         addGameboardToList(lobby.getLobbyId(), gameboard);
         return gameboard;
+    }
+
+    public DevelopmentCardDeck getDeckForLobby(String lobbyId) {
+        DevelopmentCardDeck deck = lobbyCardDecks.get(lobbyId);
+        if (deck == null) {
+            throw new IllegalStateException("No development card deck found for lobby: " + lobbyId);
+        }
+        return deck;
     }
 
     /**
@@ -156,7 +174,7 @@ public class GameService {
         if (!lobby.canStartGame(hostPlayerId)) {
             throw new GameException("Starting of game failed");
         }
-
+        lobbyCardDecks.put(lobbyId, new DevelopmentCardDeck());
         createGameboard(lobbyId);
         for (String playerId : lobby.getPlayers()) {
             playerService.initializePlayerResources(playerId);
