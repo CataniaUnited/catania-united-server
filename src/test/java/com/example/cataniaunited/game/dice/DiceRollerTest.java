@@ -139,6 +139,6 @@ class DiceRollerTest {
         ObjectNode result = diceRoller.rollDice();
         int total = result.get("total").asInt();
 
-        verify(mockTile, times(2)).update(total);
+        verify(mockTile, times(1)).update(total);
     }
 }
