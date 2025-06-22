@@ -5,6 +5,8 @@ import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.dto.PlayerInfo;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.fi.BuildingAction;
+import com.example.cataniaunited.game.DevelopmentCardDeck;
+import com.example.cataniaunited.game.DevelopmentCardType;
 import com.example.cataniaunited.game.GameService;
 import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
@@ -87,6 +89,7 @@ public class GameMessageHandler {
                 case TRADE_WITH_BANK -> handleTradeWithBank(message);
                 case TRADE_WITH_PLAYER -> throw new GameException("Not yet implemented");
                 case CHEAT_ATTEMPT -> handleCheatAttempt(message);
+                case BUY_DEVELOPMENT_CARD -> handleBuyDevelopmentCard(message);
                 case ERROR, CONNECTION_SUCCESSFUL, CLIENT_DISCONNECTED, LOBBY_CREATED, LOBBY_UPDATED, PLAYER_JOINED,
                         GAME_BOARD_JSON, GAME_WON, DICE_RESULT, NEXT_TURN, GAME_STARTED, PLAYER_RESOURCE_UPDATE ->
                         throw new GameException("Invalid client command");
@@ -409,7 +412,53 @@ public class GameMessageHandler {
                 );
     }
 
+    private Uni<MessageDTO> handleBuyDevelopmentCard(MessageDTO message) throws GameException {
+        String lobbyId = message.getLobbyId();
+        String playerId = message.getPlayer();
 
+
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+        Player player = playerService.getPlayerById(playerId);
+
+        DevelopmentCardDeck deck = gameService.getDeckForLobby(lobbyId);
+
+        Map<TileType, Integer> cost = Map.of(
+                TileType.SHEEP, 1,
+                TileType.WHEAT, 1,
+                TileType.ORE, 1
+        );
+
+        for (Map.Entry<TileType, Integer> entry : cost.entrySet()) {
+            if (player.getResourceCount(entry.getKey()) < entry.getValue()) {
+                throw new GameException("Not enough resources to buy development card");
+            }
+        }
+
+        for (Map.Entry<TileType, Integer> entry : cost.entrySet()) {
+            player.removeResource(entry.getKey(), entry.getValue());
+        }
+
+        DevelopmentCardType card = deck.drawCard();
+        if (card == null) {
+            throw new GameException("No development cards remaining");
+        }
+
+        player.getDevelopmentCards().add(card);
+
+        ObjectNode payload = JsonNodeFactory.instance.objectNode();
+        payload.put("cardType", card.name());
+
+        MessageDTO response = new MessageDTO(
+                MessageType.BUY_DEVELOPMENT_CARD,
+                playerId,
+                lobbyId,
+                null,
+                payload
+        );
+
+        return playerService.sendMessageToPlayer(playerId, response)
+                .replaceWith(response);
+    }
     /**
      * Handles a request from a player to trade resources with the bank.
      * This method now deserializes the message payload into a TradeRequest object

@@ -31,5 +31,5 @@ public enum MessageType {
     TRADE_WITH_BANK,
     TRADE_WITH_PLAYER,
     CHEAT_ATTEMPT,
-
+    BUY_DEVELOPMENT_CARD,
 }
