@@ -18,9 +18,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -37,6 +35,7 @@ public class GameService {
 
     private static final Logger logger = Logger.getLogger(GameService.class);
     private static final ConcurrentHashMap<String, GameBoard> lobbyToGameboardMap = new ConcurrentHashMap<>();
+    private final Map<String, DevelopmentCardDeck> lobbyCardDecks = new HashMap<>();
 
     @Inject
     LobbyService lobbyService;
@@ -58,6 +57,14 @@ public class GameService {
         GameBoard gameboard = new GameBoard(lobby.getPlayers().size());
         addGameboardToList(lobby.getLobbyId(), gameboard);
         return gameboard;
+    }
+
+    public DevelopmentCardDeck getDeckForLobby(String lobbyId) {
+        DevelopmentCardDeck deck = lobbyCardDecks.get(lobbyId);
+        if (deck == null) {
+            throw new IllegalStateException("No development card deck found for lobby: " + lobbyId);
+        }
+        return deck;
     }
 
     /**
@@ -159,7 +166,7 @@ public class GameService {
         if (!lobby.canStartGame(hostPlayerId)) {
             throw new GameException("Starting of game failed");
         }
-
+        lobbyCardDecks.put(lobbyId, new DevelopmentCardDeck());
         createGameboard(lobbyId);
         for (String playerId : lobby.getPlayers()) {
             playerService.initializePlayerResources(playerId);
