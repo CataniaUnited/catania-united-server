@@ -31,6 +31,7 @@ public class Lobby {
     private final Map<String, Integer> latestDiceRollOfPlayer = new ConcurrentHashMap<>();
     private final Map<String, Boolean> readyState = new ConcurrentHashMap<>();
     private Map<String, Integer> cheatCounts = new HashMap<>();
+    private Map<String, Integer> reportCounts = new HashMap<>();
 
     /**
      * Constructs a new Lobby instance.
@@ -347,5 +348,18 @@ public class Lobby {
 
     public int getCheatCount(String playerId) {
         return cheatCounts.getOrDefault(playerId, 0);
+    }
+
+    public Map<String, Integer> getReportCounts() {
+        return reportCounts;
+    }
+
+    public void recordReport(String playerId) {
+        int current = reportCounts.getOrDefault(playerId, 0);
+        reportCounts.put(playerId, current + 1);
+    }
+
+    public int getReportCount(String playerId) {
+        return reportCounts.getOrDefault(playerId, 0);
     }
 }
