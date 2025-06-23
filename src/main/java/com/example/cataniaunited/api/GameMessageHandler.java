@@ -5,6 +5,7 @@ import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.dto.PlayerInfo;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.fi.BuildingAction;
+import com.example.cataniaunited.game.BuildingCosts;
 import com.example.cataniaunited.game.GameService;
 import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
@@ -87,6 +88,7 @@ public class GameMessageHandler {
                 case TRADE_WITH_BANK -> handleTradeWithBank(message);
                 case TRADE_WITH_PLAYER -> throw new GameException("Not yet implemented");
                 case CHEAT_ATTEMPT -> handleCheatAttempt(message);
+                case BUILDING_COST -> handleBuildingCostRequest(message);
                 case ERROR, CONNECTION_SUCCESSFUL, CLIENT_DISCONNECTED, LOBBY_CREATED, LOBBY_UPDATED, PLAYER_JOINED,
                         GAME_BOARD_JSON, GAME_WON, DICE_RESULT, NEXT_TURN, GAME_STARTED, PLAYER_RESOURCE_UPDATE ->
                         throw new GameException("Invalid client command");
@@ -136,6 +138,34 @@ public class GameMessageHandler {
 
         return lobbyService.notifyPlayers(message.getLobbyId(), update)
                 .chain(() -> Uni.createFrom().item(update));
+    }
+
+    Uni<MessageDTO> handleBuildingCostRequest(MessageDTO message) {
+        ObjectNode result = JsonNodeFactory.instance.objectNode();
+        ObjectNode costsNode = JsonNodeFactory.instance.objectNode();
+
+        Map<String, Map<TileType, Integer>> costs = BuildingCosts.getAllCosts();
+
+        for (Map.Entry<String, Map<TileType, Integer>> entry : costs.entrySet()) {
+            String buildingType = entry.getKey();
+            Map<TileType, Integer> resourceCosts = entry.getValue();
+
+            ObjectNode resourceNode = JsonNodeFactory.instance.objectNode();
+            for (Map.Entry<TileType, Integer> cost : resourceCosts.entrySet()) {
+                resourceNode.put(cost.getKey().name().toLowerCase(), cost.getValue());
+            }
+
+            costsNode.set(buildingType.toLowerCase(), resourceNode);
+        }
+
+        result.set("costs", costsNode);
+
+        return Uni.createFrom().item(new MessageDTO(
+                MessageType.BUILDING_COST,
+                message.getPlayer(),
+                message.getLobbyId(),
+                result
+        ));
     }
 
     /**
