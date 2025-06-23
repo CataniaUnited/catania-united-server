@@ -6,5 +6,5 @@ public enum TileType {
     WOOD,
     CLAY,
     ORE,
-    WASTE;
+    WASTE
 }
