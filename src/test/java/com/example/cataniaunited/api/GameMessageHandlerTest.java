@@ -2,8 +2,10 @@ package com.example.cataniaunited.api;
 
 import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.dto.MessageType;
+import com.example.cataniaunited.dto.PlayerInfo;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.exception.ui.InvalidTurnException;
+import com.example.cataniaunited.game.GameService;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.example.cataniaunited.game.trade.TradeRequest;
 import com.example.cataniaunited.game.trade.TradingService;
@@ -21,13 +23,12 @@ import io.quarkus.websockets.next.WebSocketConnection;
 import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
-
+import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyString;
 import java.util.Map;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
 
 @QuarkusTest
 class GameMessageHandlerTest {
@@ -46,6 +47,10 @@ class GameMessageHandlerTest {
 
     @InjectSpy
     TradingService tradingService;
+
+    @InjectSpy
+    GameService gameService;
+
 
     @Test
     void getLobbyPlayerInfoShouldNotMapNullValues() throws GameException {
@@ -241,4 +246,86 @@ class GameMessageHandlerTest {
         verify(tradingService, never()).handleBankTradeRequest(anyString(), any(TradeRequest.class));
         verify(lobbyService, never()).notifyPlayers(anyString(), any(MessageDTO.class));
     }
+
+    @Test
+    void handleCheatAttempt_validResource_shouldBroadcastUpdate() throws GameException {
+        WebSocketConnection conn = mock(WebSocketConnection.class);
+        when(conn.id()).thenReturn("playerY");
+        Player player = playerService.addPlayer(conn);
+        String playerId = player.getUniqueId();
+        String lobbyId = lobbyService.createLobby(playerId);
+
+        TileType resource = TileType.WOOD;
+
+        ObjectNode payload = JsonNodeFactory.instance.objectNode();
+        payload.put("resource", resource.name());
+        MessageDTO inputMessage = new MessageDTO(MessageType.CHEAT_ATTEMPT, playerId, lobbyId, payload);
+
+        doNothing().when(gameService).handleCheat(lobbyId, playerId, resource);
+
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+        PlayerInfo playerInfo = mock(PlayerInfo.class);
+        when(playerMapper.toDto(player, lobby)).thenReturn(playerInfo);
+
+        MessageDTO expected = new MessageDTO(MessageType.PLAYER_RESOURCE_UPDATE, playerId, lobbyId, Map.of(playerId, playerInfo));
+        when(lobbyService.notifyPlayers(eq(lobbyId), any(MessageDTO.class)))
+                .thenReturn(Uni.createFrom().item(expected));
+
+        MessageDTO result = gameMessageHandler.handleCheatAttempt(inputMessage).await().indefinitely();
+
+        assertNotNull(result);
+        assertEquals(MessageType.PLAYER_RESOURCE_UPDATE, result.getType());
+        assertEquals(playerId, result.getPlayer());
+        verify(gameService, times(1)).handleCheat(lobbyId, playerId, resource);
+        verify(lobbyService, times(1)).notifyPlayers(eq(lobbyId), any(MessageDTO.class));
+    }
+
+
+    @Test
+    void handleCheatAttempt_gameException_shouldReturnErrorDto() throws GameException {
+        String lobbyId = "lobbyX";
+        String playerId = "playerY";
+        TileType resource = TileType.ORE;
+
+        ObjectNode payload = JsonNodeFactory.instance.objectNode();
+        payload.put("resource", resource.name());
+        MessageDTO inputMessage = new MessageDTO(MessageType.CHEAT_ATTEMPT, playerId, lobbyId, payload);
+
+        doThrow(new GameException("cheating not allowed")).when(gameService)
+                .handleCheat(lobbyId, playerId, resource);
+
+        MessageDTO result = gameMessageHandler.handleCheatAttempt(inputMessage).await().indefinitely();
+
+        assertNotNull(result);
+        assertEquals(MessageType.ERROR, result.getType());
+        assertEquals("cheating not allowed", result.getMessageNode("error").asText());
+        verify(gameService, times(1)).handleCheat(lobbyId, playerId, resource);
+        verify(lobbyService, never()).notifyPlayers(any(), any());
+    }
+
+    @Test
+    void handleCheatAttempt_invalidResource_shouldReturnInvalidResourceTypeError() throws GameException {
+        String lobbyId = "lobbyX";
+        String playerId = "playerY";
+        String invalidResource = "BANANA";
+
+        ObjectNode payload = JsonNodeFactory.instance.objectNode();
+        payload.put("resource", invalidResource);
+        MessageDTO inputMessage = new MessageDTO(MessageType.CHEAT_ATTEMPT, playerId, lobbyId, payload);
+
+        MessageDTO result = gameMessageHandler.handleCheatAttempt(inputMessage).await().indefinitely();
+
+        assertNotNull(result);
+        assertEquals(MessageType.ERROR, result.getType());
+        assertEquals("Invalid resource type", result.getMessageNode("error").asText());
+        verify(gameService, never()).handleCheat(any(), any(), any());
+        verify(lobbyService, never()).notifyPlayers(any(), any());
+    }
+
+
+
+
+
+
+
 }

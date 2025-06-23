@@ -6,6 +6,7 @@ import com.example.cataniaunited.exception.ui.SetupLimitExceededException;
 import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.game.board.Road;
 import com.example.cataniaunited.game.board.ports.Port;
+import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.example.cataniaunited.game.buildings.Settlement;
 import com.example.cataniaunited.lobby.Lobby;
 import com.example.cataniaunited.lobby.LobbyService;
@@ -17,6 +18,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
+import java.util.Comparator;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -253,5 +256,38 @@ public class GameService {
     public void clearGameBoardsForTesting() {
         lobbyToGameboardMap.clear();
         logger.info("All game boards have been cleared for testing.");
+    }
+
+    public void handleCheat(String lobbyId, String playerId, TileType resource) throws GameException {
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+        Player cheater = playerService.getPlayerById(playerId);
+
+        int currentCheatCount = lobby.getCheatCount(playerId);
+        if (currentCheatCount >= 2) {
+            throw new GameException("You already cheated twice!");
+        }
+
+        List<String> potentialVictims = lobby.getPlayers().stream()
+                .filter(pid -> !pid.equals(playerId))
+                .filter(pid -> {
+                    Player p = playerService.getPlayerById(pid);
+                    return p.getResourceCount(resource) > 0;
+                })
+                .toList();
+
+        if (potentialVictims.isEmpty()) {
+            throw new GameException("No player has that resource to steal.");
+        }
+
+        String victimId = potentialVictims.stream()
+                .max(Comparator.comparingInt(pid -> playerService.getPlayerById(pid).getResourceCount(resource)))
+                .orElseThrow();
+
+        Player victim = playerService.getPlayerById(victimId);
+
+        victim.removeResource(resource, 1);
+        cheater.receiveResource(resource, 1);
+
+        lobby.recordCheat(playerId);
     }
 }

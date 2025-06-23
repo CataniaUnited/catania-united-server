@@ -20,6 +20,7 @@ import io.quarkus.test.junit.mockito.InjectSpy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 
 import java.util.List;
 import java.util.Set;
@@ -508,6 +509,66 @@ class GameServiceTest {
 
         verify(gameboardMock, never()).getPlayerStructureCount(playerId, Road.class);
         verify(gameboardMock, never()).getPlayerStructureCount(playerId, Settlement.class);
+    }
+
+    @Test
+    void handleCheat_shouldThrowIfNoPlayerHasThatResource(){
+        String cheaterId = "cheater";
+        String victimId = "victim";
+        String lobbyId = lobbyService.createLobby(cheaterId);
+        lobbyService.joinLobbyByCode(lobbyId, victimId);
+
+        Player cheater = mock(Player.class);
+        Player victim = mock(Player.class);
+        when(playerService.getPlayerById(cheaterId)).thenReturn(cheater);
+        when(playerService.getPlayerById(victimId)).thenReturn(victim);
+        when(victim.getResourceCount(TileType.ORE)).thenReturn(0);
+
+        GameException ex = assertThrows(GameException.class,
+                () -> gameService.handleCheat(lobbyId, cheaterId, TileType.ORE));
+        assertEquals("No player has that resource to steal.", ex.getMessage());
+    }
+
+    @Test
+    void handleCheat_shouldThrowIfCheatLimitReached() throws GameException {
+        String cheaterId = "cheater";
+        String victimId = "victim";
+        String lobbyId = lobbyService.createLobby(cheaterId);
+        lobbyService.joinLobbyByCode(lobbyId, victimId);
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+        lobby.recordCheat(cheaterId);
+        lobby.recordCheat(cheaterId);
+
+        Player cheater = mock(Player.class);
+        Player victim = mock(Player.class);
+        when(playerService.getPlayerById(cheaterId)).thenReturn(cheater);
+        when(playerService.getPlayerById(victimId)).thenReturn(victim);
+        when(victim.getResourceCount(TileType.WHEAT)).thenReturn(2);
+
+        GameException ex = assertThrows(GameException.class,
+                () -> gameService.handleCheat(lobbyId, cheaterId, TileType.WHEAT));
+        assertEquals("You already cheated twice!", ex.getMessage());
+    }
+
+    @Test
+    void handleCheat_shouldTransferResourceToCheaterAndIncrementCount() throws GameException {
+        String cheaterId = "cheater";
+        String victimId = "victim";
+        String lobbyId = lobbyService.createLobby(cheaterId);
+        lobbyService.joinLobbyByCode(lobbyId, victimId);
+
+        Player cheater = mock(Player.class);
+        Player victim = mock(Player.class);
+        when(playerService.getPlayerById(cheaterId)).thenReturn(cheater);
+        when(playerService.getPlayerById(victimId)).thenReturn(victim);
+        when(victim.getResourceCount(TileType.WOOD)).thenReturn(3);
+
+        gameService.handleCheat(lobbyId, cheaterId, TileType.WOOD);
+
+        verify(victim).removeResource(TileType.WOOD, 1);
+        verify(cheater).receiveResource(TileType.WOOD, 1);
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+        assertEquals(1, lobby.getCheatCount(cheaterId));
     }
 
 }
