@@ -32,6 +32,10 @@ public class Lobby {
     private final Map<String, Boolean> readyState = new ConcurrentHashMap<>();
     private Map<String, Integer> cheatCounts = new HashMap<>();
     private Map<String, Integer> reportCounts = new HashMap<>();
+    private final List<ReportRecord> reportRecords = new ArrayList<>();
+
+    public record ReportRecord(String reporterId, String reportedId) {
+    }
 
     /**
      * Constructs a new Lobby instance.
@@ -354,9 +358,14 @@ public class Lobby {
         return reportCounts;
     }
 
-    public void recordReport(String playerId) {
-        int current = reportCounts.getOrDefault(playerId, 0);
-        reportCounts.put(playerId, current + 1);
+    public void recordReport(String reporterId, String reportedId) {
+        int current = reportCounts.getOrDefault(reporterId, 0);
+        reportCounts.put(reporterId, current + 1);
+        reportRecords.add(new ReportRecord(reporterId, reportedId));
+    }
+
+    public List<ReportRecord> getReportRecords() {
+        return Collections.unmodifiableList(reportRecords);
     }
 
     public int getReportCount(String playerId) {
