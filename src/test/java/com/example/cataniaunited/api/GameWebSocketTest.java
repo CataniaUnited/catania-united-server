@@ -1378,6 +1378,48 @@ public class GameWebSocketTest {
         client1Connection.closeAndAwait();
         client2Connection.closeAndAwait();
     }
+    @Test
+    void testPlaceRobber_invalidTileId() throws Exception {
+        String playerId = "playerPR1";
+        String lobbyId = lobbyService.createLobby(playerId);
+        assertNotNull(lobbyId);
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+        lobby.setActivePlayer(playerId);
+
+        List<String> receivedMessages = new CopyOnWriteArrayList<>();
+        CountDownLatch errorLatch = new CountDownLatch(1);
+
+        var clientConnection = BasicWebSocketConnector.create()
+                .baseUri(serverUri)
+                .path("/game")
+                .onTextMessage((conn, msg) -> {
+                   try {
+                       MessageDTO dto = objectMapper.readValue(msg, MessageDTO.class);
+                       if(dto.getType() == MessageType.ERROR){
+                           receivedMessages.add(msg);
+                           errorLatch.countDown();
+                       }
+                   } catch (JsonProcessingException e) {
+                       throw new RuntimeException(e);
+                   }
+                }).connectAndAwait();
+
+        ObjectNode invalidPayload = JsonNodeFactory.instance.objectNode();
+        invalidPayload.put("robberTileId", "not-a-number");
+
+        MessageDTO invalidMsg = new MessageDTO(MessageType.PLACE_ROBBER, playerId, lobbyId, invalidPayload);
+        clientConnection.sendTextAndAwait(objectMapper.writeValueAsString(invalidMsg));
+
+        assertTrue(errorLatch.await(5, TimeUnit.SECONDS), "Did not receive ERROR response in time");
+        assertEquals(1, receivedMessages.size());
+
+        MessageDTO responseDTO = objectMapper.readValue(receivedMessages.get(0), MessageDTO.class);
+        assertEquals(MessageType.ERROR, responseDTO.getType());
+        assertTrue(responseDTO.getMessageNode("error").asText().startsWith("Invalid robber tile id:"));
+
+        verify(gameService, never()).placeRobber(anyString(), anyInt());
+        clientConnection.closeAndAwait();
+    }
 
     @Test
     void testPlaceSettlement_success_playerWins() throws Exception {

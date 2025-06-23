@@ -51,7 +51,7 @@ public class DiceRoller implements Publisher<Tile, Integer> {
      */
     @Override
     public void addSubscriber(Tile subscriber) {
-        if(!subscribers.contains(subscriber)){
+        if(!isSubscribed(subscriber)){
             subscribers.add(subscriber);
         }
         Log.debug("Tile " + subscriber.getId() + "subscribed.");
