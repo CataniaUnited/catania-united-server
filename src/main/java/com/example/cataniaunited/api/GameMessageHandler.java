@@ -85,7 +85,6 @@ public class GameMessageHandler {
                 case START_GAME -> handleStartGame(message);
                 case SET_READY -> setReady(message);
                 case TRADE_WITH_BANK -> handleTradeWithBank(message);
-                case TRADE_WITH_PLAYER -> throw new GameException("Not yet implemented");
                 case CHEAT_ATTEMPT -> handleCheatAttempt(message);
                 case ERROR, CONNECTION_SUCCESSFUL, CLIENT_DISCONNECTED, LOBBY_CREATED, LOBBY_UPDATED, PLAYER_JOINED,
                         GAME_BOARD_JSON, GAME_WON, DICE_RESULT, NEXT_TURN, GAME_STARTED, PLAYER_RESOURCE_UPDATE ->

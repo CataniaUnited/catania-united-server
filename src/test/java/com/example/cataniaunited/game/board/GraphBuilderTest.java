@@ -166,20 +166,6 @@ class GraphBuilderTest {
     }
 
     @Test
-    void checkAndThrowAssertionErrorShouldNotThrowWhenSuccessIsTrue() {
-        assertDoesNotThrow(() -> GraphBuilder.checkAndThrowAssertionError(true, "Shouldn't Throw"), "Shouldn't throw");
-    }
-
-    @Test
-    void checkAndThrowAssertionErrorShouldThrowAssertionErrorWhenSuccessIsFalse() {
-        String message = "Test failed";
-        assertThrows(AssertionError.class,
-                () -> GraphBuilder.checkAndThrowAssertionError(false, message)
-                , "should throw exception"
-        );
-    }
-
-    @Test
     void getRoadListShouldThrowExceptionWhenRoadListIsNull() {
         GraphBuilder graphBuilder = mock(GraphBuilder.class);
         when(graphBuilder.getRoadList()).thenCallRealMethod();
