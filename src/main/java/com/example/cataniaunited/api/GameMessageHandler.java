@@ -481,6 +481,34 @@ public class GameMessageHandler {
         }
     }
 
+    Uni<MessageDTO> handleReportPlayer(MessageDTO message) {
+        try {
+            String lobbyId = message.getLobbyId();
+            String reporterId = message.getPlayer();
+            String reportedId = message.getMessageNode("reportedId").asText();
+
+            gameService.handleReportPlayer(lobbyId, reporterId, reportedId);
+
+            MessageDTO update = new MessageDTO(
+                    MessageType.REPORT_PLAYER,
+                    reporterId,
+                    lobbyId,
+                    getLobbyPlayerInformation(lobbyId)
+            );
+
+            return playerService.sendMessageToPlayer(reporterId, update)
+                    .chain(() -> Uni.createFrom().item(update));
+        } catch (GameException e) {
+            return Uni.createFrom().item(createErrorMessage(e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            return Uni.createFrom().item(createErrorMessage("Invalid player to report."));
+        }
+    }
+
+
+
+
+
 
 
 }
