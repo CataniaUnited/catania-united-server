@@ -33,10 +33,7 @@ jobs:
       - name: Build and analyze
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          ./gradlew build sonarqube \
-            --info \
-            --warning-mode all || echo "Build completed with warnings"
+        run: ./gradlew build sonar --info
 
   build-docker-images:
     name: Build and push Docker images
