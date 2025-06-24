@@ -6,6 +6,7 @@ import com.example.cataniaunited.dto.PlayerInfo;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.fi.BuildingAction;
 import com.example.cataniaunited.game.GameService;
+import com.example.cataniaunited.game.ReportOutcome;
 import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.example.cataniaunited.game.trade.TradeRequest;
@@ -89,7 +90,7 @@ public class GameMessageHandler {
                 case CHEAT_ATTEMPT -> handleCheatAttempt(message);
                 case REPORT_PLAYER -> handleReportPlayer(message);
                 case ERROR, CONNECTION_SUCCESSFUL, CLIENT_DISCONNECTED, LOBBY_CREATED, LOBBY_UPDATED, PLAYER_JOINED,
-                        GAME_BOARD_JSON, GAME_WON, DICE_RESULT, NEXT_TURN, GAME_STARTED, PLAYER_RESOURCE_UPDATE ->
+                        GAME_BOARD_JSON, GAME_WON, DICE_RESULT, NEXT_TURN, GAME_STARTED, PLAYER_RESOURCE_UPDATE, ALERT ->
                         throw new GameException("Invalid client command");
                 case END_TURN -> endTurn(message);
             };
@@ -487,22 +488,58 @@ public class GameMessageHandler {
             String reporterId = message.getPlayer();
             String reportedId = message.getMessageNode("reportedId").asText();
 
-            gameService.handleReportPlayer(lobbyId, reporterId, reportedId);
+            ReportOutcome outcome = gameService.handleReportPlayer(lobbyId, reporterId, reportedId);
 
-            MessageDTO update = new MessageDTO(
-                    MessageType.REPORT_PLAYER,
+            String reportedUsername = playerService.getPlayerById(reportedId).getUsername();
+
+            ObjectNode alertPayload = JsonNodeFactory.instance.objectNode();
+            switch (outcome) {
+                case CORRECT_REPORT_NEW -> {
+                    alertPayload.put("message", reportedUsername + " got caught cheating!");
+                    alertPayload.put("severity", "success");
+                }
+                case CORRECT_REPORT_ALREADY_CAUGHT -> {
+                    alertPayload.put("message", reportedUsername + " was already caught cheating! You lost 1 resource.");
+                    alertPayload.put("severity", "error");
+                }
+                case FALSE_REPORT -> {
+                    alertPayload.put("message", "You falsely accused " + reportedUsername + " and lost 1 resource.");
+                    alertPayload.put("severity", "error");
+                }
+            }
+
+            MessageDTO alert = new MessageDTO(
+                    MessageType.ALERT,
                     reporterId,
                     lobbyId,
-                    getLobbyPlayerInformation(lobbyId)
+                    alertPayload
             );
 
-            return Uni.createFrom().item(update);
+            Uni<Void> privateAlert = playerService.sendMessageToPlayer(reporterId, alert);
+
+            return privateAlert.chain(() -> {
+                try {
+                    MessageDTO update = new MessageDTO(
+                            MessageType.PLAYER_RESOURCE_UPDATE,
+                            reporterId,
+                            lobbyId,
+                            getLobbyPlayerInformation(lobbyId)
+                    );
+                    return lobbyService.notifyPlayers(lobbyId, update)
+                            .chain(() -> Uni.createFrom().item(update));
+                } catch (GameException e) {
+                    return Uni.createFrom().item(createErrorMessage(e.getMessage()));
+                }
+            });
+
         } catch (GameException e) {
             return Uni.createFrom().item(createErrorMessage(e.getMessage()));
         } catch (IllegalArgumentException e) {
             return Uni.createFrom().item(createErrorMessage("Invalid player to report."));
         }
     }
+
+
 
 
 
