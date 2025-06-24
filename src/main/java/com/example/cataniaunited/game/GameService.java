@@ -288,7 +288,7 @@ public class GameService {
     }
 
 
-    public boolean handleReportPlayer(String lobbyId, String reporterId, String reportedId) throws GameException {
+    public ReportOutcome handleReportPlayer(String lobbyId, String reporterId, String reportedId) throws GameException {
         Lobby lobby = lobbyService.getLobbyById(lobbyId);
 
         int reportCount = lobby.getReportCount(reporterId);
@@ -301,35 +301,44 @@ public class GameService {
         Player reported = playerService.getPlayerById(reportedId);
         Player reporter = playerService.getPlayerById(reporterId);
 
-        boolean reportedActuallyCheated = lobby.getCheatCount(reportedId) > 0
-                && !lobby.isCheaterAlreadyCaught(reportedId);
+        boolean hasCheated = lobby.getCheatCount(reportedId) > 0;
+        boolean alreadyCaught = !lobby.isCheaterAlreadyCaught(reportedId);
 
-        if (reportedActuallyCheated) {
-            for (TileType type : TileType.values()) {
-                if (type == TileType.WASTE) continue;
+        if (hasCheated) {
+            if (!alreadyCaught) {
+                for (TileType type : TileType.values()) {
+                    if (type == TileType.WASTE) continue;
+                    int count = reported.getResourceCount(type);
+                    reported.removeResource(type, count);
+                    reported.receiveResource(type, count / 2);
+                }
 
-                int count = reported.getResourceCount(type);
-                reported.removeResource(type, count);
-                reported.receiveResource(type, count / 2);
+                lobby.markCheaterAsCaught(reportedId);
+                return ReportOutcome.CORRECT_REPORT_NEW;
+
+            } else {
+                punishReporter(reporter);
+                return ReportOutcome.CORRECT_REPORT_ALREADY_CAUGHT;
             }
-
-            lobby.markCheaterAsCaught(reportedId);
-
         } else {
-
-            List<TileType> availableResources = reporter.getResources().entrySet().stream()
-                    .filter(e -> e.getKey() != TileType.WASTE && e.getValue() > 0)
-                    .map(Map.Entry::getKey)
-                    .toList();
-
-            if (!availableResources.isEmpty()) {
-                TileType random = availableResources.get(new java.util.Random().nextInt(availableResources.size()));
-                reporter.removeResource(random, 1);
-            }
+            punishReporter(reporter);
+            return ReportOutcome.FALSE_REPORT;
         }
-
-        return reportedActuallyCheated;
     }
+
+    private void punishReporter(Player reporter) throws GameException {
+        List<TileType> availableResources = reporter.getResources().entrySet().stream()
+                .filter(e -> e.getKey() != TileType.WASTE && e.getValue() > 0)
+                .map(Map.Entry::getKey)
+                .toList();
+
+        if (!availableResources.isEmpty()) {
+            TileType random = availableResources.get(new java.util.Random().nextInt(availableResources.size()));
+            reporter.removeResource(random, 1);
+        }
+    }
+
+
 
 
 
