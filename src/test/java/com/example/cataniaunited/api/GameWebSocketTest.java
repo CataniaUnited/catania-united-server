@@ -1336,10 +1336,10 @@ public class GameWebSocketTest {
         gameService.startGame(lobbyId, p1);
 
         GameBoard board = gameService.getGameboardByLobbyId(lobbyId);
-        int oldRobberId = board.getRobberTileId();
+        Tile oldRobberId = board.getRobberTile();
         Tile newTile = board.getTileList().stream()
                 .filter(t -> t.getType() != TileType.WASTE)
-                .filter(t -> t.getId() != oldRobberId)
+                .filter(t -> t.getId() != oldRobberId.getId())
                 .findFirst().orElseThrow();
 
         // === Send PLACE_ROBBER Message ===
