@@ -598,7 +598,6 @@ class GameServiceTest {
         String reportedId = "reported";
         String lobbyId = lobbyService.createLobby(reporterId);
         lobbyService.joinLobbyByCode(lobbyId, reportedId);
-        Lobby lobby = lobbyService.getLobbyById(lobbyId);
 
         gameService.handleReportPlayer(lobbyId, reporterId, reportedId);
         gameService.handleReportPlayer(lobbyId, reporterId, reportedId);
