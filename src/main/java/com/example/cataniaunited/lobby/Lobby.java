@@ -34,8 +34,6 @@ public class Lobby {
     private Map<String, Integer> reportCounts = new HashMap<>();
     private final List<ReportRecord> reportRecords = new ArrayList<>();
 
-    public record ReportRecord(String reporterId, String reportedId) {
-    }
 
     /**
      * Constructs a new Lobby instance.

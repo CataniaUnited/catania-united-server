@@ -496,8 +496,7 @@ public class GameMessageHandler {
                     getLobbyPlayerInformation(lobbyId)
             );
 
-            return playerService.sendMessageToPlayer(reporterId, update)
-                    .chain(() -> Uni.createFrom().item(update));
+            return Uni.createFrom().item(update);
         } catch (GameException e) {
             return Uni.createFrom().item(createErrorMessage(e.getMessage()));
         } catch (IllegalArgumentException e) {
