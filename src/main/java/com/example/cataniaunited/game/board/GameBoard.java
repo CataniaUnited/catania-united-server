@@ -47,7 +47,9 @@ public class GameBoard {
     List<Road> roadList;
     List<Port> portList;
 
-    private int robberTileId;
+    private Tile robberTile;
+    private boolean robberMovedThisTurn;
+    private int latestRolledDiceTotal;
 
     /**
      * Constructs a new GameBoard based on the number of players.
@@ -68,18 +70,17 @@ public class GameBoard {
 
         generateTileList();
 
-        this.robberTileId = tileList.stream()
+        this.robberTile = tileList.stream()
                 .filter(tile -> tile.getType() == TileType.WASTE)
                 .findFirst()
-                .orElseThrow(() -> new IllegalStateException("No desert tile found"))
-                .getId();
+                .orElseThrow(() -> new IllegalStateException("No desert tile found"));
 
         generateBoard();
 
         this.diceRoller = new DiceRoller();
         subscribeTilesToDice();
 
-        diceRoller.removeSubscriber(getTileById(robberTileId));
+        diceRoller.removeSubscriber(getTileById(robberTile.getId()));
 
         long endtime = System.nanoTime();
 
@@ -217,7 +218,7 @@ public class GameBoard {
     }
 
     public void placeRobber(int newRobberTileId) {
-        Tile oldRobberTile = getTileById(getRobberTileId());
+        Tile oldRobberTile = getRobberTile();
         Tile newRobberTile = getTileById(newRobberTileId);
 
         //Release old robber tile
@@ -230,7 +231,7 @@ public class GameBoard {
             diceRoller.removeSubscriber(newRobberTile);
         }
 
-        this.robberTileId = newRobberTileId;
+        this.robberTile = newRobberTile;
     }
 
     private boolean hasAdjacentRoads(Road road, Player player) {
@@ -322,8 +323,24 @@ public class GameBoard {
         return roadList;
     }
 
-    public int getRobberTileId() {
-        return robberTileId;
+    public Tile getRobberTile() {
+        return robberTile;
+    }
+
+    public boolean hasRobberMovedThisTurn(){
+        return robberMovedThisTurn;
+    }
+
+    public void setRobberMovedThisTurn(boolean moved){
+        this.robberMovedThisTurn = moved;
+    }
+
+    public int getLatestRolledDiceTotal(){
+        return latestRolledDiceTotal;
+    }
+
+    public void setLatestRolledDiceTotal(int diceValueTotal){
+        this.latestRolledDiceTotal = diceValueTotal;
     }
 
     public boolean isTileProducing(Tile tile){
@@ -354,7 +371,7 @@ public class GameBoard {
         // Add tiles
         for (Tile tile : this.tileList) {
             ObjectNode tileJson = tile.toJson();
-            tileJson.put("isRobbed", tile.getId() == robberTileId);
+            tileJson.put("isRobbed", tile.getId() == robberTile.getId());
             tilesNode.add(tileJson);
         }
 
@@ -405,7 +422,7 @@ public class GameBoard {
      */
     private void subscribeTilesToDice() {
         tileList.stream()
-        .filter(tile -> tile.getType() != TileType.WASTE && tile.getId() != getRobberTileId())
+        .filter(tile -> tile.getType() != TileType.WASTE && tile.getId() != getRobberTile().getId())
         .forEach(tile -> tile.subscribeToDice(diceRoller));
     }
 
@@ -419,4 +436,3 @@ public class GameBoard {
         return diceRoller.rollDice();
     }
 }
-

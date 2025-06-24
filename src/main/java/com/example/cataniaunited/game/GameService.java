@@ -2,6 +2,7 @@ package com.example.cataniaunited.game;
 
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.exception.ui.MissingRequiredStructuresException;
+import com.example.cataniaunited.exception.ui.RobberNotPlacedException;
 import com.example.cataniaunited.exception.ui.SetupLimitExceededException;
 import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.game.board.LongestRoadCalculator;
@@ -155,6 +156,28 @@ public class GameService {
         gameBoard.placeRobber(newRobberTileId);
     }
 
+    public void placeRobber(String lobbyId, int newRobberTileId) throws GameException {
+        GameBoard gameBoard = getGameboardByLobbyId(lobbyId);
+        gameBoard.placeRobber(newRobberTileId);
+        gameBoard.setRobberMovedThisTurn(true);
+    }
+
+    public void checkRobberPlacementRequired(String lobbyId, String playerId) throws GameException {
+        GameBoard gameBoard = getGameboardByLobbyId(lobbyId);
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+
+        if(!lobby.getActivePlayer().equals(playerId)){
+            return;
+        }
+
+        int lastRoll = gameBoard.getLatestRolledDiceTotal();
+        boolean robberMoved = gameBoard.hasRobberMovedThisTurn();
+
+        if(lastRoll == 7 && !robberMoved){
+            throw new RobberNotPlacedException();
+        }
+    }
+
     private boolean exceedsSetupLimit(BuildRequest buildRequest, long structureCount) {
         Optional<Integer> maximumStructureCount = buildRequest.maximumStructureCount();
         return buildRequest.isSetupRound()
@@ -250,6 +273,11 @@ public class GameService {
         lobbyService.checkPlayerDiceRoll(lobbyId, playerId);
         GameBoard gameboard = getGameboardByLobbyId(lobbyId);
         ObjectNode result = gameboard.rollDice();
+
+        int total = result.get("total").asInt();
+        gameboard.setLatestRolledDiceTotal(total);
+        gameboard.setRobberMovedThisTurn(false);
+
         lobbyService.updateLatestDiceRoll(lobbyId, playerId);
         return result;
     }

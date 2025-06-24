@@ -44,7 +44,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -1336,10 +1335,10 @@ class GameWebSocketTest {
         gameService.startGame(lobbyId, p1);
 
         GameBoard board = gameService.getGameboardByLobbyId(lobbyId);
-        int oldRobberId = board.getRobberTileId();
+        Tile oldRobberId = board.getRobberTile();
         Tile newTile = board.getTileList().stream()
                 .filter(t -> t.getType() != TileType.WASTE)
-                .filter(t -> t.getId() != oldRobberId)
+                .filter(t -> t.getId() != oldRobberId.getId())
                 .findFirst().orElseThrow();
 
         // === Send PLACE_ROBBER Message ===

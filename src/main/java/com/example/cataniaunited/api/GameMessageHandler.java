@@ -102,6 +102,7 @@ public class GameMessageHandler {
     Uni<MessageDTO> endTurn(MessageDTO message) throws GameException {
         Lobby lobby = lobbyService.getLobbyById(message.getLobbyId());
         gameService.checkRequiredPlayerStructures(message.getLobbyId(), message.getPlayer(), lobby.getRoundsPlayed());
+        gameService.checkRobberPlacementRequired(lobby.getLobbyId(), message.getPlayer());
         lobbyService.nextTurn(message.getLobbyId(), message.getPlayer());
         ObjectNode payload = getGameBoardInformation(message.getLobbyId());
         var response = new MessageDTO(MessageType.NEXT_TURN, message.getPlayer(), message.getLobbyId(), getLobbyPlayerInformation(message.getLobbyId()), payload);

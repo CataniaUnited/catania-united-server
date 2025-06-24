@@ -375,18 +375,14 @@ class GameBoardTest {
     @Test
     void testInitialRobberOnDesertTile(){
         GameBoard gameBoard = spy(new GameBoard(4));
-        int robberTileId = gameBoard.getRobberTileId();
-        Tile robberTile = gameBoard.getTileList().stream()
-                .filter(tile -> tile.getId() == robberTileId)
-                .findFirst()
-                .orElseThrow();
+        Tile robberTile = gameBoard.getRobberTile();
         assertEquals(TileType.WASTE, robberTile.getType(), "Robber must start on the desert tile.");
     }
 
     @Test
     void placeRobberBlocksNewTileAndReleasesOld(){
         GameBoard gameBoard = spy(new GameBoard(4));
-        int oldRobberTileId = gameBoard.getRobberTileId();
+        int oldRobberTileId = gameBoard.getRobberTile().getId();
         Tile oldRobberTile = gameBoard.getTileList().stream()
                 .filter(tile -> tile.getId() == oldRobberTileId)
                 .findFirst()
@@ -394,13 +390,13 @@ class GameBoardTest {
 
         Tile newRobberTile = gameBoard.getTileList().stream()
                 .filter(tile -> tile.getType() != TileType.WASTE)
-                .filter(tile -> tile.getId() != oldRobberTileId)
+                .filter(tile -> tile.getId() != oldRobberTile.getId())
                 .findFirst()
                 .orElseThrow();
 
         gameBoard.placeRobber(newRobberTile.getId());
 
-        assertEquals(newRobberTile.getId(), gameBoard.getRobberTileId(), "Robber should be placed to the new tile.");
+        assertEquals(newRobberTile, gameBoard.getRobberTile(), "Robber should be placed to the new tile.");
 
         //Check that old robber tile is subscribed again (producing again)
         assertTrue(gameBoard.isTileProducing(oldRobberTile), "Old tile must have subscribers again.");
