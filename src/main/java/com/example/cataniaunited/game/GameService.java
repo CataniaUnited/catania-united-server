@@ -4,6 +4,7 @@ import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.exception.ui.MissingRequiredStructuresException;
 import com.example.cataniaunited.exception.ui.SetupLimitExceededException;
 import com.example.cataniaunited.game.board.GameBoard;
+import com.example.cataniaunited.game.board.LongestRoadCalculator;
 import com.example.cataniaunited.game.board.Road;
 import com.example.cataniaunited.game.board.ports.Port;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
@@ -37,6 +38,7 @@ public class GameService {
 
     private static final Logger logger = Logger.getLogger(GameService.class);
     private static final ConcurrentHashMap<String, GameBoard> lobbyToGameboardMap = new ConcurrentHashMap<>();
+    private static final int MIN_LONGEST_ROAD_LENGTH = 5;
 
     @Inject
     LobbyService lobbyService;
@@ -123,6 +125,29 @@ public class GameService {
             throw new SetupLimitExceededException();
         }
         gameboard.placeRoad(buildRequest);
+        Player player = buildRequest.player();
+        List<Road> playerRoads = gameboard.getRoadList().stream()
+                .filter(r -> player.equals(r.getOwner()))
+                .toList();
+
+        LongestRoadCalculator calculator = getLongestRoadCalculator();
+        int newLength = calculator.calculateFor(playerRoads);
+        if (newLength >= MIN_LONGEST_ROAD_LENGTH && newLength > gameboard.getLongestRoadLength()) {
+            String oldLongestRoadPlayerId = gameboard.getLongestRoadPlayerId();
+            if (oldLongestRoadPlayerId != null && !oldLongestRoadPlayerId.equals(playerId)) {
+                playerService.addVictoryPoints(oldLongestRoadPlayerId, -2);
+            }
+
+            if (!playerId.equals(oldLongestRoadPlayerId)) {
+                playerService.addVictoryPoints(playerId, 2);
+            }
+
+            gameboard.setLongestRoad(playerId, newLength);
+        }
+    }
+
+    protected LongestRoadCalculator getLongestRoadCalculator() {
+        return new LongestRoadCalculator();
     }
 
     private boolean exceedsSetupLimit(BuildRequest buildRequest, long structureCount) {

@@ -73,6 +73,22 @@ class BuildingSiteTest {
     }
 
     @Test
+    void testEqualsAndHashCodeContract() {
+        BuildingSite site1a = new BuildingSite(1);
+        BuildingSite site1b = new BuildingSite(1);
+        BuildingSite site2 = new BuildingSite(2);
+
+        assertEquals(site1a, site1a, "A site should always be equal to itself.");
+        assertEquals(site1a, site1b, "Sites with the same ID should be equal.");
+
+        assertNotEquals(site1a, site2, "Sites with different IDs should not be equal.");
+        assertNotEquals(null, site1a, "A site should not be equal to null.");
+        assertNotEquals(site1a, new Object(), "A site should not be equal to an object of a different type.");
+        assertEquals(site1a.hashCode(), site1b.hashCode(), "Hash codes must be the same for equal objects.");
+        assertNotEquals(site1a.hashCode(), site2.hashCode(), "Hash codes should ideally be different for unequal objects.");
+    }
+
+    @Test
     void testConstructorInitialization() {
         assertEquals(STANDARD_ID, buildingSite.getId(), "ID should be set by constructor");
         assertArrayEquals(new double[]{0.0, 0.0}, buildingSite.getCoordinates(), 0.001, "Initial coordinates should be [0.0, 0.0]");

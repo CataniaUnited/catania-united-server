@@ -4,9 +4,12 @@ import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.exception.ui.InvalidTurnException;
 import com.example.cataniaunited.exception.ui.MissingRequiredStructuresException;
 import com.example.cataniaunited.exception.ui.SetupLimitExceededException;
+import com.example.cataniaunited.game.board.BuildingSite;
 import com.example.cataniaunited.game.board.GameBoard;
+import com.example.cataniaunited.game.board.LongestRoadCalculator;
 import com.example.cataniaunited.game.board.Road;
 import com.example.cataniaunited.game.board.ports.Port;
+import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.example.cataniaunited.game.buildings.Settlement;
 import com.example.cataniaunited.lobby.Lobby;
 import com.example.cataniaunited.lobby.LobbyService;
@@ -20,8 +23,8 @@ import io.quarkus.test.junit.mockito.InjectSpy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -35,6 +38,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
@@ -61,6 +65,7 @@ class GameServiceTest {
     GameBoard gameboardMock;
 
     Lobby lobbyMock;
+
 
     @BeforeEach
     void init() {
@@ -97,6 +102,75 @@ class GameServiceTest {
         assertTrue(lobby.getPlayerOrder().containsAll(List.of(hostId, "p2")));
         assertNotNull(lobby.getActivePlayer());
         assertNotNull(gameService.getGameboardByLobbyId(lobbyId));
+    }
+
+    @Test
+    void testSetAndGetLongestRoad() {
+        GameBoard gameBoard = new GameBoard(2);
+        String expectedPlayerId = "p1_the_winner";
+        int expectedLength = 9;
+        gameBoard.setLongestRoad(expectedPlayerId, expectedLength);
+        assertEquals(expectedLength, gameBoard.getLongestRoadLength(), "The getter for road length should return the value that was set.");
+        assertEquals(expectedPlayerId, gameBoard.getLongestRoadPlayerId(), "The getter for the player ID should return the value that was set.");
+    }
+
+    @Test
+    void testPlaceRoad_CoversLongestRoadLogic() throws GameException {
+        String lobbyId = "testLobby";
+        String playerId = "p1";
+        Player testPlayer = new Player(playerId, null);
+        List<BuildingSite> sites = new ArrayList<>();
+        for (int i = 0; i < 6; i++) {
+            sites.add(new BuildingSite(i));
+        }
+        List<Road> realPlayerRoads = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            Road road = new Road(sites.get(i), sites.get(i + 1), i);
+            road.setOwner(testPlayer);
+            sites.get(i).addRoad(road);
+            sites.get(i + 1).addRoad(road);
+            realPlayerRoads.add(road);
+        }
+        doReturn(gameboardMock).when(gameService).getGameboardByLobbyId(lobbyId);
+        when(gameboardMock.getRoadList()).thenReturn(realPlayerRoads);
+        when(gameboardMock.getLongestRoadLength()).thenReturn(0);
+        when(gameboardMock.getLongestRoadPlayerId()).thenReturn(null);
+        doReturn(testPlayer).when(playerService).getPlayerById(playerId);
+        doReturn(PlayerColor.RED).when(lobbyService).getPlayerColor(anyString(), anyString());
+        doReturn(2).when(lobbyService).getRoundsPlayed(anyString());
+        doNothing().when(lobbyService).checkPlayerTurn(anyString(), anyString());
+        gameService.placeRoad(lobbyId, playerId, 1);
+        verify(playerService, times(1)).addVictoryPoints(playerId, 2);
+        verify(gameboardMock, times(1)).setLongestRoad(playerId, 5);
+    }
+
+
+    @Test
+    void whenLongestRoadIsTaken_shouldUpdateVPsAndBoard() throws GameException {
+        String lobbyId = "testLobby";
+        String playerId = "p1";
+        Player testPlayer = new Player(playerId, null);
+        doReturn(gameboardMock).when(gameService).getGameboardByLobbyId(lobbyId);
+        doReturn(testPlayer).when(playerService).getPlayerById(playerId);
+        doReturn(PlayerColor.RED).when(lobbyService).getPlayerColor(anyString(), anyString());
+        doReturn(2).when(lobbyService).getRoundsPlayed(anyString());
+        doNothing().when(lobbyService).checkPlayerTurn(anyString(), anyString());
+        List<Road> realRoads = new ArrayList<>();
+        List<BuildingSite> sites = new ArrayList<>();
+        for (int i = 0; i < 6; i++) sites.add(new BuildingSite(i));
+        for (int i = 0; i < 5; i++) {
+            Road road = new Road(sites.get(i), sites.get(i + 1), i);
+            road.setOwner(testPlayer);
+            sites.get(i).addRoad(road);
+            sites.get(i + 1).addRoad(road);
+            realRoads.add(road);
+        }
+
+        when(gameboardMock.getRoadList()).thenReturn(realRoads);
+        when(gameboardMock.getLongestRoadLength()).thenReturn(0);
+        gameService.placeRoad(lobbyId, playerId, 1);
+        verify(playerService).addVictoryPoints(playerId, 2);
+        verify(gameboardMock).setLongestRoad(playerId, 5);
     }
 
     @Test
@@ -374,10 +448,45 @@ class GameServiceTest {
         assertFalse(settlementBuildRequestCaptor.getValue().isSetupRound());
     }
 
+    @Test
+    void placeRoadShouldDecrementVictoryPointsIfPlayerDoesNotHaveLongestRoadAnymore() throws GameException {
+        Player player = new Player("player1");
+        Player oldLongestRoadPlayer = new Player("oldLongestRoadPlayer");
+        oldLongestRoadPlayer.addVictoryPoints(2);
+        String playerId = player.getUniqueId();
+        int settlementPositionId = 15;
+        int newLongestRoadLength = 7;
+        String lobbyId = lobbyMock.getLobbyId();
+        LongestRoadCalculator longestRoadCalculatorMock = mock(LongestRoadCalculator.class);
+
+        doReturn(lobbyMock).when(lobbyService).getLobbyById(lobbyId);
+        doReturn(true).when(lobbyMock).isPlayerTurn(playerId);
+        doReturn(PlayerColor.BLUE).when(lobbyMock).getPlayerColor(playerId);
+        doReturn(gameboardMock).when(gameService).getGameboardByLobbyId(lobbyId);
+        doReturn(longestRoadCalculatorMock).when(gameService).getLongestRoadCalculator();
+        doReturn(player).when(playerService).getPlayerById(playerId);
+        doReturn(oldLongestRoadPlayer).when(playerService).getPlayerById(oldLongestRoadPlayer.getUniqueId());
+        doReturn(newLongestRoadLength).when(longestRoadCalculatorMock).calculateFor(anyList());
+        doReturn(newLongestRoadLength - 1).when(gameboardMock).getLongestRoadLength();
+        doReturn(oldLongestRoadPlayer.getUniqueId()).when(gameboardMock).getLongestRoadPlayerId();
+
+        assertEquals(0, player.getVictoryPoints());
+        assertEquals(2, oldLongestRoadPlayer.getVictoryPoints());
+
+        gameService.placeRoad(lobbyId, playerId, settlementPositionId);
+
+        assertEquals(2, player.getVictoryPoints());
+        assertEquals(0, oldLongestRoadPlayer.getVictoryPoints());
+
+        verify(gameboardMock).setLongestRoad(playerId, newLongestRoadLength);
+        verify(playerService).addVictoryPoints(oldLongestRoadPlayer.getUniqueId(), -2);
+        verify(playerService).addVictoryPoints(playerId, 2);
+    }
+
 
     @Test
     void testGetJsonByValidLobbyId() throws GameException {
-        String lobbyId = lobbyMock.getLobbyId(); // Use the ID from the mock setup
+        String lobbyId = lobbyMock.getLobbyId();
         ObjectNode expectedJson = new ObjectMapper().createObjectNode().put("test", "data"); // Create a dummy JSON node
         when(gameboardMock.getJson()).thenReturn(expectedJson);
         doReturn(gameboardMock).when(gameService).getGameboardByLobbyId(lobbyId);
@@ -512,7 +621,7 @@ class GameServiceTest {
     }
 
     @Test
-    void handleCheat_shouldThrowIfNoPlayerHasThatResource(){
+    void handleCheat_shouldThrowIfNoPlayerHasThatResource() {
         String cheaterId = "cheater";
         String victimId = "victim";
         String lobbyId = lobbyService.createLobby(cheaterId);
