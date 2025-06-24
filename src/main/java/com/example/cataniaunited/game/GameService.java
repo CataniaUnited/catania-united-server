@@ -154,11 +154,6 @@ public class GameService {
     public void placeRobber(String lobbyId, int newRobberTileId) throws GameException {
         GameBoard gameBoard = getGameboardByLobbyId(lobbyId);
         gameBoard.placeRobber(newRobberTileId);
-    }
-
-    public void placeRobber(String lobbyId, int newRobberTileId) throws GameException {
-        GameBoard gameBoard = getGameboardByLobbyId(lobbyId);
-        gameBoard.placeRobber(newRobberTileId);
         gameBoard.setRobberMovedThisTurn(true);
     }
 
