@@ -3,6 +3,7 @@ package com.example.cataniaunited.game;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.exception.ui.InvalidTurnException;
 import com.example.cataniaunited.exception.ui.MissingRequiredStructuresException;
+import com.example.cataniaunited.exception.ui.RobberNotPlacedException;
 import com.example.cataniaunited.exception.ui.SetupLimitExceededException;
 import com.example.cataniaunited.game.board.BuildingSite;
 import com.example.cataniaunited.game.board.GameBoard;
@@ -65,7 +66,6 @@ class GameServiceTest {
     GameBoard gameboardMock;
 
     Lobby lobbyMock;
-
 
     @BeforeEach
     void init() {
@@ -621,6 +621,38 @@ class GameServiceTest {
     }
 
     @Test
+    void checkRobberPlacementRequired_Success() throws GameException {
+        String playerId = "player1";
+        lobbyMock.setActivePlayer(playerId);
+        String lobbyId = lobbyMock.getLobbyId();
+
+        doReturn(lobbyId).when(lobbyMock).getLobbyId();
+        doReturn(playerId).when(lobbyMock).getActivePlayer();
+        doReturn(7).when(gameboardMock).getLatestRolledDiceTotal();
+        doReturn(true).when(gameboardMock).hasRobberMovedThisTurn();
+        doReturn(lobbyMock).when(lobbyService).getLobbyById(lobbyId);
+        doReturn(gameboardMock).when(gameService).getGameboardByLobbyId(lobbyId);
+
+        assertDoesNotThrow(() -> gameService.checkRobberPlacementRequired(lobbyId, playerId));
+    }
+
+    @Test
+    void checkRobberPlacementRequired_Failure() throws GameException {
+        String lobbyId = lobbyMock.getLobbyId();
+        String playerId = "player1";
+        lobbyMock.setActivePlayer(playerId);
+
+        doReturn(lobbyId).when(lobbyMock).getLobbyId();
+        doReturn(playerId).when(lobbyMock).getActivePlayer();
+        doReturn(7).when(gameboardMock).getLatestRolledDiceTotal();
+        doReturn(false).when(gameboardMock).hasRobberMovedThisTurn();
+        doReturn(lobbyMock).when(lobbyService).getLobbyById(lobbyId);
+        doReturn(gameboardMock).when(gameService).getGameboardByLobbyId(lobbyId);
+
+        assertThrows(RobberNotPlacedException.class, () -> gameService.checkRobberPlacementRequired(lobbyId, playerId));
+    }
+
+    @Test
     void handleCheat_shouldThrowIfNoPlayerHasThatResource() {
         String cheaterId = "cheater";
         String victimId = "victim";
@@ -716,9 +748,4 @@ class GameServiceTest {
         );
         assertEquals("You have already reported twice in this game.", ex.getMessage());
     }
-
-
-
-
-
 }

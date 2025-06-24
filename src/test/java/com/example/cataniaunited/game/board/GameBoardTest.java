@@ -373,6 +373,39 @@ class GameBoardTest {
     }
 
     @Test
+    void testInitialRobberOnDesertTile(){
+        GameBoard gameBoard = spy(new GameBoard(4));
+        Tile robberTile = gameBoard.getRobberTile();
+        assertEquals(TileType.WASTE, robberTile.getType(), "Robber must start on the desert tile.");
+    }
+
+    @Test
+    void placeRobberBlocksNewTileAndReleasesOld(){
+        GameBoard gameBoard = spy(new GameBoard(4));
+        int oldRobberTileId = gameBoard.getRobberTile().getId();
+        Tile oldRobberTile = gameBoard.getTileList().stream()
+                .filter(tile -> tile.getId() == oldRobberTileId)
+                .findFirst()
+                .orElseThrow();
+
+        Tile newRobberTile = gameBoard.getTileList().stream()
+                .filter(tile -> tile.getType() != TileType.WASTE)
+                .filter(tile -> tile.getId() != oldRobberTile.getId())
+                .findFirst()
+                .orElseThrow();
+
+        gameBoard.placeRobber(newRobberTile.getId());
+
+        assertEquals(newRobberTile, gameBoard.getRobberTile(), "Robber should be placed to the new tile.");
+
+        //Check that old robber tile is subscribed again (producing again)
+        assertTrue(gameBoard.isTileProducing(oldRobberTile), "Old tile must have subscribers again.");
+
+        //Check that new robber tile has no subscribers (blocked)
+        assertFalse(gameBoard.isTileProducing(newRobberTile), "New tile must not have subscribers");
+    }
+
+    @Test
     void testUpdateOfPlayerStructures() throws GameException {
         GameBoard gameBoard = spy(new GameBoard(2));
         BuildingSite buildingSite1 = gameBoard.getBuildingSitePositionGraph().get(0);

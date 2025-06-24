@@ -84,6 +84,7 @@ public class GameMessageHandler {
                 case ROLL_DICE -> handleDiceRoll(message);
                 case START_GAME -> handleStartGame(message);
                 case SET_READY -> setReady(message);
+                case PLACE_ROBBER -> placeRobber(message);
                 case TRADE_WITH_BANK -> handleTradeWithBank(message);
                 case CHEAT_ATTEMPT -> handleCheatAttempt(message);
                 case REPORT_PLAYER -> handleReportPlayer(message);
@@ -101,6 +102,7 @@ public class GameMessageHandler {
     Uni<MessageDTO> endTurn(MessageDTO message) throws GameException {
         Lobby lobby = lobbyService.getLobbyById(message.getLobbyId());
         gameService.checkRequiredPlayerStructures(message.getLobbyId(), message.getPlayer(), lobby.getRoundsPlayed());
+        gameService.checkRobberPlacementRequired(lobby.getLobbyId(), message.getPlayer());
         lobbyService.nextTurn(message.getLobbyId(), message.getPlayer());
         ObjectNode payload = getGameBoardInformation(message.getLobbyId());
         var response = new MessageDTO(MessageType.NEXT_TURN, message.getPlayer(), message.getLobbyId(), getLobbyPlayerInformation(message.getLobbyId()), payload);
@@ -128,6 +130,30 @@ public class GameMessageHandler {
 
         MessageDTO update = new MessageDTO(
                 MessageType.PLACE_ROAD,
+                message.getPlayer(),
+                message.getLobbyId(),
+                getLobbyPlayerInformation(message.getLobbyId()),
+                root
+        );
+
+        return lobbyService.notifyPlayers(message.getLobbyId(), update)
+                .chain(() -> Uni.createFrom().item(update));
+    }
+
+    Uni<MessageDTO> placeRobber(MessageDTO message) throws GameException {
+        JsonNode robberTileId = message.getMessageNode("robberTileId");
+
+        try {
+            int newRobberTileId = Integer.parseInt(robberTileId.toString());
+            gameService.placeRobber(message.getLobbyId(), newRobberTileId);
+        } catch (NumberFormatException err) {
+            throw new GameException("Invalid robber tile id: %s", robberTileId.toString());
+        }
+
+        ObjectNode root = getGameBoardInformation(message.getLobbyId());
+
+        MessageDTO update = new MessageDTO(
+                MessageType.PLACE_ROBBER,
                 message.getPlayer(),
                 message.getLobbyId(),
                 getLobbyPlayerInformation(message.getLobbyId()),

@@ -47,6 +47,10 @@ public class GameBoard {
     List<Road> roadList;
     List<Port> portList;
 
+    private Tile robberTile;
+    private boolean robberMovedThisTurn;
+    private int latestRolledDiceTotal;
+
     /**
      * Constructs a new GameBoard based on the number of players.
      * Initializes tiles, building sites, roads, and the dice roller.
@@ -65,10 +69,18 @@ public class GameBoard {
         long starttime = System.nanoTime();
 
         generateTileList();
+
+        this.robberTile = tileList.stream()
+                .filter(tile -> tile.getType() == TileType.WASTE)
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("No desert tile found"));
+
         generateBoard();
 
         this.diceRoller = new DiceRoller();
         subscribeTilesToDice();
+
+        diceRoller.removeSubscriber(getTileById(robberTile.getId()));
 
         long endtime = System.nanoTime();
 
@@ -198,6 +210,30 @@ public class GameBoard {
         }
     }
 
+    private Tile getTileById(int tileId){
+        return tileList.stream()
+                .filter(tile -> tile.getId() == tileId)
+                .findFirst()
+                .orElseThrow(()-> new IllegalArgumentException("Tile not found: id=" + tileId));
+    }
+
+    public void placeRobber(int newRobberTileId) {
+        Tile oldRobberTile = getRobberTile();
+        Tile newRobberTile = getTileById(newRobberTileId);
+
+        //Release old robber tile
+        if(!diceRoller.isSubscribed(oldRobberTile)){
+            diceRoller.addSubscriber(oldRobberTile);
+        }
+
+        //Block new robber tile
+        if(diceRoller.isSubscribed(newRobberTile)){
+            diceRoller.removeSubscriber(newRobberTile);
+        }
+
+        this.robberTile = newRobberTile;
+    }
+
     private boolean hasAdjacentRoads(Road road, Player player) {
         return road.getAdjacentRoads().stream().anyMatch(r -> r.getOwner() == player);
     }
@@ -287,6 +323,30 @@ public class GameBoard {
         return roadList;
     }
 
+    public Tile getRobberTile() {
+        return robberTile;
+    }
+
+    public boolean hasRobberMovedThisTurn(){
+        return robberMovedThisTurn;
+    }
+
+    public void setRobberMovedThisTurn(boolean moved){
+        this.robberMovedThisTurn = moved;
+    }
+
+    public int getLatestRolledDiceTotal(){
+        return latestRolledDiceTotal;
+    }
+
+    public void setLatestRolledDiceTotal(int diceValueTotal){
+        this.latestRolledDiceTotal = diceValueTotal;
+    }
+
+    public boolean isTileProducing(Tile tile){
+        return diceRoller.isSubscribed(tile);
+    }
+
     public Port getPortOfBuildingSite(int buildingSitePositionId) {
         return buildingSiteGraph.get(buildingSitePositionId).getPort();
     }
@@ -310,7 +370,9 @@ public class GameBoard {
 
         // Add tiles
         for (Tile tile : this.tileList) {
-            tilesNode.add(tile.toJson());
+            ObjectNode tileJson = tile.toJson();
+            tileJson.put("isRobbed", tile.getId() == robberTile.getId());
+            tilesNode.add(tileJson);
         }
 
         // Add building sites
@@ -359,7 +421,9 @@ public class GameBoard {
      * This allows tiles to be notified when dice are rolled to distribute resources.
      */
     private void subscribeTilesToDice() {
-        tileList.forEach(tile -> tile.subscribeToDice(diceRoller));
+        tileList.stream()
+        .filter(tile -> tile.getType() != TileType.WASTE && tile.getId() != getRobberTile().getId())
+        .forEach(tile -> tile.subscribeToDice(diceRoller));
     }
 
     /**
@@ -372,4 +436,3 @@ public class GameBoard {
         return diceRoller.rollDice();
     }
 }
-
