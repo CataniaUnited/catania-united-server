@@ -302,7 +302,7 @@ public class GameService {
         Player reporter = playerService.getPlayerById(reporterId);
 
         boolean hasCheated = lobby.getCheatCount(reportedId) > 0;
-        boolean alreadyCaught = !lobby.isCheaterAlreadyCaught(reportedId);
+        boolean alreadyCaught = lobby.isCheaterAlreadyCaught(reportedId);
 
         if (hasCheated) {
             if (!alreadyCaught) {
