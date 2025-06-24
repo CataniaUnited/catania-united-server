@@ -322,6 +322,94 @@ class GameMessageHandlerTest {
         verify(lobbyService, never()).notifyPlayers(any(), any());
     }
 
+    @Test
+    void handleReportPlayer_validReport_shouldReturnReportPlayerDto() throws GameException {
+
+        WebSocketConnection conn1 = mock(WebSocketConnection.class);
+        WebSocketConnection conn2 = mock(WebSocketConnection.class);
+        when(conn1.id()).thenReturn("reporter-conn");
+        when(conn2.id()).thenReturn("reported-conn");
+
+        Player reporter = playerService.addPlayer(conn1);
+        Player reported = playerService.addPlayer(conn2);
+
+        String reporterId = reporter.getUniqueId();
+        String reportedId = reported.getUniqueId();
+        String lobbyId = lobbyService.createLobby(reporterId);
+        lobbyService.joinLobbyByCode(lobbyId, reportedId);
+
+        ObjectNode payload = JsonNodeFactory.instance.objectNode();
+        payload.put("reportedId", reportedId);
+        MessageDTO inputMessage = new MessageDTO(MessageType.REPORT_PLAYER, reporterId, lobbyId, payload);
+
+        doNothing().when(gameService).handleReportPlayer(lobbyId, reporterId, reportedId);
+
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+        PlayerInfo reporterInfo = mock(PlayerInfo.class);
+        PlayerInfo reportedInfo = mock(PlayerInfo.class);
+        when(reporterInfo.id()).thenReturn(reporterId);
+        when(reportedInfo.id()).thenReturn(reportedId);
+        when(playerMapper.toDto(reporter, lobby)).thenReturn(reporterInfo);
+        when(playerMapper.toDto(reported, lobby)).thenReturn(reportedInfo);
+
+        MessageDTO result = gameMessageHandler.handleReportPlayer(inputMessage).await().indefinitely();
+
+        assertNotNull(result);
+        assertEquals(MessageType.REPORT_PLAYER, result.getType());
+        assertEquals(reporterId, result.getPlayer());
+        assertTrue(result.getPlayers().containsKey(reporterId));
+        assertTrue(result.getPlayers().containsKey(reportedId));
+        verify(gameService, times(1)).handleReportPlayer(lobbyId, reporterId, reportedId);
+        verify(lobbyService, never()).notifyPlayers(any(), any());
+    }
+
+    @Test
+    void handleReportPlayer_gameException_shouldReturnErrorDto() throws GameException {
+        String lobbyId = "lobbyX";
+        String reporterId = "reporterY";
+        String reportedId = "reportedY";
+
+        ObjectNode payload = JsonNodeFactory.instance.objectNode();
+        payload.put("reportedId", reportedId);
+        MessageDTO inputMessage = new MessageDTO(MessageType.REPORT_PLAYER, reporterId, lobbyId, payload);
+
+        doThrow(new GameException("reporting not allowed"))
+                .when(gameService).handleReportPlayer(lobbyId, reporterId, reportedId);
+
+        MessageDTO result = gameMessageHandler.handleReportPlayer(inputMessage).await().indefinitely();
+
+        assertNotNull(result);
+        assertEquals(MessageType.ERROR, result.getType());
+        assertEquals("reporting not allowed", result.getMessageNode("error").asText());
+        verify(gameService, times(1)).handleReportPlayer(lobbyId, reporterId, reportedId);
+        verify(lobbyService, never()).notifyPlayers(any(), any());
+    }
+
+    @Test
+    void handleReportPlayer_invalidPlayer_shouldReturnInvalidPlayerError() throws GameException {
+        String lobbyId = "lobbyZ";
+        String reporterId = "reporterZ";
+        String invalidReportedId = "not-a-real-player";
+
+        ObjectNode payload = JsonNodeFactory.instance.objectNode();
+        payload.put("reportedId", invalidReportedId);
+        MessageDTO inputMessage = new MessageDTO(MessageType.REPORT_PLAYER, reporterId, lobbyId, payload);
+
+        doThrow(new IllegalArgumentException("No such player"))
+                .when(gameService).handleReportPlayer(lobbyId, reporterId, invalidReportedId);
+
+        MessageDTO result = gameMessageHandler.handleReportPlayer(inputMessage).await().indefinitely();
+
+        assertNotNull(result);
+        assertEquals(MessageType.ERROR, result.getType());
+        assertEquals("Invalid player to report.", result.getMessageNode("error").asText());
+        verify(gameService, times(1)).handleReportPlayer(lobbyId, reporterId, invalidReportedId);
+        verify(lobbyService, never()).notifyPlayers(any(), any());
+    }
+
+
+
+
 
 
 

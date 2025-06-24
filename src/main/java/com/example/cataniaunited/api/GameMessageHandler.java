@@ -86,6 +86,7 @@ public class GameMessageHandler {
                 case SET_READY -> setReady(message);
                 case TRADE_WITH_BANK -> handleTradeWithBank(message);
                 case CHEAT_ATTEMPT -> handleCheatAttempt(message);
+                case REPORT_PLAYER -> handleReportPlayer(message);
                 case ERROR, CONNECTION_SUCCESSFUL, CLIENT_DISCONNECTED, LOBBY_CREATED, LOBBY_UPDATED, PLAYER_JOINED,
                         GAME_BOARD_JSON, GAME_WON, DICE_RESULT, NEXT_TURN, GAME_STARTED, PLAYER_RESOURCE_UPDATE ->
                         throw new GameException("Invalid client command");
@@ -478,4 +479,34 @@ public class GameMessageHandler {
             return Uni.createFrom().item(createErrorMessage("Invalid resource type"));
         }
     }
+
+    Uni<MessageDTO> handleReportPlayer(MessageDTO message) {
+        try {
+            String lobbyId = message.getLobbyId();
+            String reporterId = message.getPlayer();
+            String reportedId = message.getMessageNode("reportedId").asText();
+
+            gameService.handleReportPlayer(lobbyId, reporterId, reportedId);
+
+            MessageDTO update = new MessageDTO(
+                    MessageType.REPORT_PLAYER,
+                    reporterId,
+                    lobbyId,
+                    getLobbyPlayerInformation(lobbyId)
+            );
+
+            return Uni.createFrom().item(update);
+        } catch (GameException e) {
+            return Uni.createFrom().item(createErrorMessage(e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            return Uni.createFrom().item(createErrorMessage("Invalid player to report."));
+        }
+    }
+
+
+
+
+
+
+
 }

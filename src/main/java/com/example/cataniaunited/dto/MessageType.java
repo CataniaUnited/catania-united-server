@@ -30,5 +30,6 @@ public enum MessageType {
     SET_READY,
     TRADE_WITH_BANK,
     CHEAT_ATTEMPT,
+    REPORT_PLAYER
 
 }
