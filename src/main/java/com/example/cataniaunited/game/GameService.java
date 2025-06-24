@@ -20,6 +20,7 @@ import org.jboss.logging.Logger;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -287,7 +288,7 @@ public class GameService {
     }
 
 
-    public void handleReportPlayer(String lobbyId, String reporterId, String reportedId) throws GameException {
+    public boolean handleReportPlayer(String lobbyId, String reporterId, String reportedId) throws GameException {
         Lobby lobby = lobbyService.getLobbyById(lobbyId);
 
         int reportCount = lobby.getReportCount(reporterId);
@@ -296,6 +297,37 @@ public class GameService {
         }
 
         lobby.recordReport(reporterId, reportedId);
+
+        Player reported = playerService.getPlayerById(reportedId);
+        Player reporter = playerService.getPlayerById(reporterId);
+
+        boolean reportedActuallyCheated = lobby.getCheatCount(reportedId) > 0;
+
+        if (reportedActuallyCheated) {
+
+            for (TileType type : TileType.values()) {
+                if (type == TileType.WASTE) continue;
+
+                int count = reported.getResourceCount(type);
+                reported.removeResource(type, count);
+                reported.receiveResource(type, count / 2);
+            }
+
+        } else {
+
+            List<TileType> availableResources = reporter.getResources().entrySet().stream()
+                    .filter(e -> e.getKey() != TileType.WASTE && e.getValue() > 0)
+                    .map(Map.Entry::getKey)
+                    .toList();
+
+            if (!availableResources.isEmpty()) {
+                TileType random = availableResources.get(new java.util.Random().nextInt(availableResources.size()));
+                reporter.removeResource(random, 1);
+            }
+        }
+
+        return reportedActuallyCheated;
     }
+
 
 }
