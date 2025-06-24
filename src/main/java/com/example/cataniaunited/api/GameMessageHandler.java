@@ -503,7 +503,7 @@ public class GameMessageHandler {
                     alertPayload.put("severity", "error");
                 }
                 case FALSE_REPORT -> {
-                    alertPayload.put("message", "You falsely accused " + reportedUsername + " and lost 1 resource.");
+                    alertPayload.put("message", "You falsely accused " + reportedUsername + " of cheating! You lost 1 resource.");
                     alertPayload.put("severity", "error");
                 }
             }

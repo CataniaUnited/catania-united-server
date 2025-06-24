@@ -18,10 +18,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -306,12 +303,23 @@ public class GameService {
 
         if (hasCheated) {
             if (!alreadyCaught) {
+                List<TileType> resourceList = new ArrayList<>();
                 for (TileType type : TileType.values()) {
                     if (type == TileType.WASTE) continue;
                     int count = reported.getResourceCount(type);
-                    reported.removeResource(type, count);
-                    reported.receiveResource(type, count / 2);
+                    for (int i = 0; i < count; i++) {
+                        resourceList.add(type);
+                    }
                 }
+
+                int totalResources = resourceList.size();
+                int toLose = totalResources / 2;
+
+                Collections.shuffle(resourceList);
+                for (int i = 0; i < toLose; i++) {
+                    reported.removeResource(resourceList.get(i), 1);
+                }
+
 
                 lobby.markCheaterAsCaught(reportedId);
                 return ReportOutcome.CORRECT_REPORT_NEW;
