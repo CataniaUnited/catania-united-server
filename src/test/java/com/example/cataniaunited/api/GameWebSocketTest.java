@@ -67,7 +67,7 @@ import static org.mockito.Mockito.when;
 
 
 @QuarkusTest
-public class GameWebSocketTest {
+class GameWebSocketTest {
 
     @TestHTTPResource
     URI serverUri;

@@ -313,4 +313,17 @@ public class GameService {
 
         lobby.recordCheat(playerId);
     }
+
+
+    public void handleReportPlayer(String lobbyId, String reporterId, String reportedId) throws GameException {
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+
+        int reportCount = lobby.getReportCount(reporterId);
+        if (reportCount >= 2) {
+            throw new GameException("You have already reported twice in this game.");
+        }
+
+        lobby.recordReport(reporterId, reportedId);
+    }
+
 }

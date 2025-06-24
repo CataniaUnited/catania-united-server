@@ -395,7 +395,7 @@ public class GameBoard {
         boardNode.set("ports", portsNode);
 
         boardNode.put("ringsOfBoard", this.sizeOfBoard);
-        boardNode.put("sizeOfHex", DEFAULT_TILES_PER_PLAYER_GOAL);// This seems wrong TODO: check
+        boardNode.put("sizeOfHex", DEFAULT_TILES_PER_PLAYER_GOAL);
 
         return boardNode;
     }

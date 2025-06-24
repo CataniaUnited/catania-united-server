@@ -348,5 +348,76 @@ class LobbyTest {
         assertEquals(0, lobby.getCheatCount("unknown"));
     }
 
+    @Test
+    void recordReport_shouldIncrementReportCountAndAddReportRecord() {
+        Lobby lobby = new Lobby("reportLobby", "host");
+        String reporter = "host";
+        String reported = "p2";
+        lobby.addPlayer(reported);
+        assertEquals(0, lobby.getReportCount(reporter));
+        assertTrue(lobby.getReportCounts().isEmpty());
+        assertTrue(lobby.getReportRecords().isEmpty());
+
+        lobby.recordReport(reporter, reported);
+        assertEquals(1, lobby.getReportCount(reporter));
+        assertEquals(1, lobby.getReportCounts().size());
+
+        List<ReportRecord> records = lobby.getReportRecords();
+        assertEquals(1, records.size());
+        assertEquals(reporter, records.get(0).reporterId());
+        assertEquals(reported, records.get(0).reportedId());
+
+        String reported2 = "p3";
+        lobby.addPlayer(reported2);
+        lobby.recordReport(reporter, reported2);
+        assertEquals(2, lobby.getReportCount(reporter));
+        assertEquals(1, lobby.getReportCounts().size());
+
+        records = lobby.getReportRecords();
+        assertEquals(2, records.size());
+        assertEquals(reported2, records.get(1).reportedId());
+    }
+
+    @Test
+    void getReportCounts_shouldReturnUnmodifiableMapWithCorrectValues() {
+        Lobby lobby = new Lobby("reportMap", "host");
+        lobby.addPlayer("p2");
+        assertTrue(lobby.getReportCounts().isEmpty());
+
+        lobby.recordReport("host", "p2");
+        lobby.recordReport("host", "p2");
+        lobby.recordReport("p2", "host");
+
+        Map<String, Integer> reportCounts = lobby.getReportCounts();
+        assertEquals(2, reportCounts.get("host"));
+        assertEquals(1, reportCounts.get("p2"));
+        assertEquals(2, reportCounts.size());
+    }
+
+    @Test
+    void getReportRecords_shouldReturnUnmodifiableListWithCorrectValues() {
+        Lobby lobby = new Lobby("reportRecords", "host");
+        lobby.addPlayer("p2");
+        lobby.recordReport("host", "p2");
+        lobby.recordReport("host", "p2");
+        lobby.recordReport("p2", "host");
+
+        List<ReportRecord> records = lobby.getReportRecords();
+        assertEquals(3, records.size());
+        assertEquals("host", records.get(0).reporterId());
+        assertEquals("p2", records.get(0).reportedId());
+        assertEquals("host", records.get(1).reporterId());
+        assertEquals("p2", records.get(1).reportedId());
+        assertEquals("p2", records.get(2).reporterId());
+        assertEquals("host", records.get(2).reportedId());
+    }
+
+    @Test
+    void getReportCount_returnsZeroForUnknownPlayer() {
+        Lobby lobby = new Lobby("reportLobby", "host");
+        assertEquals(0, lobby.getReportCount("unknown"));
+    }
+
+
 }
 //

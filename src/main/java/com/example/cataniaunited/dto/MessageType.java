@@ -30,7 +30,7 @@ public enum MessageType {
     SET_READY,
     PLACE_ROBBER,
     TRADE_WITH_BANK,
-    TRADE_WITH_PLAYER,
     CHEAT_ATTEMPT,
+    REPORT_PLAYER
 
 }
