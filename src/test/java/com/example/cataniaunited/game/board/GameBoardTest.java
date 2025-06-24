@@ -224,6 +224,16 @@ class GameBoardTest {
     }
 
     @Test
+    void testSetAndGetLongestRoad() {
+        GameBoard gameBoard = new GameBoard(2);
+        String expectedPlayerId = "p1_has_the_longest_road";
+        int expectedLength = 10;
+        gameBoard.setLongestRoad(expectedPlayerId, expectedLength);
+        assertEquals(expectedLength, gameBoard.getLongestRoadLength(), "The getter for road length should return the value that was set.");
+        assertEquals(expectedPlayerId, gameBoard.getLongestRoadPlayerId(), "The getter for the player ID should return the value that was set.");
+    }
+
+    @Test
     void placeSettlementShouldThrowExceptionIfPositionIsBiggerThanSize() {
         GameBoard gameBoard = new GameBoard(2);
         int positionId = gameBoard.getBuildingSitePositionGraph().size() + 1;

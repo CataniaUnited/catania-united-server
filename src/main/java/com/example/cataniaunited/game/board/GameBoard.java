@@ -35,6 +35,8 @@ public class GameBoard {
     private static final Logger logger = Logger.getLogger(GameBoard.class);
     static final int DEFAULT_TILES_PER_PLAYER_GOAL = 6;
     static final int SIZE_OF_HEX = 10; // Size parameter for graphical representation of hexes
+    private String longestRoadPlayerId = null;
+    private int longestRoadLength = 0;
 
     final int sizeOfBoard; // Number of rings/layers of tiles from the center
     private final DiceRoller diceRoller;
@@ -338,6 +340,20 @@ public class GameBoard {
         return boardNode;
     }
 
+    public String getLongestRoadPlayerId() {
+        return longestRoadPlayerId;
+    }
+
+    public int getLongestRoadLength() {
+        return longestRoadLength;
+    }
+
+    public void setLongestRoad(String playerId, int length) {
+        this.longestRoadPlayerId = playerId;
+        this.longestRoadLength = length;
+        logger.infof("New Longest Road updated: Player %s with length %d", playerId, length);
+    }
+
     /**
      * Subscribes all tiles on the board to the dice roller.
      * This allows tiles to be notified when dice are rolled to distribute resources.
@@ -356,3 +372,4 @@ public class GameBoard {
         return diceRoller.rollDice();
     }
 }
+
