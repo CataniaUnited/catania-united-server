@@ -24,7 +24,6 @@ import io.quarkus.test.junit.mockito.InjectSpy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -622,7 +621,7 @@ class GameServiceTest {
     }
 
     @Test
-    public void checkRobberPlacementRequired_Success() throws GameException {
+    void checkRobberPlacementRequired_Success() throws GameException {
         String playerId = "player1";
         lobbyMock.setActivePlayer(playerId);
         String lobbyId = lobbyMock.getLobbyId();
@@ -638,7 +637,7 @@ class GameServiceTest {
     }
 
     @Test
-    public void checkRobberPlacementRequired_Failure() throws GameException {
+    void checkRobberPlacementRequired_Failure() throws GameException {
         String lobbyId = lobbyMock.getLobbyId();
         String playerId = "player1";
         lobbyMock.setActivePlayer(playerId);
