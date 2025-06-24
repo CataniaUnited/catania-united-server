@@ -301,10 +301,10 @@ public class GameService {
         Player reported = playerService.getPlayerById(reportedId);
         Player reporter = playerService.getPlayerById(reporterId);
 
-        boolean reportedActuallyCheated = lobby.getCheatCount(reportedId) > 0;
+        boolean reportedActuallyCheated = lobby.getCheatCount(reportedId) > 0
+                && !lobby.isCheaterAlreadyCaught(reportedId);
 
         if (reportedActuallyCheated) {
-
             for (TileType type : TileType.values()) {
                 if (type == TileType.WASTE) continue;
 
@@ -312,6 +312,8 @@ public class GameService {
                 reported.removeResource(type, count);
                 reported.receiveResource(type, count / 2);
             }
+
+            lobby.markCheaterAsCaught(reportedId);
 
         } else {
 
@@ -328,6 +330,7 @@ public class GameService {
 
         return reportedActuallyCheated;
     }
+
 
 
 }
