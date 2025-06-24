@@ -571,4 +571,46 @@ class GameServiceTest {
         assertEquals(1, lobby.getCheatCount(cheaterId));
     }
 
+    @Test
+    void handleReportPlayer_shouldRecordReportForFirstTwoReports() throws GameException {
+        String reporterId = "reporter";
+        String reportedId = "reported";
+        String lobbyId = lobbyService.createLobby(reporterId);
+        lobbyService.joinLobbyByCode(lobbyId, reportedId);
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+
+        assertEquals(0, lobby.getReportCount(reporterId));
+
+        gameService.handleReportPlayer(lobbyId, reporterId, reportedId);
+        assertEquals(1, lobby.getReportCount(reporterId));
+        assertEquals(1, lobby.getReportRecords().size());
+        assertEquals(reporterId, lobby.getReportRecords().get(0).reporterId());
+        assertEquals(reportedId, lobby.getReportRecords().get(0).reportedId());
+
+        gameService.handleReportPlayer(lobbyId, reporterId, reportedId);
+        assertEquals(2, lobby.getReportCount(reporterId));
+        assertEquals(2, lobby.getReportRecords().size());
+    }
+
+    @Test
+    void handleReportPlayer_shouldThrowIfReportLimitReached() throws GameException {
+        String reporterId = "reporter";
+        String reportedId = "reported";
+        String lobbyId = lobbyService.createLobby(reporterId);
+        lobbyService.joinLobbyByCode(lobbyId, reportedId);
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+
+        gameService.handleReportPlayer(lobbyId, reporterId, reportedId);
+        gameService.handleReportPlayer(lobbyId, reporterId, reportedId);
+
+        GameException ex = assertThrows(GameException.class, () ->
+                gameService.handleReportPlayer(lobbyId, reporterId, reportedId)
+        );
+        assertEquals("You have already reported twice in this game.", ex.getMessage());
+    }
+
+
+
+
+
 }
