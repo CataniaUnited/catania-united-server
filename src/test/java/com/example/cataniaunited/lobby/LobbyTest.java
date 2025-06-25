@@ -418,6 +418,25 @@ class LobbyTest {
         assertEquals(0, lobby.getReportCount("unknown"));
     }
 
+    @Test
+    void isCheaterAlreadyCaught_shouldReturnFalseWhenCheaterIsActive() {
+        Lobby lobby = new Lobby("cheaterTest", "host");
+        String playerId = "player1";
+
+        lobby.recordCheat(playerId);
+        assertFalse(lobby.isCheaterAlreadyCaught(playerId));
+    }
+
+    @Test
+    void markCheaterAsCaught_shouldRemovePlayerFromActiveCheaters() {
+        Lobby lobby = new Lobby("cheaterTest", "host");
+        String playerId = "player1";
+
+        lobby.recordCheat(playerId);
+        assertFalse(lobby.isCheaterAlreadyCaught(playerId));
+
+        lobby.markCheaterAsCaught(playerId);
+        assertTrue(lobby.isCheaterAlreadyCaught(playerId));
+    }
 
 }
-//

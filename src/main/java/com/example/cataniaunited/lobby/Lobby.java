@@ -33,6 +33,8 @@ public class Lobby {
     private Map<String, Integer> cheatCounts = new HashMap<>();
     private Map<String, Integer> reportCounts = new HashMap<>();
     private final List<ReportRecord> reportRecords = new ArrayList<>();
+    private final Set<String> activeCheaters = new HashSet<>();
+
 
 
     /**
@@ -346,6 +348,7 @@ public class Lobby {
     public void recordCheat(String playerId) {
         int current = cheatCounts.getOrDefault(playerId, 0);
         cheatCounts.put(playerId, current + 1);
+        activeCheaters.add(playerId);
     }
 
     public int getCheatCount(String playerId) {
@@ -369,4 +372,14 @@ public class Lobby {
     public int getReportCount(String playerId) {
         return reportCounts.getOrDefault(playerId, 0);
     }
+
+    public boolean isCheaterAlreadyCaught(String playerId) {
+        return !activeCheaters.contains(playerId);
+    }
+
+    public void markCheaterAsCaught(String playerId) {
+        activeCheaters.remove(playerId);
+    }
+
+
 }
