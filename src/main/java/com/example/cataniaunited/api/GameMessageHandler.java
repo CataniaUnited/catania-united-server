@@ -39,6 +39,10 @@ public class GameMessageHandler {
 
     private static final Logger logger = Logger.getLogger(GameMessageHandler.class);
     private static final String COLOR_FIELD = "color";
+    private static final String ERROR = "error";
+    private static final String SEVERITY = "severity";
+    private static final String MESSAGE = "message";
+
 
     @Inject
     LobbyService lobbyService;
@@ -289,7 +293,7 @@ public class GameMessageHandler {
      */
     MessageDTO createErrorMessage(String errorMessage) {
         ObjectNode errorNode = JsonNodeFactory.instance.objectNode();
-        errorNode.put("error", errorMessage);
+        errorNode.put(ERROR, errorMessage);
         return new MessageDTO(MessageType.ERROR, errorNode);
     }
 
@@ -494,16 +498,16 @@ public class GameMessageHandler {
             ObjectNode alertPayload = JsonNodeFactory.instance.objectNode();
             switch (outcome) {
                 case CORRECT_REPORT_NEW -> {
-                    alertPayload.put("message", reportedUsername + " got caught cheating!");
-                    alertPayload.put("severity", "success");
+                    alertPayload.put(MESSAGE, reportedUsername + " got caught cheating!");
+                    alertPayload.put(SEVERITY, "success");
                 }
                 case CORRECT_REPORT_ALREADY_CAUGHT -> {
-                    alertPayload.put("message", reportedUsername + " was already caught cheating! You lost 1 resource.");
-                    alertPayload.put("severity", "error");
+                    alertPayload.put(MESSAGE, reportedUsername + " was already caught cheating! You lost 1 resource.");
+                    alertPayload.put(SEVERITY, "error");
                 }
                 case FALSE_REPORT -> {
-                    alertPayload.put("message", "You falsely accused " + reportedUsername + " of cheating! You lost 1 resource.");
-                    alertPayload.put("severity", "error");
+                    alertPayload.put(MESSAGE, "You falsely accused " + reportedUsername + " of cheating! You lost 1 resource.");
+                    alertPayload.put(SEVERITY, "error");
                 }
             }
 

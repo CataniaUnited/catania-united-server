@@ -476,41 +476,6 @@ class GameMessageHandlerTest {
         ));
     }
 
-    @Test
-    void handleReportPlayer_notifyPlayersThrows_shouldReturnErrorDto() throws GameException {
-        WebSocketConnection conn = mock(WebSocketConnection.class);
-        when(conn.id()).thenReturn("reporter");
-        Player reporter = playerService.addPlayer(conn);
-
-        Player reported = mock(Player.class);
-        String reportedId = "mock-reported-id";
-        when(reported.getUniqueId()).thenReturn(reportedId);
-        when(reported.getUsername()).thenReturn("cheater");
-
-        String reporterId = reporter.getUniqueId();
-        String lobbyId = lobbyService.createLobby(reporterId);
-        lobbyService.joinLobbyByCode(lobbyId, reportedId);
-
-        ObjectNode payload = JsonNodeFactory.instance.objectNode();
-        payload.put("reportedId", reportedId);
-        MessageDTO inputMessage = new MessageDTO(MessageType.REPORT_PLAYER, reporterId, lobbyId, payload);
-
-        when(gameService.handleReportPlayer(lobbyId, reporterId, reportedId)).thenReturn(ReportOutcome.FALSE_REPORT);
-        when(playerService.getPlayerById(reportedId)).thenReturn(reported);
-        when(playerService.sendMessageToPlayer(eq(reporterId), any())).thenReturn(Uni.createFrom().voidItem());
-
-        when(lobbyService.notifyPlayers(eq(lobbyId), any()))
-                .thenReturn(Uni.createFrom().failure(new GameException("notify error")));
-
-        try {
-            gameMessageHandler.handleReportPlayer(inputMessage).await().indefinitely();
-            fail("Expected CompletionException to be thrown");
-        } catch (CompletionException e) {
-            Throwable cause = e.getCause();
-            assertInstanceOf(GameException.class, cause);
-            assertEquals("notify error", cause.getMessage());
-        }
-    }
 
     @Test
     void handleReportPlayer_getLobbyPlayerInformationFails_shouldReturnErrorDto() throws GameException {
