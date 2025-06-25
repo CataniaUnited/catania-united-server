@@ -29,7 +29,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletionException;
 
 
 @QuarkusTest

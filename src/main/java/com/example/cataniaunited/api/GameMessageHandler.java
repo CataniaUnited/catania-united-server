@@ -42,6 +42,7 @@ public class GameMessageHandler {
     private static final String ERROR = "error";
     private static final String SEVERITY = "severity";
     private static final String MESSAGE = "message";
+    private static final String SUCCESS = "success";
 
 
     @Inject
@@ -499,15 +500,15 @@ public class GameMessageHandler {
             switch (outcome) {
                 case CORRECT_REPORT_NEW -> {
                     alertPayload.put(MESSAGE, reportedUsername + " got caught cheating!");
-                    alertPayload.put(SEVERITY, "success");
+                    alertPayload.put(SEVERITY, SUCCESS);
                 }
                 case CORRECT_REPORT_ALREADY_CAUGHT -> {
                     alertPayload.put(MESSAGE, reportedUsername + " was already caught cheating! You lost 1 resource.");
-                    alertPayload.put(SEVERITY, "error");
+                    alertPayload.put(SEVERITY, ERROR);
                 }
                 case FALSE_REPORT -> {
                     alertPayload.put(MESSAGE, "You falsely accused " + reportedUsername + " of cheating! You lost 1 resource.");
-                    alertPayload.put(SEVERITY, "error");
+                    alertPayload.put(SEVERITY, ERROR);
                 }
             }
 
