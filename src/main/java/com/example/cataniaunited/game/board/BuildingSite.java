@@ -65,7 +65,18 @@ public class BuildingSite implements Placable, Subscriber<TileType> {
         return String.format("BuildingSite{ID='%s', (%s; %s), tiles=%s, roads=%s}",
                 id, this.coordinates[0], this.coordinates[1], tiles, roads);
     }
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        BuildingSite that = (BuildingSite) o;
+        return id == that.id;
+    }
 
+    @Override
+    public int hashCode() {
+        return java.util.Objects.hash(id);
+    }
     /**
      * Gets a list of neighboring building sites connected by roads.
      *

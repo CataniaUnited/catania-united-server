@@ -328,8 +328,6 @@ public class GraphBuilder {
         b.addRoad(roadToAdd);
         roadList.add(roadToAdd);
     }
-
-    // TODO: Add Javadoc
     private void addPorts() {
         // We are only talking about the Outermost nodes
         int startingIndex = (int) (6 * Math.pow((sizeOfBoard - 1), 2));
@@ -800,23 +798,6 @@ public class GraphBuilder {
         // or else third Element is Duplicate
 
         return list.get(3);
-    }
-
-    /**
-     * Checks a boolean condition and throws an {@link AssertionError} if the condition is false.
-     * This method is "Deprecated" since it drastically reduced branch coverage for the working end product.
-     * And is only used in two tests
-     *
-     * @param success      The boolean condition to check.
-     * @param errorMessage The message for the AssertionError if the condition is false.
-     * @throws AssertionError if success is false.
-     */
-    @Deprecated
-    static void checkAndThrowAssertionError(boolean success, String errorMessage){
-        if (success)
-            return;
-
-        throw new AssertionError(errorMessage);
     }
 
 }

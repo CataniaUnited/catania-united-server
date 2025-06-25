@@ -215,6 +215,19 @@ public class Road implements Placable, Buildable {
         return roadNode;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Road road = (Road) o;
+        return id == road.id;
+    }
+
+    @Override
+    public int hashCode() {
+        return java.util.Objects.hash(id);
+    }
+
     /**
      * Gets the map of resource types and amounts required to build this road.
      *

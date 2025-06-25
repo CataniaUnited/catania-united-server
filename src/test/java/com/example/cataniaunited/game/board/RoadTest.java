@@ -51,6 +51,22 @@ class RoadTest {
         assertSame(mockPositionB, road.getNeighbour(mockPositionA), "getNeighbour should return B when given A");
         assertSame(mockPositionA, road.getNeighbour(mockPositionB), "getNeighbour should return A when given B");
     }
+    @Test
+    void testEqualsAndHashCodeContract() {
+        BuildingSite site1 = new BuildingSite(1);
+        BuildingSite site2 = new BuildingSite(2);
+        BuildingSite site3 = new BuildingSite(3);
+        Road roadA = new Road(site1, site2, 101);
+        Road roadB = new Road(site1, site2, 101);
+        Road roadC = new Road(site2, site3, 102);
+        assertEquals(roadA, roadA, "A road should always be equal to itself.");
+        assertEquals(roadA, roadB, "Roads with the same ID should be equal.");
+        assertNotEquals(roadA, roadC, "Roads with different IDs should not be equal.");
+        assertNotEquals(null, roadA, "A road should not be equal to null.");
+        assertNotEquals(roadA, new Object(), "A road should not be equal to an object of a different type.");
+        assertEquals(roadA.hashCode(), roadB.hashCode(), "Hash codes must be the same for equal objects.");
+        assertNotEquals(roadA.hashCode(), roadC.hashCode(), "Hash codes should ideally be different for unequal objects.");
+    }
 
     @Test
     void getNeighbourReturnsNullWhenGivenUnknownPosition() {
