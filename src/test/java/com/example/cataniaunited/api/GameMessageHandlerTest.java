@@ -512,8 +512,89 @@ class GameMessageHandlerTest {
         }
     }
 
+    @Test
+    void handleReportPlayer_getLobbyPlayerInformationFails_shouldReturnErrorDto() throws GameException {
+        WebSocketConnection conn = mock(WebSocketConnection.class);
+        when(conn.id()).thenReturn("reporter");
+        Player reporter = playerService.addPlayer(conn);
+
+        Player reported = mock(Player.class);
+        String reportedId = "mock-reported-id";
+        when(reported.getUniqueId()).thenReturn(reportedId);
+        when(reported.getUsername()).thenReturn("cheater");
+
+        String reporterId = reporter.getUniqueId();
+        String lobbyId = lobbyService.createLobby(reporterId);
+        lobbyService.joinLobbyByCode(lobbyId, reportedId);
+
+        ObjectNode payload = JsonNodeFactory.instance.objectNode();
+        payload.put("reportedId", reportedId);
+        MessageDTO inputMessage = new MessageDTO(MessageType.REPORT_PLAYER, reporterId, lobbyId, payload);
+
+        when(gameService.handleReportPlayer(lobbyId, reporterId, reportedId)).thenReturn(ReportOutcome.FALSE_REPORT);
+        when(playerService.getPlayerById(reportedId)).thenReturn(reported);
+        when(playerService.sendMessageToPlayer(eq(reporterId), any())).thenReturn(Uni.createFrom().voidItem());
+        doThrow(new GameException("player info error")).when(lobbyService).getLobbyById(lobbyId);
+
+        MessageDTO result = gameMessageHandler.handleReportPlayer(inputMessage).await().indefinitely();
+
+        assertEquals(MessageType.ERROR, result.getType());
+        assertEquals("player info error", result.getMessageNode("error").asText());
+    }
+
+    @Test
+    void handleGameMessage_cheatAttempt_shouldTriggerHandler() throws GameException {
+        WebSocketConnection conn = mock(WebSocketConnection.class);
+        when(conn.id()).thenReturn("cheater");
+        Player player = playerService.addPlayer(conn);
+        String playerId = player.getUniqueId();
+        String lobbyId = lobbyService.createLobby(playerId);
+        lobbyService.getLobbyById(lobbyId).setActivePlayer(playerId);
+
+        ObjectNode payload = JsonNodeFactory.instance.objectNode();
+        payload.put("resource", TileType.WHEAT.name());
+        MessageDTO input = new MessageDTO(MessageType.CHEAT_ATTEMPT, playerId, lobbyId, payload);
+
+        doNothing().when(gameService).handleCheat(lobbyId, playerId, TileType.WHEAT);
+        PlayerInfo mockInfo = mock(PlayerInfo.class);
+        when(playerMapper.toDto(eq(player), any())).thenReturn(mockInfo);
+        MessageDTO expectedUpdate = new MessageDTO(MessageType.PLAYER_RESOURCE_UPDATE, playerId, lobbyId, Map.of(playerId, mockInfo));
+        when(lobbyService.notifyPlayers(eq(lobbyId), any())).thenReturn(Uni.createFrom().item(expectedUpdate));
+
+        MessageDTO result = gameMessageHandler.handleGameMessage(input).await().indefinitely();
+
+        assertEquals(MessageType.PLAYER_RESOURCE_UPDATE, result.getType());
+    }
 
 
+    @Test
+    void handleGameMessage_reportPlayer_shouldTriggerHandler() throws GameException {
+        WebSocketConnection conn = mock(WebSocketConnection.class);
+        when(conn.id()).thenReturn("reporter");
+        Player reporter = playerService.addPlayer(conn);
+
+        Player reported = mock(Player.class);
+        String reportedId = "mock-reported-id";
+        when(reported.getUniqueId()).thenReturn(reportedId);
+        when(reported.getUsername()).thenReturn("cheater");
+
+        String reporterId = reporter.getUniqueId();
+        String lobbyId = lobbyService.createLobby(reporterId);
+        lobbyService.joinLobbyByCode(lobbyId, reportedId);
+
+        ObjectNode payload = JsonNodeFactory.instance.objectNode();
+        payload.put("reportedId", reportedId);
+        MessageDTO inputMessage = new MessageDTO(MessageType.REPORT_PLAYER, reporterId, lobbyId, payload);
+
+        when(gameService.handleReportPlayer(lobbyId, reporterId, reportedId)).thenReturn(ReportOutcome.FALSE_REPORT);
+        when(playerService.getPlayerById(reportedId)).thenReturn(reported);
+        when(playerService.sendMessageToPlayer(eq(reporterId), any())).thenReturn(Uni.createFrom().voidItem());
+        when(lobbyService.notifyPlayers(eq(lobbyId), any())).thenReturn(Uni.createFrom().item(new MessageDTO()));
+
+        MessageDTO result = gameMessageHandler.handleGameMessage(inputMessage).await().indefinitely();
+
+        assertEquals(MessageType.PLAYER_RESOURCE_UPDATE, result.getType());
+    }
 
 
 

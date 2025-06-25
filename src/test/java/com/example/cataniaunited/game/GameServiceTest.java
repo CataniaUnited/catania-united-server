@@ -775,6 +775,33 @@ class GameServiceTest {
         assertEquals(0, reporter.getResourceCount(TileType.WHEAT));
     }
 
+    @Test
+    void handleReportPlayer_shouldThrowIfReporterExceedsLimit() throws GameException {
+        Player reporter = new Player();
+        Player reported = new Player();
+
+        String reporterId = reporter.getUniqueId();
+        String reportedId = reported.getUniqueId();
+
+        String lobbyId = lobbyService.createLobby(reporterId);
+        lobbyService.joinLobbyByCode(lobbyId, reportedId);
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+
+        lobby.recordReport(reporterId, reportedId);
+        lobby.recordReport(reporterId, reportedId); // Already made 2 reports
+
+        PlayerService.clearAllPlayersForTesting();
+        injectPlayer(reporter);
+        injectPlayer(reported);
+
+        GameException ex = assertThrows(GameException.class, () ->
+                gameService.handleReportPlayer(lobbyId, reporterId, reportedId)
+        );
+
+        assertEquals("You have already reported twice in this game.", ex.getMessage());
+    }
+
+
 
 
 
