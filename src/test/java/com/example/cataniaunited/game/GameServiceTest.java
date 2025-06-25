@@ -24,8 +24,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -74,6 +76,18 @@ class GameServiceTest {
 
         when(lobbyMock.getLobbyId()).thenReturn("12345");
         when(lobbyMock.getPlayers()).thenReturn(Set.of("host", "p2"));
+    }
+
+    private static void injectPlayer(Player player) {
+        try {
+            Field field = PlayerService.class.getDeclaredField("playersById");
+            field.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            Map<String, Player> map = (Map<String, Player>) field.get(null);
+            map.put(player.getUniqueId(), player);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to inject player", e);
+        }
     }
 
     @Test
@@ -680,42 +694,98 @@ class GameServiceTest {
         assertEquals(1, lobby.getCheatCount(cheaterId));
     }
 
+
     @Test
-    void handleReportPlayer_shouldRecordReportForFirstTwoReports() throws GameException {
-        String reporterId = "reporter";
-        String reportedId = "reported";
+    void handleReportPlayer_shouldReturnCorrectReportNewAndRemoveHalfResources() throws GameException {
+        Player reporter = new Player();
+        Player reported = new Player();
+
+        String reporterId = reporter.getUniqueId();
+        String reportedId = reported.getUniqueId();
+
         String lobbyId = lobbyService.createLobby(reporterId);
         lobbyService.joinLobbyByCode(lobbyId, reportedId);
         Lobby lobby = lobbyService.getLobbyById(lobbyId);
 
-        assertEquals(0, lobby.getReportCount(reporterId));
+        lobby.recordCheat(reportedId);
 
-        gameService.handleReportPlayer(lobbyId, reporterId, reportedId);
-        assertEquals(1, lobby.getReportCount(reporterId));
-        assertEquals(1, lobby.getReportRecords().size());
-        assertEquals(reporterId, lobby.getReportRecords().get(0).reporterId());
-        assertEquals(reportedId, lobby.getReportRecords().get(0).reportedId());
+        reported.receiveResource(TileType.WOOD, 2);
+        reported.receiveResource(TileType.CLAY, 2);
 
-        gameService.handleReportPlayer(lobbyId, reporterId, reportedId);
-        assertEquals(2, lobby.getReportCount(reporterId));
-        assertEquals(2, lobby.getReportRecords().size());
+        PlayerService.clearAllPlayersForTesting();
+        injectPlayer(reporter);
+        injectPlayer(reported);
+
+        ReportOutcome outcome = gameService.handleReportPlayer(lobbyId, reporterId, reportedId);
+
+        assertEquals(ReportOutcome.CORRECT_REPORT_NEW, outcome);
+        int remaining = reported.getResources().values().stream().mapToInt(Integer::intValue).sum();
+        assertEquals(2, remaining);
+    }
+
+
+
+    @Test
+    void handleReportPlayer_shouldReturnCorrectReportAlreadyCaughtAndPunishReporter() throws GameException {
+        Player reporter = new Player();
+        Player reported = new Player();
+
+        String reporterId = reporter.getUniqueId();
+        String reportedId = reported.getUniqueId();
+
+        String lobbyId = lobbyService.createLobby(reporterId);
+        lobbyService.joinLobbyByCode(lobbyId, reportedId);
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+
+        lobby.recordCheat(reportedId);
+        lobby.markCheaterAsCaught(reportedId);
+
+        reporter.receiveResource(TileType.ORE, 1);
+
+        PlayerService.clearAllPlayersForTesting();
+        injectPlayer(reporter);
+        injectPlayer(reported);
+
+        ReportOutcome outcome = gameService.handleReportPlayer(lobbyId, reporterId, reportedId);
+
+        assertEquals(ReportOutcome.CORRECT_REPORT_ALREADY_CAUGHT, outcome);
+        assertEquals(0, reporter.getResourceCount(TileType.ORE));
     }
 
     @Test
-    void handleReportPlayer_shouldThrowIfReportLimitReached() throws GameException {
-        String reporterId = "reporter";
-        String reportedId = "reported";
+    void handleReportPlayer_shouldReturnFalseReportAndPunishReporter() throws GameException {
+        Player reporter = new Player();
+        Player reported = new Player();
+
+        String reporterId = reporter.getUniqueId();
+        String reportedId = reported.getUniqueId();
+
         String lobbyId = lobbyService.createLobby(reporterId);
         lobbyService.joinLobbyByCode(lobbyId, reportedId);
 
-        gameService.handleReportPlayer(lobbyId, reporterId, reportedId);
-        gameService.handleReportPlayer(lobbyId, reporterId, reportedId);
+        reporter.receiveResource(TileType.WHEAT, 1);
 
-        GameException ex = assertThrows(GameException.class, () ->
-                gameService.handleReportPlayer(lobbyId, reporterId, reportedId)
-        );
-        assertEquals("You have already reported twice in this game.", ex.getMessage());
+        PlayerService.clearAllPlayersForTesting();
+        injectPlayer(reporter);
+        injectPlayer(reported);
+
+        ReportOutcome outcome = gameService.handleReportPlayer(lobbyId, reporterId, reportedId);
+
+        assertEquals(ReportOutcome.FALSE_REPORT, outcome);
+        assertEquals(0, reporter.getResourceCount(TileType.WHEAT));
     }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
