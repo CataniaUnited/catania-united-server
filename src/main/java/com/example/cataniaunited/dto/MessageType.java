@@ -30,6 +30,7 @@ public enum MessageType {
     END_TURN,
     SET_READY,
     TRADE_WITH_BANK,
+    DISCARD_RESOURCES,
     CHEAT_ATTEMPT,
     REPORT_PLAYER
 
