@@ -41,13 +41,11 @@ public class GameService {
     private static final int MIN_LONGEST_ROAD_LENGTH = 5;
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
-
     @Inject
     LobbyService lobbyService;
 
     @Inject
     PlayerService playerService;
-
 
     /**
      * Creates a new game board for the specified lobby.

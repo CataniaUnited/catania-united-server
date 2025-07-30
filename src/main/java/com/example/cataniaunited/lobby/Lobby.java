@@ -36,7 +36,6 @@ public class Lobby {
     private final Set<String> activeCheaters = new HashSet<>();
 
 
-
     /**
      * Constructs a new Lobby instance.
      * Initializes the lobby with a unique ID and the host player.

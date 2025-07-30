@@ -5,6 +5,7 @@ import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.dto.PlayerInfo;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.fi.BuildingAction;
+import com.example.cataniaunited.game.DiscardRequest;
 import com.example.cataniaunited.game.GameService;
 import com.example.cataniaunited.game.ReportOutcome;
 import com.example.cataniaunited.game.board.GameBoard;
@@ -91,6 +92,7 @@ public class GameMessageHandler {
                 case START_GAME -> handleStartGame(message);
                 case SET_READY -> setReady(message);
                 case TRADE_WITH_BANK -> handleTradeWithBank(message);
+                case DISCARD_RESOURCES -> handleDiscardResources(message);
                 case CHEAT_ATTEMPT -> handleCheatAttempt(message);
                 case REPORT_PLAYER -> handleReportPlayer(message);
                 case ERROR, CONNECTION_SUCCESSFUL, CLIENT_DISCONNECTED, LOBBY_CREATED, LOBBY_UPDATED, PLAYER_JOINED,
@@ -461,6 +463,34 @@ public class GameMessageHandler {
                 .chain(() -> Uni.createFrom().item(updateResponse));
     }
 
+    private Uni<MessageDTO> handleDiscardResources(MessageDTO message) throws GameException {
+        String lobbyId = message.getLobbyId();
+        String playerId = message.getPlayer();
+
+        DiscardRequest discardRequest;
+
+        try {
+            discardRequest = objectMapper.treeToValue(message.getMessage(), DiscardRequest.class);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+            //TODO:
+            playerService.updatePlayerResources(playerId, discardRequest);
+
+            Map <String, PlayerInfo> updatedPlayerInfo = getLobbyPlayerInformation(lobbyId);
+
+            MessageDTO updateResponse = new MessageDTO(
+                    MessageType.PLAYER_RESOURCE_UPDATE,
+                    playerId,
+                    lobbyId,
+                    updatedPlayerInfo
+            );
+
+            return lobbyService.notifyPlayers(lobbyId, updateResponse)
+                    .chain(() -> Uni.createFrom().item(updateResponse));
+
+    }
+
     Uni<MessageDTO> handleCheatAttempt(MessageDTO message) {
         try {
             String lobbyId = message.getLobbyId();
@@ -542,13 +572,4 @@ public class GameMessageHandler {
             return Uni.createFrom().item(createErrorMessage("Invalid player to report."));
         }
     }
-
-
-
-
-
-
-
-
-
 }
