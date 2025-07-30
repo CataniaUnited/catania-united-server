@@ -476,19 +476,18 @@ public class GameMessageHandler {
             throw new GameException("Invalid discard request format.");
         }
 
-            playerService.updatePlayerResources(playerId, discardRequest);
+        playerService.updatePlayerResources(playerId, discardRequest);
 
-            Map <String, PlayerInfo> updatedPlayerInfo = getLobbyPlayerInformation(lobbyId);
+        Map <String, PlayerInfo> updatedPlayerInfo = getLobbyPlayerInformation(lobbyId);
 
-            MessageDTO updateResponse = new MessageDTO(
-                    MessageType.PLAYER_RESOURCE_UPDATE,
-                    playerId,
-                    lobbyId,
-                    updatedPlayerInfo
-            );
+        MessageDTO updateResponse = new MessageDTO(
+                MessageType.PLAYER_RESOURCE_UPDATE,
+                playerId,
+                lobbyId,
+                updatedPlayerInfo
+        );
 
-            return lobbyService.notifyPlayers(lobbyId, updateResponse)
-                    .chain(() -> Uni.createFrom().item(updateResponse));
+        return lobbyService.notifyPlayers(lobbyId, updateResponse).chain(() -> Uni.createFrom().item(updateResponse));
 
     }
 
