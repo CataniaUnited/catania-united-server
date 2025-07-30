@@ -471,10 +471,11 @@ public class GameMessageHandler {
 
         try {
             discardRequest = objectMapper.treeToValue(message.getMessage(), DiscardRequest.class);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
+        } catch (JsonProcessingException | IllegalArgumentException e) {
+            logger.errorf("Failed to parse discard request: %s", e.getMessage());
+            throw new GameException("Invalid discard request format.");
         }
-            //TODO:
+
             playerService.updatePlayerResources(playerId, discardRequest);
 
             Map <String, PlayerInfo> updatedPlayerInfo = getLobbyPlayerInformation(lobbyId);
