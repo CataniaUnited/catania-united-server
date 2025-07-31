@@ -178,6 +178,10 @@ public class Player {
         return resources;
     }
 
+    public void setResources(HashMap<TileType, Integer> updatedResources){
+        resources = updatedResources;
+    }
+
     /**
      * Compares this Player object to another object for equality.
      * Two players are considered equal if their unique IDs are the same.

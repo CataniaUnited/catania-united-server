@@ -13,6 +13,7 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
@@ -361,5 +362,51 @@ class PlayerServiceTest {
         assertEquals(0, player.getResourceCount(TileType.ORE));
     }
 
+    @Test
+    void updatePlayerResources_shouldUpdateCorrectly() throws GameException {
+        Player player = playerService.addPlayer(mockConnection1);
+        String playerId = player.getUniqueId();
+
+        HashMap<TileType, Integer> updatedResources = new HashMap<>();
+        updatedResources.put(TileType.SHEEP, 2);
+        updatedResources.put(TileType.ORE, 1);
+        updatedResources.put(TileType.WOOD, 1);
+
+        playerService.updatePlayerResources(playerId, updatedResources);
+
+        assertEquals(2, player.getResources().get(TileType.SHEEP));
+        assertEquals(1, player.getResources().get(TileType.ORE));
+        assertEquals(1, player.getResources().get(TileType.WOOD));
+    }
+
+    @Test
+    void updatePlayerResources_getTotalResourceCount_Exception(){
+        String playerId = "unknown";
+        HashMap<TileType, Integer> dummy = new HashMap<>();
+
+        var exception = assertThrows(GameException.class, () -> playerService.updatePlayerResources(playerId, dummy));
+        assertEquals("Player with id %s not found".formatted(playerId), exception.getMessage());
+
+        var errorTotalResourceCount = assertThrows(GameException.class, () -> playerService.getTotalResourceCount(playerId));
+        assertEquals("Player with id %s not found".formatted(playerId), errorTotalResourceCount.getMessage());
+    }
+
+    @Test
+    void getTotalResourceCount_shouldReturnCorrectSum() throws GameException {
+        Player player = playerService.addPlayer(mockConnection1);
+        String playerId = player.getUniqueId();
+
+        HashMap<TileType, Integer> updatedResources = new HashMap<>();
+        updatedResources.put(TileType.ORE, 2);
+        updatedResources.put(TileType.SHEEP, 4);
+        updatedResources.put(TileType.CLAY, 0);
+        updatedResources.put(TileType.WHEAT, 1);
+        updatedResources.put(TileType.WOOD, 2);
+
+        player.setResources(updatedResources);
+
+        int totalResourcesCount = playerService.getTotalResourceCount(playerId);
+        assertEquals(9, totalResourcesCount);
+    }
 }
 

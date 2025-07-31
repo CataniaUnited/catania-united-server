@@ -5,7 +5,6 @@ import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.dto.PlayerInfo;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.fi.BuildingAction;
-import com.example.cataniaunited.game.DiscardRequest;
 import com.example.cataniaunited.game.GameService;
 import com.example.cataniaunited.game.ReportOutcome;
 import com.example.cataniaunited.game.board.GameBoard;
@@ -30,9 +29,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
-import java.util.Comparator;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @ApplicationScoped
@@ -466,17 +463,25 @@ public class GameMessageHandler {
     private Uni<MessageDTO> handleDiscardResources(MessageDTO message) throws GameException {
         String lobbyId = message.getLobbyId();
         String playerId = message.getPlayer();
+        JsonNode discardNode = message.getMessageNode("discardResources");
 
-        DiscardRequest discardRequest;
-
-        try {
-            discardRequest = objectMapper.treeToValue(message.getMessage(), DiscardRequest.class);
-        } catch (JsonProcessingException | IllegalArgumentException e) {
-            logger.errorf("Failed to parse discard request: %s", e.getMessage());
-            throw new GameException("Invalid discard request format.");
+        if (discardNode == null || discardNode.isEmpty()) {
+            return Uni.createFrom().item(createErrorMessage("Must discard resources before ending your turn"));
         }
 
-        playerService.updatePlayerResources(playerId, discardRequest);
+        HashMap<TileType, Integer> updatedResources = new HashMap<>();
+        for (Iterator<Map.Entry<String, JsonNode>> it = discardNode.fields(); it.hasNext(); ) {
+            Map.Entry<String, JsonNode> field = it.next();
+            try {
+                TileType type = TileType.valueOf(field.getKey());
+                int amount = field.getValue().asInt();
+                updatedResources.put(type, amount);
+            } catch (IllegalArgumentException e) {
+                return Uni.createFrom().item(createErrorMessage("Invalid resource type: " + field.getKey()));
+            }
+        }
+        logger.debugf("Remaining ressources: " + updatedResources);
+        playerService.updatePlayerResources(playerId, updatedResources);
 
         Map <String, PlayerInfo> updatedPlayerInfo = getLobbyPlayerInformation(lobbyId);
 

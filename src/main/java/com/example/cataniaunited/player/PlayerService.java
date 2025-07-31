@@ -2,15 +2,14 @@ package com.example.cataniaunited.player;
 
 import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.exception.GameException;
-import com.example.cataniaunited.game.DiscardRequest;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import io.quarkus.websockets.next.WebSocketConnection;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.jboss.logging.Logger;
 
+import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -196,23 +195,13 @@ public class PlayerService {
         }
     }
 
-    public void updatePlayerResources (String playerId, DiscardRequest discardRequest) throws GameException {
+    public void updatePlayerResources (String playerId, HashMap<TileType, Integer> remainingResources) throws GameException {
         Player player = getPlayerById(playerId);
         if (player == null){
             logger.errorf("Update of resources failed, no player found: playerId = %s", playerId);
             throw new GameException("Player with id %s not found", playerId);
         }
-
-        Map<TileType, Integer> remainingResources = discardRequest.remainingResources();
-        Map <TileType, Integer> updatedResources = player.getResources();
-        updatedResources.clear();
-
-        for (TileType resource: TileType.values()) {
-            if (resource == TileType.WASTE) continue;
-
-            int amount = remainingResources.getOrDefault(resource, 0);
-            updatedResources.put(resource, Math.max(amount, 0));
-        }
+        player.setResources(remainingResources);
     }
 
     public int getTotalResourceCount (String playerId) throws GameException {
