@@ -484,10 +484,6 @@ public class GameMessageHandler {
         String playerId = message.getPlayer();
         JsonNode discardNode = message.getMessageNode("discardResources");
 
-        if (discardNode == null || discardNode.isEmpty()) {
-            return Uni.createFrom().item(createErrorMessage("Must discard resources before ending your turn"));
-        }
-
         HashMap<TileType, Integer> updatedResources = new HashMap<>();
         for (Iterator<Map.Entry<String, JsonNode>> it = discardNode.fields(); it.hasNext(); ) {
             Map.Entry<String, JsonNode> field = it.next();
