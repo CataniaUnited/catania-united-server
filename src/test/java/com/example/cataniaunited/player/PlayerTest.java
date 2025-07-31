@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
 import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -182,6 +183,21 @@ class PlayerTest {
         assertEquals(initialWoodCount, player.getResourceCount(TileType.WOOD), "Adding WASTE should not affect WOOD count.");
         assertEquals(initialWheatCount, player.getResourceCount(TileType.WHEAT), "Adding WASTE should not affect WHEAT count.");
         assertFalse(player.resources.containsKey(TileType.WASTE), "Player's internal resources map should not contain WASTE key.");
+    }
+
+    @Test
+    void setResourcesShouldReplaceMap() {
+        HashMap<TileType, Integer> resources = new HashMap<>();
+        resources.put(TileType.WOOD, 3);
+        player.setResources(resources);
+
+        assertEquals(resources, player.getResources());
+
+        HashMap<TileType, Integer> newResources = new HashMap<>();
+        newResources.put(TileType.CLAY, 1);
+        player.setResources(newResources);
+
+        assertEquals(newResources, player.getResources());
     }
 
     @Test

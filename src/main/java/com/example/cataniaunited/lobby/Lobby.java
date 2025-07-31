@@ -34,6 +34,7 @@ public class Lobby {
     private Map<String, Integer> reportCounts = new HashMap<>();
     private final List<ReportRecord> reportRecords = new ArrayList<>();
     private final Set<String> activeCheaters = new HashSet<>();
+    private final Set<String> playersPendingDiscard = new CopyOnWriteArraySet<>();
 
 
     /**
@@ -380,5 +381,19 @@ public class Lobby {
         activeCheaters.remove(playerId);
     }
 
+    public void requireDiscard(String playerId) {
+        playersPendingDiscard.add(playerId);
+    }
 
+    public void markDiscarded(String playerId) {
+        playersPendingDiscard.remove(playerId);
+    }
+
+    public boolean needsToDiscard(String playerId) {
+        return playersPendingDiscard.contains(playerId);
+    }
+
+    public boolean hasPendingDiscards() {
+        return !playersPendingDiscard.isEmpty();
+    }
 }

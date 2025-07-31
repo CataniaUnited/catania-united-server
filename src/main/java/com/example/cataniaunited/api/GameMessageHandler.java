@@ -4,6 +4,7 @@ import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.dto.PlayerInfo;
 import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.exception.ui.ResourcesNotDiscardedException;
 import com.example.cataniaunited.fi.BuildingAction;
 import com.example.cataniaunited.game.GameService;
 import com.example.cataniaunited.game.ReportOutcome;
@@ -105,6 +106,9 @@ public class GameMessageHandler {
 
     Uni<MessageDTO> endTurn(MessageDTO message) throws GameException {
         Lobby lobby = lobbyService.getLobbyById(message.getLobbyId());
+        if(lobbyService.hasPendingDiscards(message.getLobbyId())){
+            throw new ResourcesNotDiscardedException();
+        }
         gameService.checkRequiredPlayerStructures(message.getLobbyId(), message.getPlayer(), lobby.getRoundsPlayed());
         lobbyService.nextTurn(message.getLobbyId(), message.getPlayer());
         ObjectNode payload = getGameBoardInformation(message.getLobbyId());
@@ -329,6 +333,21 @@ public class GameMessageHandler {
                     try {
                         ObjectNode diceResult = gameService.rollDice(message.getLobbyId(), message.getPlayer());
 
+                        int total = diceResult.get("total").asInt();
+                        if (total == 7) {
+                            Lobby lobby = lobbyService.getLobbyById(message.getLobbyId());
+                            List<String> toDiscard = lobby.getPlayers().stream()
+                                    .filter(pid -> {
+                                        try {
+                                            return playerService.getTotalResourceCount(pid) > 7;
+                                        } catch (GameException ex) {
+                                            return false;
+                                        }
+                                    })
+                                    .toList();
+                            lobbyService.markPlayersNeedingDiscard(message.getLobbyId(), toDiscard);
+                        }
+
                         diceResult.put("rollingUsername", username);
                         diceResult.put("player", playerId);
 
@@ -482,6 +501,7 @@ public class GameMessageHandler {
         }
         logger.debugf("Remaining ressources: " + updatedResources);
         playerService.updatePlayerResources(playerId, updatedResources);
+        lobbyService.playerDiscarded(lobbyId, playerId);
 
         Map <String, PlayerInfo> updatedPlayerInfo = getLobbyPlayerInformation(lobbyId);
 

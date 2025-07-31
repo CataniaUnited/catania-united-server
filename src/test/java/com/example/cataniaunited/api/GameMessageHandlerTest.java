@@ -5,6 +5,7 @@ import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.dto.PlayerInfo;
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.exception.ui.InvalidTurnException;
+import com.example.cataniaunited.exception.ui.ResourcesNotDiscardedException;
 import com.example.cataniaunited.game.GameService;
 import com.example.cataniaunited.game.ReportOutcome;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
@@ -27,6 +28,8 @@ import org.junit.jupiter.api.Test;
 import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
+
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -220,40 +223,45 @@ class GameMessageHandlerTest {
     }
 
     @Test
-    void handleDiscardResources_shouldUpdateResourcesSuccessfully() throws GameException {
-        WebSocketConnection connection = mock(WebSocketConnection.class);
-        when(connection.id()).thenReturn("1234");
-        Player player = playerService.addPlayer(connection);
-        String player1Id = player.getUniqueId();
-        String lobbyId = lobbyService.createLobby(player1Id);
+    void handleDiscardResources_shouldUpdateResourcesAndNotify() throws GameException {
+        WebSocketConnection conn = mock(WebSocketConnection.class);
+        when(conn.id()).thenReturn("p1");
+        Player player = playerService.addPlayer(conn);
+        String playerId = player.getUniqueId();
+        String lobbyId = lobbyService.createLobby(playerId);
+        lobbyService.getLobbyById(lobbyId).setActivePlayer(playerId);
 
-        ObjectNode discardNode = JsonNodeFactory.instance.objectNode();
-        discardNode.put("WOOD", 2);
-        discardNode.put("ClAY", 1);
-        discardNode.put("SHEEP", 0);
-        discardNode.put("ORE", 2);
-        discardNode.put("WHEAT", 0);
+        ObjectNode discard = JsonNodeFactory.instance.objectNode();
+        discard.put(TileType.WOOD.name(), 2);
 
-        ObjectNode payload = JsonNodeFactory.instance.objectNode();
-        payload.set("discardResources", discardNode);
+        ObjectNode payload = JsonNodeFactory.instance.objectNode().set("discardResources", discard);
+        MessageDTO dto = new MessageDTO(MessageType.DISCARD_RESOURCES, playerId, lobbyId, payload);
 
-        MessageDTO message = new MessageDTO(MessageType.END_TURN, player1Id, lobbyId, payload);
+        when(lobbyService.notifyPlayers(eq(lobbyId), any())).thenReturn(Uni.createFrom().item(new MessageDTO()));
 
-        Player mockPlayer = mock(Player.class);
-        Lobby mockLobby = mock(Lobby.class);
-        PlayerInfo mockPlayerInfo = mock(PlayerInfo.class);
+        gameMessageHandler.handleGameMessage(dto).await().indefinitely();
 
-        when(playerService.getPlayerById(player1Id)).thenReturn(mockPlayer);
-        when(lobbyService.getLobbyById(lobbyId)).thenReturn(mockLobby);
-        when(mockLobby.getPlayers()).thenReturn(Set.of(player1Id));
-        when(playerMapper.toDto(any(), any())).thenReturn(mockPlayerInfo);
-        when(playerService.sendMessageToPlayer(eq(player1Id), any())).thenReturn(Uni.createFrom().voidItem());
+        verify(playerService).updatePlayerResources(eq(playerId), argThat(map -> Integer.valueOf(2).equals(map.get(TileType.WOOD))));
+        verify(lobbyService).playerDiscarded(lobbyId, playerId);
+        verify(lobbyService).notifyPlayers(eq(lobbyId), any(MessageDTO.class));
+    }
 
-        /*Uni<MessageDTO> result = gameMessageHandler.handleDiscardResources(message); TODO:
+    @Test
+    void endTurnShouldReturnErrorWhenDiscardsPending() throws GameException {
+        WebSocketConnection conn = mock(WebSocketConnection.class);
+        when(conn.id()).thenReturn("p1");
+        Player player = playerService.addPlayer(conn);
+        String playerId = player.getUniqueId();
+        String lobbyId = lobbyService.createLobby(playerId);
+        lobbyService.markPlayersNeedingDiscard(lobbyId, List.of(playerId));
+        lobbyService.getLobbyById(lobbyId).setActivePlayer(playerId);
 
-        MessageDTO response = result.await().indefinitely();
-        assertEquals(MessageType.PLAYER_RESOURCE_UPDATE, response.getType());
-        assertEquals(player1Id, response.getPlayer());*/
+        MessageDTO dto = new MessageDTO(MessageType.END_TURN, playerId, lobbyId);
+        MessageDTO result = gameMessageHandler.handleGameMessage(dto).await().indefinitely();
+
+        assertEquals(MessageType.ERROR, result.getType());
+        assertEquals(new ResourcesNotDiscardedException().getMessage(), result.getMessageNode("error").asText());
+        verify(lobbyService, never()).nextTurn(anyString(), anyString());
     }
 
     @Test

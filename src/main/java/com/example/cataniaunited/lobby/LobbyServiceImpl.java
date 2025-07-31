@@ -288,4 +288,22 @@ public class LobbyServiceImpl implements LobbyService {
         lobbies.clear();
         logger.info("All lobbies have been cleared.");
     }
+
+    @Override
+    public void markPlayersNeedingDiscard(String lobbyId, List<String> players) throws GameException {
+        Lobby lobby = getLobbyById(lobbyId);
+        players.forEach(lobby::requireDiscard);
+    }
+
+    @Override
+    public void playerDiscarded(String lobbyId, String playerId) throws GameException {
+        Lobby lobby = getLobbyById(lobbyId);
+        lobby.markDiscarded(playerId);
+    }
+
+    @Override
+    public boolean hasPendingDiscards(String lobbyId) throws GameException {
+        Lobby lobby = getLobbyById(lobbyId);
+        return lobby.hasPendingDiscards();
+    }
 }

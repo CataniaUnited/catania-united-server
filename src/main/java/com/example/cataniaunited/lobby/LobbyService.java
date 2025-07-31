@@ -105,4 +105,10 @@ public interface LobbyService {
 
     void toggleReady(String lobbyId, String playerId) throws GameException;
 
+    void markPlayersNeedingDiscard(String lobbyId, List<String> players) throws GameException;
+
+    void playerDiscarded(String lobbyId, String playerId) throws GameException;
+
+    boolean hasPendingDiscards(String lobbyId) throws GameException;
+
 }

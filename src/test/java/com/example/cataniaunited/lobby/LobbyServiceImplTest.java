@@ -407,4 +407,24 @@ class LobbyServiceImplTest {
                 .withSubscriber(UniAssertSubscriber.create())
                 .assertItem(message);
     }
+
+    @Test
+    void discardTrackingShouldUpdatePendingSet() throws GameException {
+        String host = "host";
+        String lobbyId = lobbyService.createLobby(host);
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+        lobby.addPlayer("p2");
+
+        lobbyService.markPlayersNeedingDiscard(lobbyId, List.of(host, "p2"));
+
+        assertTrue(lobbyService.hasPendingDiscards(lobbyId));
+        assertTrue(lobby.needsToDiscard(host));
+
+        lobbyService.playerDiscarded(lobbyId, host);
+        assertTrue(lobbyService.hasPendingDiscards(lobbyId));
+        assertFalse(lobby.needsToDiscard(host));
+
+        lobbyService.playerDiscarded(lobbyId, "p2");
+        assertFalse(lobbyService.hasPendingDiscards(lobbyId));
+    }
 }
