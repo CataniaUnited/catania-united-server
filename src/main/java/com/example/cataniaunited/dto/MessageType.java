@@ -6,6 +6,7 @@ public enum MessageType {
     CONNECTION_SUCCESSFUL,
     CLIENT_DISCONNECTED,
     ERROR,
+    ALERT,
     LOBBY_UPDATED,
     PLAYER_JOINED,
     LOBBY_CREATED,

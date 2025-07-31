@@ -19,10 +19,10 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
+import java.security.SecureRandom;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
+
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -40,6 +40,8 @@ public class GameService {
     private static final Logger logger = Logger.getLogger(GameService.class);
     private static final ConcurrentHashMap<String, GameBoard> lobbyToGameboardMap = new ConcurrentHashMap<>();
     private static final int MIN_LONGEST_ROAD_LENGTH = 5;
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
 
     @Inject
     LobbyService lobbyService;
@@ -340,15 +342,67 @@ public class GameService {
     }
 
 
-    public void handleReportPlayer(String lobbyId, String reporterId, String reportedId) throws GameException {
+    public ReportOutcome handleReportPlayer(String lobbyId, String reporterId, String reportedId) throws GameException {
         Lobby lobby = lobbyService.getLobbyById(lobbyId);
-
-        int reportCount = lobby.getReportCount(reporterId);
-        if (reportCount >= 2) {
-            throw new GameException("You have already reported twice in this game.");
-        }
+        validateReportLimit(lobby, reporterId);
 
         lobby.recordReport(reporterId, reportedId);
+
+        Player reported = playerService.getPlayerById(reportedId);
+        Player reporter = playerService.getPlayerById(reporterId);
+
+        boolean hasCheated = lobby.getCheatCount(reportedId) > 0;
+        boolean alreadyCaught = lobby.isCheaterAlreadyCaught(reportedId);
+
+        if (!hasCheated) {
+            punishReporter(reporter);
+            return ReportOutcome.FALSE_REPORT;
+        }
+
+        if (alreadyCaught) {
+            punishReporter(reporter);
+            return ReportOutcome.CORRECT_REPORT_ALREADY_CAUGHT;
+        }
+
+        punishCheater(reported);
+        lobby.markCheaterAsCaught(reportedId);
+        return ReportOutcome.CORRECT_REPORT_NEW;
+    }
+
+
+    private void validateReportLimit(Lobby lobby, String reporterId) throws GameException {
+        if (lobby.getReportCount(reporterId) >= 2) {
+            throw new GameException("You have already reported twice in this game.");
+        }
+    }
+
+    private void punishCheater(Player reported) throws GameException {
+        List<TileType> resourceList = new ArrayList<>();
+        for (TileType type : TileType.values()) {
+            if (type == TileType.WASTE) continue;
+            int count = reported.getResourceCount(type);
+            for (int i = 0; i < count; i++) {
+                resourceList.add(type);
+            }
+        }
+
+        int toLose = resourceList.size() / 2;
+        Collections.shuffle(resourceList);
+        for (int i = 0; i < toLose; i++) {
+            reported.removeResource(resourceList.get(i), 1);
+        }
+    }
+
+    private void punishReporter(Player reporter) throws GameException {
+        List<TileType> availableResources = reporter.getResources().entrySet().stream()
+                .filter(e -> e.getKey() != TileType.WASTE && e.getValue() > 0)
+                .map(Map.Entry::getKey)
+                .toList();
+
+        if (!availableResources.isEmpty()) {
+            TileType random = availableResources.get(SECURE_RANDOM.nextInt(availableResources.size()));
+            reporter.removeResource(random, 1);
+        }
     }
 
 }
