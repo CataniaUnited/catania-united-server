@@ -757,6 +757,96 @@ class GameWebSocketTest {
         verify(gameService, times(2)).getGameboardByLobbyId(lobbyId);
     }
 
+    @Test
+    void testPlacementOfRoadChecksForWin() throws Exception {
+        String player1 = "Player1";
+        String player2 = "Player2";
+
+        Player mockPlayer2 = mock(Player.class);
+        when(mockPlayer2.getUniqueId()).thenReturn(player2);
+        when(mockPlayer2.getUsername()).thenReturn(player2);
+        when(mockPlayer2.getResources()).thenReturn(new EnumMap<>(TileType.class));
+        when(mockPlayer2.getResourceCount(any(TileType.class))).thenReturn(10);
+        doReturn(mockPlayer2).when(playerService).getPlayerById(player2);
+
+        doReturn(true).when(playerService).checkForWin(player2);
+
+        String lobbyId = lobbyService.createLobby(player1);
+        lobbyService.joinLobbyByCode(lobbyId, player2);
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+        lobby.setActivePlayer(player2);
+
+        GameBoard gameBoard = gameService.createGameboard(lobbyId);
+        int roadId = gameBoard.getRoadList().get(0).getId();
+        doReturn(gameBoard).when(gameService).getGameboardByLobbyId(lobbyId);
+
+        ObjectNode mergedBoardJson = objectMapper.createObjectNode().put("merged", "gameData");
+        doReturn(mergedBoardJson).when(gameMessageHandler).getGameBoardInformation(lobbyId);
+
+        ObjectNode placeRoadMessageNode = objectMapper.createObjectNode().put("roadId", roadId);
+        MessageDTO placeRoadMessageDTO = new MessageDTO(MessageType.PLACE_ROAD, player2, lobbyId, placeRoadMessageNode);
+
+        List<String> receivedMessages = new CopyOnWriteArrayList<>();
+        CountDownLatch latch = new CountDownLatch(3); // Expect CONNECTION_SUCCESSFUL, PLAYER_RESOURCES, GAME_WON
+
+        final List<String> actualPlayerIds = new CopyOnWriteArrayList<>();
+        CountDownLatch connectionLatch = new CountDownLatch(1);
+
+        var webSocketClientConnection = BasicWebSocketConnector.create()
+                .baseUri(serverUri)
+                .path("/game")
+                .onTextMessage((connection, message) -> {
+                    if (message.startsWith("{")) {
+                        try {
+                            MessageDTO dto = objectMapper.readValue(message, MessageDTO.class);
+                            if (dto.getType() == MessageType.CONNECTION_SUCCESSFUL) {
+                                actualPlayerIds.add(dto.getMessageNode("playerId").asText());
+                                connectionLatch.countDown();
+                                latch.countDown();
+                            } else {
+                                receivedMessages.add(message);
+                                latch.countDown();
+                            }
+                        } catch (JsonProcessingException e) {
+                            fail("Failed to parse message");
+                        }
+                    }
+                }).connectAndAwait();
+
+        assertTrue(connectionLatch.await(5, TimeUnit.SECONDS));
+        lobbyService.joinLobbyByCode(lobbyId, actualPlayerIds.get(0));
+
+        webSocketClientConnection.sendTextAndAwait(objectMapper.writeValueAsString(placeRoadMessageDTO));
+
+        assertTrue(latch.await(5, TimeUnit.SECONDS), "Not all expected messages were received");
+
+        MessageDTO gameWonResponse = receivedMessages.stream()
+                .map(msg -> {
+                    try {
+                        return objectMapper.readValue(msg, MessageDTO.class);
+                    } catch (JsonProcessingException e) {
+                        return null;
+                    }
+                })
+                .filter(dto -> dto != null && dto.getType() == MessageType.GAME_WON)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("GAME_WON message not received"));
+
+        assertEquals(player2, gameWonResponse.getPlayer());
+        assertEquals(lobbyId, gameWonResponse.getLobbyId());
+        assertNotNull(gameWonResponse.getMessage());
+        assertTrue(gameWonResponse.getMessage().has("leaderboard"), "Expected 'leaderboard' field in message payload");
+
+        var actualRoad = gameService.getGameboardByLobbyId(lobbyId).getRoadList().get(0);
+        assertEquals(mockPlayer2, actualRoad.getOwner());
+
+        verify(gameService).placeRoad(lobbyId, player2, roadId);
+        verify(playerService, times(3)).getPlayerById(player2);
+        verify(playerService).checkForWin(player2);
+        verify(gameMessageHandler, never()).getGameBoardInformation(lobbyId);
+        verify(gameService, times(2)).getGameboardByLobbyId(lobbyId);
+    }
+
 
     @ParameterizedTest
     @MethodSource("invalidPlaceRoadMessageNodes")

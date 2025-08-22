@@ -130,6 +130,10 @@ public class GameMessageHandler {
             throw new GameException("Invalid road id: id = %s", roadId.toString());
         }
 
+        if (playerService.checkForWin(message.getPlayer())) {
+            return broadcastWin(message.getLobbyId(), message.getPlayer());
+        }
+
         ObjectNode root = getGameBoardInformation(message.getLobbyId());
 
         MessageDTO update = new MessageDTO(
