@@ -752,7 +752,7 @@ class GameWebSocketTest {
         assertEquals(mockPlayer2, actualRoad.getOwner());
 
         verify(gameService).placeRoad(lobbyId, player2, roadId);
-        verify(playerService, times(2)).getPlayerById(player2);
+        verify(playerService, times(3)).getPlayerById(player2);
         verify(gameMessageHandler).getGameBoardInformation(lobbyId);
         verify(gameService, times(2)).getGameboardByLobbyId(lobbyId);
     }
