@@ -85,7 +85,10 @@ public class GameService {
         Player player = buildRequest.player();
         Port port = gameboard.getPortOfBuildingSite(settlementPositionId);
         if (port != null) {
+            logger.infof("Port found at settlementPositionId=%s", settlementPositionId);
             player.addPort(port);
+        } else {
+            logger.debug("No Port found at settlementPositionId=%s".formatted(settlementPositionId));
         }
         playerService.addVictoryPoints(playerId, 1);
     }

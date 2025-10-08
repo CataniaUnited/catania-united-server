@@ -288,7 +288,7 @@ public class GameBoard {
     }
 
     public Port getPortOfBuildingSite(int buildingSitePositionId) {
-        return buildingSiteGraph.get(buildingSitePositionId).getPort();
+        return buildingSiteGraph.get(buildingSitePositionId - 1).getPort();
     }
 
     /**
