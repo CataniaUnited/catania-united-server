@@ -199,7 +199,15 @@ public class GameBoard {
     }
 
     private boolean hasAdjacentRoads(Road road, Player player) {
-        return road.getAdjacentRoads().stream().anyMatch(r -> r.getOwner() == player);
+        List<Road> currentRoadList = road.getAdjacentRoads().stream().filter(r -> r.getOwner() == player).toList();
+        List<BuildingSite> buildingSites = road.getBuildingSites();
+        for(Road adjacentRoad : currentRoadList){
+            BuildingSite interMediateBuildingSite = adjacentRoad.getBuildingSites().stream().filter(buildingSites::contains).toList().get(0);
+            if(interMediateBuildingSite.getBuildingOwner() == null || interMediateBuildingSite.getBuildingOwner() == player){
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

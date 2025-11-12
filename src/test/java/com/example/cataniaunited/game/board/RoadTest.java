@@ -9,6 +9,7 @@ import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Locale;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -364,5 +365,10 @@ class RoadTest {
         // Check Angle
         assertTrue(jsonNode.has("rotationAngle"), "JSON should contain 'rotationAngle' field");
         assertEquals(expectedAngle, jsonNode.get("rotationAngle").asDouble(), 0.0001, "Calculated rotationAngle should be correct in JSON");
+    }
+
+    @Test
+    void testGetBuildingSitesReturnsCorrectBuildingSites(){
+        assertEquals(List.of(mockPositionA, mockPositionB), road.getBuildingSites());
     }
 }
