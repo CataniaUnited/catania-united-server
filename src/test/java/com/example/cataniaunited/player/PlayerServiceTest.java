@@ -46,7 +46,7 @@ class PlayerServiceTest {
 
     @BeforeEach
     void setUp() {
-        PlayerService.clearAllPlayersForTesting();
+        playerService.clearAllPlayersForTesting();
 
         mockConnection1 = mock(WebSocketConnection.class);
         when(mockConnection1.id()).thenReturn(mockConnId1);

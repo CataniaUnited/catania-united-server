@@ -24,8 +24,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class PlayerService {
 
     private static final Logger logger = Logger.getLogger(PlayerService.class);
-    private static final ConcurrentHashMap<String, Player> playersByConnectionId = new ConcurrentHashMap<>();
-    private static final ConcurrentHashMap<String, Player> playersById = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Player> playersByConnectionId = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Player> playersById = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, WebSocketConnection> connectionsByPlayerId = new ConcurrentHashMap<>();
     public static final int WIN_THRESHOLD = 10;
 
@@ -42,6 +42,10 @@ public class PlayerService {
         playersById.put(player.getUniqueId(), player);
         connectionsByPlayerId.put(player.getUniqueId(), connection);
         return player;
+    }
+
+    public void addPlayerWithoutConnection(Player player) {
+        playersById.put(player.getUniqueId(), player);
     }
 
     /**
@@ -96,7 +100,7 @@ public class PlayerService {
      * Clears all player data from the service.
      * Intended for testing purposes to reset state.
      */
-    public static void clearAllPlayersForTesting() {
+    public void clearAllPlayersForTesting() {
         playersByConnectionId.clear();
         playersById.clear();
     }
