@@ -82,6 +82,15 @@ public class Road implements Placable, Buildable {
     }
 
     /**
+     * Gets a list of both BuildingSites connected by this road.
+     *
+     * @return A List consiting of both {@link BuildingSite}s connected by this road.
+     */
+    public List<BuildingSite> getBuildingSites(){
+        return List.of(positionA, positionB);
+    }
+
+    /**
      * Gets the coordinates (midpoint) of this road.
      *
      * @return A clone of the double array representing the [x, y] coordinates.

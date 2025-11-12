@@ -322,6 +322,37 @@ class GameBoardTest {
     }
 
     @Test
+    void testPlaceRoadShouldThrowExceptionIfOpponentOwnsBuildingSiteBetweenAdjacentRoads() throws GameException {
+        GameBoard gameBoard = spy(new GameBoard(2));
+        Player player = new Player("Player1");
+        Player player2 = new Player("Player2");
+
+        //Place first road with isSetupRound true
+        var road = gameBoard.roadList.get(0);
+        var road2 = gameBoard.roadList.get(1);
+
+        // place road 1
+        var buildRequest = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, road.getId(), true, 2);
+        gameBoard.placeRoad(buildRequest);
+        assertEquals(player, road.getOwner());
+        assertEquals(PlayerColor.LIGHT_ORANGE, road.getColor());
+
+        // place road that will not be occupied and Settlement in the middle to disable the connection between the two roads
+        BuildingSite middleBuildingSite = gameBoard.buildingSiteGraph.get(1);
+        Road roadToOwn = middleBuildingSite.getRoads().stream().filter(r -> r.getOwner() == null && r != road2).toList().get(0);
+        buildRequest = new BuildRequest(player2, PlayerColor.BROWN, roadToOwn.getId(), true, 2);
+        gameBoard.placeRoad(buildRequest);
+        middleBuildingSite.setBuilding(new Settlement(player2, PlayerColor.BROWN));
+
+        //Place second road with isSetupRound false -> should fail, since opponent has Settlement in the Middle
+        player.receiveResource(TileType.WOOD, 1);
+        player.receiveResource(TileType.CLAY, 1);
+
+        BuildRequest buildRequest2 = new BuildRequest(player, PlayerColor.LIGHT_ORANGE, road2.getId());
+        assertThrows(NoAdjacentRoadException.class, () -> gameBoard.placeRoad(buildRequest2));
+    }
+
+    @Test
     void placeRoadShouldThrowExceptionIfRoadIdIsLessThanZero() {
         GameBoard gameBoard = new GameBoard(2);
         var buildRequest = new BuildRequest(new Player("Player1"), PlayerColor.LIGHT_ORANGE, -1, false, 2);
