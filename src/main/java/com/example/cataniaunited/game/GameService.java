@@ -319,7 +319,6 @@ public class GameService {
 
     public ReportOutcome handleReportPlayer(String lobbyId, String reporterId, String reportedId) throws GameException {
         Lobby lobby = lobbyService.getLobbyById(lobbyId);
-        validateReportLimit(lobby, reporterId);
 
         lobby.recordReport(reporterId, reportedId);
 
@@ -342,13 +341,6 @@ public class GameService {
         punishCheater(reported);
         lobby.markCheaterAsCaught(reportedId);
         return ReportOutcome.CORRECT_REPORT_NEW;
-    }
-
-
-    private void validateReportLimit(Lobby lobby, String reporterId) throws GameException {
-        if (lobby.getReportCount(reporterId) >= 2) {
-            throw new GameException("You have already reported twice in this game.");
-        }
     }
 
     private void punishCheater(Player reported) throws GameException {
