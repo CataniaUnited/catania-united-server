@@ -22,6 +22,7 @@ dependencies {
     implementation("io.quarkus:quarkus-websockets-next")
     implementation("io.quarkus:quarkus-arc")
     implementation("org.mapstruct:mapstruct:$mapstructVersion")
+    implementation("io.quarkus:quarkus-scheduler")
     annotationProcessor("org.mapstruct:mapstruct-processor:$mapstructVersion")
     testImplementation("io.quarkus:quarkus-junit5")
     testImplementation("io.quarkus:quarkus-junit5-mockito")

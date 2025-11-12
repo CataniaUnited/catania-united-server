@@ -4,7 +4,14 @@ import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.player.PlayerColor;
 import org.jboss.logging.Logger;
 
-import java.util.*;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -20,6 +27,7 @@ public class Lobby {
     private static final Logger logger = Logger.getLogger(Lobby.class);
 
     private final String lobbyId;
+    private final Instant createdAt;
     private final String hostPlayer; // ID of the player who created the lobby
     private final Set<String> players = new CopyOnWriteArraySet<>(); // Set of player IDs in the lobby
     private final List<String> playerOrder = new CopyOnWriteArrayList<>();
@@ -36,7 +44,6 @@ public class Lobby {
     private final Set<String> activeCheaters = new HashSet<>();
 
 
-
     /**
      * Constructs a new Lobby instance.
      * Initializes the lobby with a unique ID and the host player.
@@ -48,6 +55,7 @@ public class Lobby {
      */
     public Lobby(String lobbyId, String hostPlayer) {
         this.lobbyId = lobbyId;
+        this.createdAt = Instant.now();
         this.hostPlayer = hostPlayer;
         Collections.addAll(availableColors, PlayerColor.values());
         players.add(hostPlayer);
@@ -61,6 +69,10 @@ public class Lobby {
      */
     public String getLobbyId() {
         return lobbyId;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
     }
 
     public String getHostPlayer() {

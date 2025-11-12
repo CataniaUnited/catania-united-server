@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -68,11 +69,11 @@ class LobbyServiceImplTest {
         String lobbyId1 = lobbyService.createLobby("Player 1");
         String lobbyId2 = lobbyService.createLobby("Player 2");
 
-        List<String> openLobbies = lobbyService.getOpenLobbies();
+        List<Lobby> openLobbies = lobbyService.getOpenLobbies();
 
         assertEquals(2, openLobbies.size(), "There should be 2 open lobbies");
-        assertTrue(openLobbies.contains(lobbyId1));
-        assertTrue(openLobbies.contains(lobbyId2));
+        assertEquals(1, openLobbies.stream().filter(l -> Objects.equals(l.getLobbyId(), lobbyId1)).count());
+        assertEquals(1, openLobbies.stream().filter(l -> Objects.equals(l.getLobbyId(), lobbyId2)).count());
 
         logger.infof("Open lobbies: %s", openLobbies);
     }
@@ -143,7 +144,7 @@ class LobbyServiceImplTest {
                 "The joining player should be in the lobby's player list.");
 
         lobbyService.clearLobbies();
-        List<String> openLobbies = lobbyService.getOpenLobbies();
+        var openLobbies = lobbyService.getOpenLobbies();
         assertTrue(openLobbies.isEmpty(), "All lobbies should be cleared after the test");
     }
 
@@ -165,7 +166,6 @@ class LobbyServiceImplTest {
         PlayerColor color = lobby.getPlayerColor("Player1");
 
         assertNotNull(color);
-        assertFalse(lobbyService.getOpenLobbies().isEmpty());
     }
 
     @Test

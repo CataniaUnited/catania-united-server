@@ -179,7 +179,7 @@ public class PlayerService {
      */
     public void initializePlayerResources(String playerId) throws GameException {
         Player player = getPlayerById(playerId);
-        if(player == null) {
+        if (player == null) {
             logger.errorf("Initialize player resources failed, no player found: playerId = %s", playerId);
             throw new GameException("Player with id %s not found", playerId);
         }

@@ -32,7 +32,7 @@ public interface LobbyService {
      *
      * @return A list of lobby ID strings.
      */
-    List<String> getOpenLobbies();
+    List<Lobby> getOpenLobbies();
 
     /**
      * Allows a player to join an existing lobby using its ID (code).
