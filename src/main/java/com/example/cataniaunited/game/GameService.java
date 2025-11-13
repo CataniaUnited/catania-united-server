@@ -18,10 +18,14 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
+
 import java.security.SecureRandom;
-
-
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -370,6 +374,11 @@ public class GameService {
             TileType random = availableResources.get(SECURE_RANDOM.nextInt(availableResources.size()));
             reporter.removeResource(random, 1);
         }
+    }
+
+    public void removeGameBoardForLobby(String lobbyId) {
+        logger.debugf("Removing game board for lobbyId=%s", lobbyId);
+        lobbyToGameboardMap.remove(lobbyId);
     }
 
 }

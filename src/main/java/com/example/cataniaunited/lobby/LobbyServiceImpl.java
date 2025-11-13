@@ -85,8 +85,8 @@ public class LobbyServiceImpl implements LobbyService {
      * {@inheritDoc}
      */
     @Override
-    public List<String> getOpenLobbies() {
-        List<String> openLobbies = new ArrayList<>(lobbies.keySet());
+    public List<Lobby> getOpenLobbies() {
+        List<Lobby> openLobbies = new ArrayList<>(lobbies.values());
         logger.infof("Current open lobbies: %s", openLobbies);
         return openLobbies;
     }

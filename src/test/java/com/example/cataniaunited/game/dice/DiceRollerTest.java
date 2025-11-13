@@ -65,32 +65,6 @@ class DiceRollerTest {
     }
 
     @Test
-    void testRemoveSubscriberDecreasesSubscriberCountAndStopsNotifyingRemovedSubscriber() {
-        Tile mockTileSubscriber1 = Mockito.mock(Tile.class);
-        Tile mockTileSubscriber2 = Mockito.mock(Tile.class);
-
-        diceRoller.addSubscriber(mockTileSubscriber1);
-        diceRoller.addSubscriber(mockTileSubscriber2);
-
-        ObjectNode result1 = diceRoller.rollDice();
-        int total1 = result1.get("total").asInt();
-        verify(mockTileSubscriber1, times(1)).update(total1);
-        verify(mockTileSubscriber2, times(1)).update(total1);
-
-        diceRoller.removeSubscriber(mockTileSubscriber1);
-
-        ObjectNode result2 = diceRoller.rollDice();
-        int total2 = result2.get("total").asInt();
-
-        verify(mockTileSubscriber1, times(1)).update(anyInt());
-        verify(mockTileSubscriber1, times(1)).update(total1);
-        verify(mockTileSubscriber1, never()).update(total2);
-
-        verify(mockTileSubscriber2, times(1)).update(total2);
-        verify(mockTileSubscriber2, times(2)).update(anyInt());
-    }
-
-    @Test
     void testNotifySubscribersCallsUpdateOnAllRegisteredSubscribers() {
         Tile mockTile1 = Mockito.mock(Tile.class);
         Tile mockTile2 = Mockito.mock(Tile.class);

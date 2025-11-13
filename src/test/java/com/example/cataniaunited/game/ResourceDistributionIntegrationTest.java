@@ -90,7 +90,7 @@ class ResourceDistributionIntegrationTest {
 
     @AfterAll
     void tearDown() {
-        PlayerService.clearAllPlayersForTesting();
+        playerService.clearAllPlayersForTesting();
         if (lobbyService instanceof LobbyServiceImpl) {
             lobbyService.clearLobbies();
         }

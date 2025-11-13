@@ -24,10 +24,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -78,16 +76,8 @@ class GameServiceTest {
         when(lobbyMock.getPlayers()).thenReturn(Set.of("host", "p2"));
     }
 
-    private static void injectPlayer(Player player) {
-        try {
-            Field field = PlayerService.class.getDeclaredField("playersById");
-            field.setAccessible(true);
-            @SuppressWarnings("unchecked")
-            Map<String, Player> map = (Map<String, Player>) field.get(null);
-            map.put(player.getUniqueId(), player);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to inject player", e);
-        }
+    private void injectPlayer(Player player) {
+        playerService.addPlayerWithoutConnection(player);
     }
 
     @Test
@@ -712,7 +702,7 @@ class GameServiceTest {
         reported.receiveResource(TileType.WOOD, 2);
         reported.receiveResource(TileType.CLAY, 2);
 
-        PlayerService.clearAllPlayersForTesting();
+        playerService.clearAllPlayersForTesting();
         injectPlayer(reporter);
         injectPlayer(reported);
 
@@ -722,7 +712,6 @@ class GameServiceTest {
         int remaining = reported.getResources().values().stream().mapToInt(Integer::intValue).sum();
         assertEquals(2, remaining);
     }
-
 
 
     @Test
@@ -742,7 +731,7 @@ class GameServiceTest {
 
         reporter.receiveResource(TileType.ORE, 1);
 
-        PlayerService.clearAllPlayersForTesting();
+        playerService.clearAllPlayersForTesting();
         injectPlayer(reporter);
         injectPlayer(reported);
 
@@ -765,7 +754,7 @@ class GameServiceTest {
 
         reporter.receiveResource(TileType.WHEAT, 1);
 
-        PlayerService.clearAllPlayersForTesting();
+        playerService.clearAllPlayersForTesting();
         injectPlayer(reporter);
         injectPlayer(reported);
 
@@ -774,22 +763,6 @@ class GameServiceTest {
         assertEquals(ReportOutcome.FALSE_REPORT, outcome);
         assertEquals(0, reporter.getResourceCount(TileType.WHEAT));
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 }
