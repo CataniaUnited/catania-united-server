@@ -32,7 +32,6 @@ import static org.mockito.Mockito.verify;
 @QuarkusTest
 public class CleanupServiceTest {
 
-
     @InjectSpy
     CleanupService cleanupService;
 
@@ -75,6 +74,7 @@ public class CleanupServiceTest {
         verify(lobbyService).getOpenLobbies();
         verify(lobbyService).removePlayerFromLobby(lobbyId, player.getUniqueId());
         verify(gameService).removeGameBoardForLobby(lobbyId);
+        verify(lobbyService).removeLobby(lobbyId);
     }
 
     @Test

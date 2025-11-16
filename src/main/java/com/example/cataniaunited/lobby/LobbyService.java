@@ -68,6 +68,12 @@ public interface LobbyService {
     void clearLobbies();
 
     /**
+     * Removes the given lobby
+     * @param lobbyId
+     */
+    void removeLobby(String lobbyId);
+
+    /**
      * Checks if it is currently the specified player's turn in the given lobby.
      *
      * @param lobbyId  The ID of the lobby.

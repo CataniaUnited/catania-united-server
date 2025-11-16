@@ -288,4 +288,10 @@ public class LobbyServiceImpl implements LobbyService {
         lobbies.clear();
         logger.info("All lobbies have been cleared.");
     }
+
+    @Override
+    public void removeLobby(String lobbyId) {
+        logger.infof("Removed lobby: lobbyId=%s", lobbyId);
+        lobbies.remove(lobbyId);
+    }
 }
