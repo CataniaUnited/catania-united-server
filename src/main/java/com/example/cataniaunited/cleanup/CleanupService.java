@@ -49,6 +49,7 @@ public class CleanupService {
                 Log.warnf(e, "Error while removing player %s from lobby %s during cleanup", playerId, lobbyId);
             }
         });
+        lobbyService.removeLobby(lobbyId);
     }
 
     /**
