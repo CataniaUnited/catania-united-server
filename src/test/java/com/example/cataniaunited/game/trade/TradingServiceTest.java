@@ -9,24 +9,37 @@ import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerService;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
-import jakarta.inject.Inject;
+import io.quarkus.test.junit.mockito.InjectSpy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.NullSource;
 
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @QuarkusTest
 class TradingServiceTest {
 
-    @Inject
+    @InjectSpy
     TradingService tradingService;
 
     @InjectMock
@@ -52,6 +65,7 @@ class TradingServiceTest {
         // Default to no ports unless specified in a test
         when(mockPlayer.getAccessiblePorts()).thenReturn(Collections.emptySet());
     }
+
     @Test
     void handleBankTradeRequest_PlayerNotFound_ThrowsException() {
         when(playerService.getPlayerById(playerId)).thenReturn(null);
@@ -63,22 +77,22 @@ class TradingServiceTest {
     }
 
     @Test
-    void testCheckIfPlayerHasSufficientResources_True() {
+    void testHasPlayerSufficientResources_True() {
         when(mockPlayer.getResources()).thenReturn(Map.of(TileType.WOOD, 5, TileType.CLAY, 3));
         Map<TileType, Integer> offered = Map.of(TileType.WOOD, 4, TileType.CLAY, 1);
-        assertTrue(tradingService.checkIfPlayerHasSufficientResources(mockPlayer.getResources(), offered));
+        assertTrue(tradingService.hasPlayerSufficientResources(mockPlayer.getResources(), offered));
     }
 
     @Test
-    void testCheckIfPlayerHasSufficientResources_False() {
+    void testHasPlayerSufficientResources_False() {
         when(mockPlayer.getResources()).thenReturn(Map.of(TileType.WOOD, 3, TileType.CLAY, 3)); // Only has 3 wood
         Map<TileType, Integer> offered = Map.of(TileType.WOOD, 4, TileType.CLAY, 1);
-        assertFalse(tradingService.checkIfPlayerHasSufficientResources(mockPlayer.getResources(), offered));
+        assertFalse(tradingService.hasPlayerSufficientResources(mockPlayer.getResources(), offered));
     }
 
     @Test
-    void testCheckIfPlayerHasSufficientResources_OfferedEmpty_IsFalse() {
-        assertFalse(tradingService.checkIfPlayerHasSufficientResources(mockPlayer.getResources(), Collections.emptyMap()));
+    void testHasPlayerSufficientResources_OfferedEmpty_IsFalse() {
+        assertFalse(tradingService.hasPlayerSufficientResources(mockPlayer.getResources(), Collections.emptyMap()));
     }
 
     @Test
@@ -219,5 +233,46 @@ class TradingServiceTest {
         GameException exception = assertThrows(GameException.class, () -> tradingService.handleBankTradeRequest(playerId, request));
         assertEquals("Trade ratio is invalid", exception.getMessage());
         verify(mockPlayer, never()).removeResource(any(), anyInt());
+    }
+
+    @ParameterizedTest
+    @NullSource
+    @MethodSource("invalidPlayerTradeRequestSource")
+    void verifyPlayerTradeRequestShouldFailForInvalidTrad(PlayerTradeRequest request) throws GameException {
+        assertFalse(tradingService.verifyPlayerTradeRequest(request));
+    }
+
+    static Stream<Arguments> invalidPlayerTradeRequestSource() {
+        return Stream.of(
+                Arguments.of(new PlayerTradeRequest(null, null, null)),
+                Arguments.of(new PlayerTradeRequest("id", null, null)),
+                Arguments.of(new PlayerTradeRequest(null, "id", null)),
+                Arguments.of(new PlayerTradeRequest("id", "id", null)),
+                Arguments.of(new PlayerTradeRequest(null, "id", new TradeRequest(Map.of(), Map.of())))
+        );
+    }
+
+    @Test
+    void acceptPlayerTradeRequestShouldFailForWrongTargetPlayer() throws GameException {
+        String sourcePlayerId = "sourcePlayerId";
+        String targetPlayerId = "targetPlayerId";
+        String tradeId = "l#test";
+        PlayerTradeRequest request = new PlayerTradeRequest(targetPlayerId, sourcePlayerId, new TradeRequest(Map.of(), Map.of()));
+        doReturn(request).when(tradingService).getPlayerTradeRequest(tradeId);
+
+        GameException exception = assertThrows(GameException.class, () -> tradingService.acceptPlayerTradeRequest("invalidPlayer", tradeId));
+        assertEquals("Not your trade request!", exception.getMessage());
+    }
+
+    @Test
+    void rejectPlayerTradeRequestShouldFailForWrongTargetPlayer() throws GameException {
+        String sourcePlayerId = "sourcePlayerId";
+        String targetPlayerId = "targetPlayerId";
+        String tradeId = "l#test";
+        PlayerTradeRequest request = new PlayerTradeRequest(targetPlayerId, sourcePlayerId, new TradeRequest(Map.of(), Map.of()));
+        doReturn(request).when(tradingService).getPlayerTradeRequest(tradeId);
+
+        GameException exception = assertThrows(GameException.class, () -> tradingService.rejectPlayerTradeRequest("invalidPlayer", tradeId));
+        assertEquals("Not your trade request!", exception.getMessage());
     }
 }

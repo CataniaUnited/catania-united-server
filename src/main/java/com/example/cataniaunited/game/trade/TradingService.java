@@ -5,12 +5,18 @@ import com.example.cataniaunited.game.board.ports.Port;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerService;
-import com.example.cataniaunited.util.Util;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+import static com.example.cataniaunited.util.Util.isEmpty;
 
 @ApplicationScoped
 public class TradingService {
@@ -19,7 +25,11 @@ public class TradingService {
 
     @Inject
     PlayerService playerService;
+
+    private ConcurrentHashMap<String, PlayerTradeRequest> openTradeRequests = new ConcurrentHashMap<>();
+
     private static final Logger logger = Logger.getLogger(TradingService.class);
+
     /**
      * Handles a bank trade request using a clean TradeRequest object.
      *
@@ -28,21 +38,13 @@ public class TradingService {
      * @throws GameException if the player is not found, has insufficient resources, or the trade is invalid.
      */
     public void handleBankTradeRequest(String playerId, TradeRequest tradeRequest) throws GameException {
-        Player player = playerService.getPlayerById(playerId);
-        if (player == null) {
-            logger.errorf("Player requesting trade with PlayerId %s not found", playerId);
-            throw new GameException("Player not found, cannot process trade.");
-        }
+        Player player = getPlayerForTrade(playerId);
 
         Map<TileType, Integer> offeredResources = tradeRequest.offeredResources();
         Map<TileType, Integer> targetResources = tradeRequest.targetResources();
 
         // Check if player has sufficient resources for the trade.
-        if (!checkIfPlayerHasSufficientResources(player.getResources(), offeredResources)) {
-            logger.errorf("Player %s has insufficient Resources for Trade. Has: %s, Offered: %s",
-                    playerId, player.getResources(), offeredResources);
-            throw new GameException("Insufficient Resources of Player");
-        }
+        checkIfPlayerHasSufficientResources(player, offeredResources);
 
         // Check If Any Port approves this trade request
         Set<Port> ports = player.getAccessiblePorts();
@@ -61,11 +63,102 @@ public class TradingService {
         tradeResources(player, offeredResources, targetResources);
     }
 
+    public String createPlayerTradeRequest(String lobbyId, PlayerTradeRequest tradeRequest) throws GameException {
+        logger.debugf("Creating player trade request: lobbyId = %s, tradeRequest = %s", lobbyId, tradeRequest);
+        checkPlayerTradeRequest(tradeRequest);
+        String tradeId = createTradeIdentifier(lobbyId);
+        this.openTradeRequests.put(tradeId, tradeRequest);
+        logger.debugf("Trade request created: tradeId = %s, tradeRequest = %s", tradeId, tradeRequest);
+        return tradeId;
+    }
+
+    public boolean verifyPlayerTradeRequest(PlayerTradeRequest tradeRequest) {
+        return tradeRequest != null
+                && !isEmpty(tradeRequest.sourcePlayerId())
+                && !isEmpty(tradeRequest.targetPlayerId())
+                && tradeRequest.trade() != null;
+    }
+
+    public PlayerTradeRequest getPlayerTradeRequest(String tradeId) throws GameException {
+        PlayerTradeRequest playerTradeRequest = this.openTradeRequests.get(tradeId);
+        if (playerTradeRequest == null) {
+            logger.errorf("Player trade request not found: tradeId = %s", tradeId);
+            throw new GameException("Trade request not found!");
+        }
+        return playerTradeRequest;
+    }
+
+    public PlayerTradeRequest acceptPlayerTradeRequest(String playerId, String tradeId) throws GameException {
+        PlayerTradeRequest playerTradeRequest = getPlayerTradeRequest(tradeId);
+
+        if (!Objects.equals(playerId, playerTradeRequest.targetPlayerId())) {
+            logger.errorf("Player trade request doesn't match target player: tradeId = %s, playerId = %s, tradeRequest = %s", tradeId, playerId, playerTradeRequest);
+            throw new GameException("Not your trade request!");
+        }
+
+        checkPlayerTradeRequest(playerTradeRequest);
+
+        Player sourcePlayer = getPlayerForTrade(playerTradeRequest.sourcePlayerId());
+        Player targetPlayer = getPlayerForTrade(playerTradeRequest.targetPlayerId());
+        TradeRequest tradeRequest = playerTradeRequest.trade();
+
+        logger.debugf("Player %s accepted trade request, performing trade: tradeRequest = %s", playerId, playerTradeRequest);
+        tradeResources(sourcePlayer, tradeRequest.offeredResources(), tradeRequest.targetResources());
+        tradeResources(targetPlayer, tradeRequest.targetResources(), tradeRequest.offeredResources());
+        removeTradeRequest(tradeId);
+        return playerTradeRequest;
+    }
+
+    public PlayerTradeRequest rejectPlayerTradeRequest(String playerId, String tradeId) throws GameException {
+        PlayerTradeRequest playerTradeRequest = getPlayerTradeRequest(tradeId);
+
+        if (!Objects.equals(playerId, playerTradeRequest.targetPlayerId())) {
+            logger.errorf("Player trade request doesn't match target player: tradeId = %s, playerId = %s, tradeRequest = %s", tradeId, playerId, playerTradeRequest);
+            throw new GameException("Not your trade request!");
+        }
+        logger.debugf("Player %s rejected trade request, removing trade: tradeRequest = %s", playerId, playerTradeRequest);
+        removeTradeRequest(tradeId);
+        return playerTradeRequest;
+    }
+
+    String createTradeIdentifier(String lobbyId) {
+        return "%s#%s".formatted(lobbyId, UUID.randomUUID());
+    }
+
+    void checkPlayerTradeRequest(PlayerTradeRequest request) throws GameException {
+        Player sourcePlayer = getPlayerForTrade(request.sourcePlayerId());
+        Player targetPlayer = getPlayerForTrade(request.targetPlayerId());
+
+        TradeRequest tradeRequest = request.trade();
+        Map<TileType, Integer> offeredResources = tradeRequest.offeredResources();
+        Map<TileType, Integer> targetResources = tradeRequest.targetResources();
+
+        checkIfPlayerHasSufficientResources(sourcePlayer, offeredResources);
+        checkIfPlayerHasSufficientResources(targetPlayer, targetResources);
+    }
+
+    Player getPlayerForTrade(String playerId) throws GameException {
+        Player player = playerService.getPlayerById(playerId);
+        if (player == null) {
+            logger.errorf("Player requesting trade with PlayerId %s not found", playerId);
+            throw new GameException("Player not found, cannot process trade.");
+        }
+        return player;
+    }
+
+    void checkIfPlayerHasSufficientResources(Player player, Map<TileType, Integer> offeredResources) throws GameException {
+        if (!hasPlayerSufficientResources(player.getResources(), offeredResources)) {
+            logger.errorf("Player %s has insufficient Resources for Trade. Has: %s, Offered: %s",
+                    player.getUniqueId(), player.getResources(), offeredResources);
+            throw new GameException("Insufficient Resources of Player");
+        }
+    }
+
     /**
      * Checks if the player has the required resources based on a map of offered quantities.
      */
-    boolean checkIfPlayerHasSufficientResources(Map<TileType, Integer> playerResources, Map<TileType, Integer> offeredResources) {
-        if (Util.isEmpty(offeredResources)) {
+    boolean hasPlayerSufficientResources(Map<TileType, Integer> playerResources, Map<TileType, Integer> offeredResources) {
+        if (isEmpty(offeredResources)) {
             return false; // Cannot offer nothing.
         }
 
@@ -86,7 +179,7 @@ public class TradingService {
      * Checks if a standard 4:1 bank trade is valid using maps.
      */
     boolean checkIfCanTradeWithBank(Map<TileType, Integer> offeredResources, Map<TileType, Integer> targetResources) {
-        if (Util.isEmpty(offeredResources) || Util.isEmpty(targetResources)) {
+        if (isEmpty(offeredResources) || isEmpty(targetResources)) {
             logger.infof("Offered or target resources is empty.");
             return false;
         }
@@ -129,6 +222,21 @@ public class TradingService {
         // Remove all offered resources
         for (Map.Entry<TileType, Integer> entry : offeredResources.entrySet()) {
             player.removeResource(entry.getKey(), entry.getValue());
+        }
+    }
+
+    void removeTradeRequest(String tradeId) {
+        logger.debugf("Removing trade request: id = %s", tradeId);
+        this.openTradeRequests.remove(tradeId);
+    }
+
+    public void removeAllOpenTradeRequestForLobbyId(String lobbyId) {
+        logger.debugf("Removing all trade requests for lobby: lobbyId = %s", lobbyId);
+        var keys = this.openTradeRequests.keySet();
+        if (!isEmpty(keys)) {
+            keys.stream()
+                    .filter(tradeId -> tradeId.startsWith(lobbyId))
+                    .forEach(this::removeTradeRequest);
         }
     }
 }

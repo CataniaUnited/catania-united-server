@@ -9,6 +9,7 @@ import com.example.cataniaunited.player.PlayerService;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.mockito.InjectSpy;
 import io.quarkus.websockets.next.WebSocketConnection;
+import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -22,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -32,7 +33,7 @@ import static org.mockito.Mockito.verify;
 @QuarkusTest
 public class CleanupServiceTest {
 
-    @InjectSpy
+    @Inject
     CleanupService cleanupService;
 
     @InjectSpy
@@ -70,7 +71,6 @@ public class CleanupServiceTest {
         assertThrows(GameException.class, () -> gameService.getGameboardByLobbyId(lobbyId));
         assertEquals(0, lobby.getPlayers().size());
 
-        verify(cleanupService).cleanupLobby(lobby);
         verify(lobbyService).getOpenLobbies();
         verify(lobbyService).removePlayerFromLobby(lobbyId, player.getUniqueId());
         verify(gameService).removeGameBoardForLobby(lobbyId);
@@ -98,7 +98,7 @@ public class CleanupServiceTest {
         assertNotNull(gameService.getGameboardByLobbyId(lobbyId));
         assertEquals(2, lobbyService.getLobbyById(lobbyId).getPlayers().size());
 
-        verify(cleanupService, never()).cleanupLobby(any(Lobby.class));
+        verify(lobbyService, never()).removeLobby(anyString());
     }
 
     @Test
@@ -126,7 +126,6 @@ public class CleanupServiceTest {
         assertNull(playerService.getPlayerById(player.getUniqueId()));
         assertEquals(player2, playerService.getPlayerById(player2.getUniqueId()));
 
-        verify(cleanupService).cleanupDisconnectedPlayer(player);
         verify(playerService).removePlayerByConnectionId(connection1);
         verify(playerService, never()).removePlayerByConnectionId(connection2);
     }

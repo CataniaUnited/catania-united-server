@@ -24,11 +24,28 @@ import io.quarkus.websockets.next.WebSocketConnection;
 import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
-import static org.mockito.Mockito.*;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.anyString;
+
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.argThat;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 
 @QuarkusTest
@@ -561,9 +578,19 @@ class GameMessageHandlerTest {
     }
 
 
+    @Test
+    void createPlayerTradeRequestShouldFailOnMalformedRequestMessage() {
 
+        var messageDto = new MessageDTO(
+                MessageType.CREATE_PLAYER_TRADE_REQUEST,
+                UUID.randomUUID().toString(),
+                "actualLobbyId",
+                JsonNodeFactory.instance.objectNode().put("malformed", true)
+        );
 
-
+        MessageDTO result = gameMessageHandler.handleGameMessage(messageDto).await().indefinitely();
+        assertEquals("Trade request is invalid", result.getMessageNode("error").asText());
+    }
 
 
 }

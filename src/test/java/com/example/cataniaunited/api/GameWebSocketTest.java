@@ -9,6 +9,8 @@ import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
 import com.example.cataniaunited.game.buildings.City;
 import com.example.cataniaunited.game.buildings.Settlement;
+import com.example.cataniaunited.game.trade.PlayerTradeRequest;
+import com.example.cataniaunited.game.trade.TradingService;
 import com.example.cataniaunited.lobby.Lobby;
 import com.example.cataniaunited.lobby.LobbyService;
 import com.example.cataniaunited.player.Player;
@@ -39,6 +41,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -48,11 +51,13 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
@@ -85,6 +90,8 @@ class GameWebSocketTest {
     @InjectSpy
     GameService gameService;
 
+    @InjectSpy
+    TradingService tradingService;
 
     ObjectMapper objectMapper;
 
@@ -627,7 +634,7 @@ class GameWebSocketTest {
                                 actualPlayerIds.add(dto.getMessageNode("playerId").asText());
                                 connectionLatch.countDown();
                                 messageLatch.countDown();
-                            } else if (dto.getType() == MessageType.UPGRADE_SETTLEMENT){
+                            } else if (dto.getType() == MessageType.UPGRADE_SETTLEMENT) {
                                 receivedMessages.add(message);
                                 messageLatch.countDown();
                             }
@@ -2070,5 +2077,472 @@ class GameWebSocketTest {
         assertFalse(lobby.isReady(player1ActualId));
     }
 
+    @Test
+    void testCreatePlayerTradeRequest() throws InterruptedException, GameException, JsonProcessingException {
+        final String[] client1PlayerIdHolder = new String[1];
+        final String[] client2PlayerIdHolder = new String[1];
+
+        CountDownLatch connectionLatch = new CountDownLatch(2);
+
+        List<MessageDTO> player1ReceivedMessages = new CopyOnWriteArrayList<>();
+        CountDownLatch player1TradeOfferLatch = new CountDownLatch(1);
+
+        System.out.println("Setting up Client 1...");
+        BasicWebSocketConnector client1Connector = BasicWebSocketConnector.create()
+                .baseUri(serverUri).path("/game")
+                .onTextMessage((conn, msg) -> {
+                    try {
+                        MessageDTO dto = objectMapper.readValue(msg, MessageDTO.class);
+                        System.out.println("Client1 RX: " + msg);
+
+                        if (dto.getType() == MessageType.CONNECTION_SUCCESSFUL) {
+                            client1PlayerIdHolder[0] = dto.getMessageNode("playerId").asText();
+                            System.out.println("Client1 Connected with ID: " + client1PlayerIdHolder[0]);
+                            connectionLatch.countDown();
+                        } else if (dto.getType() == MessageType.TRADE_OFFER) {
+                            player1ReceivedMessages.add(dto);
+                            player1TradeOfferLatch.countDown();
+                        }
+                    } catch (JsonProcessingException e) {
+                        fail("Client1: Failed to parse message: " + msg, e);
+                    }
+                });
+        var client1WebSocketClientConnection = client1Connector.connectAndAwait();
+        System.out.println("Client 1 connection object: " + client1WebSocketClientConnection);
+
+
+        System.out.println("Setting up Client 2...");
+        BasicWebSocketConnector client2Connector = BasicWebSocketConnector.create()
+                .baseUri(serverUri).path("/game")
+                .onTextMessage((conn, msg) -> {
+                    try {
+                        MessageDTO dto = objectMapper.readValue(msg, MessageDTO.class);
+                        System.out.println("Client2 RX: " + msg);
+                        if (dto.getType() == MessageType.CONNECTION_SUCCESSFUL) {
+                            client2PlayerIdHolder[0] = dto.getMessageNode("playerId").asText();
+                            System.out.println("Client2 Connected with ID: " + client2PlayerIdHolder[0]);
+                            connectionLatch.countDown();
+                        }
+                    } catch (JsonProcessingException e) {
+                        fail("Client2: Failed to parse message: " + msg, e);
+                    }
+                });
+        var client2WebSocketClientConnection = client2Connector.connectAndAwait();
+        System.out.println("Client 2 connection object: " + client2WebSocketClientConnection);
+
+
+        assertTrue(connectionLatch.await(10, TimeUnit.SECONDS), "Not all clients connected and received their IDs. Latch: " + connectionLatch.getCount());
+        assertNotNull(client1PlayerIdHolder[0], "Client 1 Player ID not set");
+        assertNotNull(client2PlayerIdHolder[0], "Client 2 Player ID not set");
+
+        String player1ActualId = client1PlayerIdHolder[0];
+        String player2ActualId = client2PlayerIdHolder[0];
+        System.out.println("Test: player1ActualId = " + player1ActualId);
+        System.out.println("Test: player2ActualId = " + player2ActualId);
+
+        String actualLobbyId = lobbyService.createLobby(player1ActualId);
+        System.out.println("Test: Created lobby with ID: " + actualLobbyId + " for host " + player1ActualId);
+        lobbyService.joinLobbyByCode(actualLobbyId, player2ActualId);
+        System.out.println("Test: Player " + player2ActualId + " joined lobby " + actualLobbyId);
+        Lobby lobby = lobbyService.getLobbyById(actualLobbyId);
+        assertTrue(lobby.getPlayers().contains(player2ActualId));
+
+        lobby.setActivePlayer(player1ActualId);
+
+        Player player1 = playerService.getPlayerById(player1ActualId);
+        Player player2 = playerService.getPlayerById(player2ActualId);
+
+        // Initial state for the player
+        player1.receiveResource(TileType.WOOD, 1);
+        player2.receiveResource(TileType.SHEEP, 1);
+
+        // Prepare trade request from player 1 to player 2 (1 WOOD for 1 SHEEP)
+        ObjectNode tradePayload = JsonNodeFactory.instance.objectNode();
+        tradePayload.putObject("targetResources").put(TileType.WOOD.name(), 1);
+        tradePayload.putObject("offeredResources").put(TileType.SHEEP.name(), 1);
+
+        ObjectNode tradeRequestJson = JsonNodeFactory.instance.objectNode();
+        tradeRequestJson.put("sourcePlayerId", player2ActualId);
+        tradeRequestJson.put("targetPlayerId", player1ActualId);
+        tradeRequestJson.set("trade", tradePayload);
+
+        var messageDto = new MessageDTO(
+                MessageType.CREATE_PLAYER_TRADE_REQUEST,
+                player2ActualId,
+                actualLobbyId,
+                tradeRequestJson
+        );
+
+        client2WebSocketClientConnection.sendTextAndAwait(objectMapper.writeValueAsString(messageDto));
+
+        assertTrue(player1TradeOfferLatch.await(5, TimeUnit.SECONDS));
+        assertEquals(1, player1ReceivedMessages.size());
+
+        var response = player1ReceivedMessages.getFirst();
+        assertEquals(MessageType.TRADE_OFFER, response.getType());
+        assertNotNull(response.getMessage());
+
+        //Check tradeId
+        String tradeId = response.getMessageNode("tradeId").asText();
+        assertFalse(Util.isEmpty(tradeId));
+        String[] tradeIdParts = tradeId.split("#");
+        assertEquals(2, tradeIdParts.length);
+        assertEquals(actualLobbyId, tradeIdParts[0]);
+        assertDoesNotThrow(() -> UUID.fromString(tradeIdParts[1]));
+
+        JsonNode tradeRequestJsonResponse = response.getMessageNode("tradeRequest");
+        PlayerTradeRequest ptr = objectMapper.treeToValue(tradeRequestJsonResponse, PlayerTradeRequest.class);
+        assertEquals(player2ActualId, ptr.sourcePlayerId());
+        assertEquals(player1ActualId, ptr.targetPlayerId());
+
+        assertEquals(1, ptr.trade().offeredResources().size());
+        assertEquals(1, ptr.trade().targetResources().size());
+        assertEquals(1, ptr.trade().offeredResources().get(TileType.SHEEP));
+        assertEquals(1, ptr.trade().targetResources().get(TileType.WOOD));
+    }
+
+    @Test
+    void testAcceptPlayerTradeRequest() throws InterruptedException, GameException, JsonProcessingException {
+        final String[] client1PlayerIdHolder = new String[1];
+        final String[] client2PlayerIdHolder = new String[1];
+
+        CountDownLatch connectionLatch = new CountDownLatch(2);
+
+        List<MessageDTO> player1ReceivedMessages = new CopyOnWriteArrayList<>();
+        List<MessageDTO> player2ReceivedMessages = new CopyOnWriteArrayList<>();
+        CountDownLatch player1TradeOfferLatch = new CountDownLatch(1);
+        CountDownLatch player2NotificationLatch = new CountDownLatch(2);
+
+        System.out.println("Setting up Client 1...");
+        BasicWebSocketConnector client1Connector = BasicWebSocketConnector.create()
+                .baseUri(serverUri).path("/game")
+                .onTextMessage((conn, msg) -> {
+                    try {
+                        MessageDTO dto = objectMapper.readValue(msg, MessageDTO.class);
+                        System.out.println("Client1 RX: " + msg);
+
+                        if (dto.getType() == MessageType.CONNECTION_SUCCESSFUL) {
+                            client1PlayerIdHolder[0] = dto.getMessageNode("playerId").asText();
+                            System.out.println("Client1 Connected with ID: " + client1PlayerIdHolder[0]);
+                            connectionLatch.countDown();
+                        } else if (dto.getType() == MessageType.TRADE_OFFER) {
+                            player1ReceivedMessages.add(dto);
+                            player1TradeOfferLatch.countDown();
+                        }
+                    } catch (JsonProcessingException e) {
+                        fail("Client1: Failed to parse message: " + msg, e);
+                    }
+                });
+        var client1WebSocketClientConnection = client1Connector.connectAndAwait();
+        System.out.println("Client 1 connection object: " + client1WebSocketClientConnection);
+
+
+        System.out.println("Setting up Client 2...");
+        BasicWebSocketConnector client2Connector = BasicWebSocketConnector.create()
+                .baseUri(serverUri).path("/game")
+                .onTextMessage((conn, msg) -> {
+                    try {
+                        MessageDTO dto = objectMapper.readValue(msg, MessageDTO.class);
+                        System.out.println("Client2 RX: " + msg);
+                        if (dto.getType() == MessageType.CONNECTION_SUCCESSFUL) {
+                            client2PlayerIdHolder[0] = dto.getMessageNode("playerId").asText();
+                            System.out.println("Client2 Connected with ID: " + client2PlayerIdHolder[0]);
+                            connectionLatch.countDown();
+                        } else if (dto.getType() == MessageType.ALERT) {
+                            player2NotificationLatch.countDown();
+                            player2ReceivedMessages.add(dto);
+                        }
+                    } catch (JsonProcessingException e) {
+                        fail("Client2: Failed to parse message: " + msg, e);
+                    }
+                });
+        var client2WebSocketClientConnection = client2Connector.connectAndAwait();
+        System.out.println("Client 2 connection object: " + client2WebSocketClientConnection);
+
+
+        assertTrue(connectionLatch.await(10, TimeUnit.SECONDS), "Not all clients connected and received their IDs. Latch: " + connectionLatch.getCount());
+        assertNotNull(client1PlayerIdHolder[0], "Client 1 Player ID not set");
+        assertNotNull(client2PlayerIdHolder[0], "Client 2 Player ID not set");
+
+        String player1ActualId = client1PlayerIdHolder[0];
+        String player2ActualId = client2PlayerIdHolder[0];
+        System.out.println("Test: player1ActualId = " + player1ActualId);
+        System.out.println("Test: player2ActualId = " + player2ActualId);
+
+        String actualLobbyId = lobbyService.createLobby(player1ActualId);
+        System.out.println("Test: Created lobby with ID: " + actualLobbyId + " for host " + player1ActualId);
+        lobbyService.joinLobbyByCode(actualLobbyId, player2ActualId);
+        System.out.println("Test: Player " + player2ActualId + " joined lobby " + actualLobbyId);
+        Lobby lobby = lobbyService.getLobbyById(actualLobbyId);
+        assertTrue(lobby.getPlayers().contains(player2ActualId));
+
+        lobby.setActivePlayer(player1ActualId);
+
+        Player player1 = playerService.getPlayerById(player1ActualId);
+        Player player2 = playerService.getPlayerById(player2ActualId);
+
+        // Initial state for the player
+        player1.receiveResource(TileType.WOOD, 1);
+        player2.receiveResource(TileType.SHEEP, 1);
+
+        assertEquals(1, player1.getResources().size());
+        assertEquals(1, player1.getResources().get(TileType.WOOD));
+
+        assertEquals(1, player2.getResources().size());
+        assertEquals(1, player2.getResources().get(TileType.SHEEP));
+
+
+        // Prepare trade request from player 1 to player 2 (1 WOOD for 1 SHEEP)
+        ObjectNode tradePayload = JsonNodeFactory.instance.objectNode();
+        tradePayload.putObject("targetResources").put(TileType.WOOD.name(), 1);
+        tradePayload.putObject("offeredResources").put(TileType.SHEEP.name(), 1);
+
+        ObjectNode tradeRequestJson = JsonNodeFactory.instance.objectNode();
+        tradeRequestJson.put("sourcePlayerId", player2ActualId);
+        tradeRequestJson.put("targetPlayerId", player1ActualId);
+        tradeRequestJson.set("trade", tradePayload);
+
+        var messageDto = new MessageDTO(
+                MessageType.CREATE_PLAYER_TRADE_REQUEST,
+                player2ActualId,
+                actualLobbyId,
+                tradeRequestJson
+        );
+
+        client2WebSocketClientConnection.sendTextAndAwait(objectMapper.writeValueAsString(messageDto));
+
+        assertTrue(player1TradeOfferLatch.await(5, TimeUnit.SECONDS));
+        assertEquals(1, player1ReceivedMessages.size());
+
+        var response = player1ReceivedMessages.getFirst();
+        assertEquals(MessageType.TRADE_OFFER, response.getType());
+        assertNotNull(response.getMessage());
+
+        //Check tradeId
+        String tradeId = response.getMessageNode("tradeId").asText();
+        assertFalse(Util.isEmpty(tradeId));
+        String[] tradeIdParts = tradeId.split("#");
+        assertEquals(2, tradeIdParts.length);
+        assertEquals(actualLobbyId, tradeIdParts[0]);
+        assertDoesNotThrow(() -> UUID.fromString(tradeIdParts[1]));
+
+        JsonNode tradeRequestJsonResponse = response.getMessageNode("tradeRequest");
+        PlayerTradeRequest ptr = objectMapper.treeToValue(tradeRequestJsonResponse, PlayerTradeRequest.class);
+        assertEquals(player2ActualId, ptr.sourcePlayerId());
+        assertEquals(player1ActualId, ptr.targetPlayerId());
+
+        assertEquals(1, ptr.trade().offeredResources().size());
+        assertEquals(1, ptr.trade().targetResources().size());
+        assertEquals(1, ptr.trade().offeredResources().get(TileType.SHEEP));
+        assertEquals(1, ptr.trade().targetResources().get(TileType.WOOD));
+
+        var acceptRequestDto = new MessageDTO(
+                MessageType.ACCEPT_TRADE_REQUEST,
+                player1ActualId,
+                actualLobbyId,
+                JsonNodeFactory.instance.objectNode().put("tradeId", tradeId)
+        );
+        client1WebSocketClientConnection.sendTextAndAwait(objectMapper.writeValueAsString(acceptRequestDto));
+
+        assertTrue(player2NotificationLatch.await(5, TimeUnit.SECONDS));
+        assertEquals(2, player2ReceivedMessages.size());
+
+        var sendResponse = player2ReceivedMessages.getFirst();
+        assertEquals(MessageType.ALERT, sendResponse.getType());
+        assertNotNull(sendResponse.getMessage());
+        assertEquals("Sent trade request to %s".formatted(player1.getUsername()), sendResponse.getMessageNode("message").asText());
+        assertEquals("success", sendResponse.getMessageNode("severity").asText());
+
+        var acceptResponse = player2ReceivedMessages.getLast();
+        assertEquals(MessageType.ALERT, acceptResponse.getType());
+        assertNotNull(acceptResponse.getMessage());
+        assertEquals("Trade request was accepted by %s".formatted(player1.getUsername()), acceptResponse.getMessageNode("message").asText());
+        assertEquals("success", acceptResponse.getMessageNode("severity").asText());
+
+        assertEquals(2, player1.getResources().size());
+        assertEquals(1, player1.getResources().get(TileType.SHEEP));
+        assertEquals(0, player1.getResources().get(TileType.WOOD));
+
+        assertEquals(2, player2.getResources().size());
+        assertEquals(1, player2.getResources().get(TileType.WOOD));
+        assertEquals(0, player2.getResources().get(TileType.SHEEP));
+
+        //trade request must have been removed after trade
+        assertThrows(GameException.class, () -> tradingService.getPlayerTradeRequest(tradeId));
+
+        verify(tradingService).acceptPlayerTradeRequest(player1ActualId, tradeId);
+        verify(tradingService).createPlayerTradeRequest(eq(actualLobbyId), any(PlayerTradeRequest.class));
+    }
+
+    @Test
+    void testRejectPlayerTradeRequest() throws InterruptedException, GameException, JsonProcessingException {
+        final String[] client1PlayerIdHolder = new String[1];
+        final String[] client2PlayerIdHolder = new String[1];
+
+        CountDownLatch connectionLatch = new CountDownLatch(2);
+
+        List<MessageDTO> player1ReceivedMessages = new CopyOnWriteArrayList<>();
+        List<MessageDTO> player2ReceivedMessages = new CopyOnWriteArrayList<>();
+        CountDownLatch player1TradeOfferLatch = new CountDownLatch(1);
+        CountDownLatch player2NotificationLatch = new CountDownLatch(2);
+
+        System.out.println("Setting up Client 1...");
+        BasicWebSocketConnector client1Connector = BasicWebSocketConnector.create()
+                .baseUri(serverUri).path("/game")
+                .onTextMessage((conn, msg) -> {
+                    try {
+                        MessageDTO dto = objectMapper.readValue(msg, MessageDTO.class);
+                        System.out.println("Client1 RX: " + msg);
+
+                        if (dto.getType() == MessageType.CONNECTION_SUCCESSFUL) {
+                            client1PlayerIdHolder[0] = dto.getMessageNode("playerId").asText();
+                            System.out.println("Client1 Connected with ID: " + client1PlayerIdHolder[0]);
+                            connectionLatch.countDown();
+                        } else if (dto.getType() == MessageType.TRADE_OFFER) {
+                            player1ReceivedMessages.add(dto);
+                            player1TradeOfferLatch.countDown();
+                        }
+                    } catch (JsonProcessingException e) {
+                        fail("Client1: Failed to parse message: " + msg, e);
+                    }
+                });
+        var client1WebSocketClientConnection = client1Connector.connectAndAwait();
+        System.out.println("Client 1 connection object: " + client1WebSocketClientConnection);
+
+
+        System.out.println("Setting up Client 2...");
+        BasicWebSocketConnector client2Connector = BasicWebSocketConnector.create()
+                .baseUri(serverUri).path("/game")
+                .onTextMessage((conn, msg) -> {
+                    try {
+                        MessageDTO dto = objectMapper.readValue(msg, MessageDTO.class);
+                        System.out.println("Client2 RX: " + msg);
+                        if (dto.getType() == MessageType.CONNECTION_SUCCESSFUL) {
+                            client2PlayerIdHolder[0] = dto.getMessageNode("playerId").asText();
+                            System.out.println("Client2 Connected with ID: " + client2PlayerIdHolder[0]);
+                            connectionLatch.countDown();
+                        } else if (dto.getType() == MessageType.ALERT) {
+                            player2NotificationLatch.countDown();
+                            player2ReceivedMessages.add(dto);
+                        }
+                    } catch (JsonProcessingException e) {
+                        fail("Client2: Failed to parse message: " + msg, e);
+                    }
+                });
+        var client2WebSocketClientConnection = client2Connector.connectAndAwait();
+        System.out.println("Client 2 connection object: " + client2WebSocketClientConnection);
+
+
+        assertTrue(connectionLatch.await(10, TimeUnit.SECONDS), "Not all clients connected and received their IDs. Latch: " + connectionLatch.getCount());
+        assertNotNull(client1PlayerIdHolder[0], "Client 1 Player ID not set");
+        assertNotNull(client2PlayerIdHolder[0], "Client 2 Player ID not set");
+
+        String player1ActualId = client1PlayerIdHolder[0];
+        String player2ActualId = client2PlayerIdHolder[0];
+        System.out.println("Test: player1ActualId = " + player1ActualId);
+        System.out.println("Test: player2ActualId = " + player2ActualId);
+
+        String actualLobbyId = lobbyService.createLobby(player1ActualId);
+        System.out.println("Test: Created lobby with ID: " + actualLobbyId + " for host " + player1ActualId);
+        lobbyService.joinLobbyByCode(actualLobbyId, player2ActualId);
+        System.out.println("Test: Player " + player2ActualId + " joined lobby " + actualLobbyId);
+        Lobby lobby = lobbyService.getLobbyById(actualLobbyId);
+        assertTrue(lobby.getPlayers().contains(player2ActualId));
+
+        lobby.setActivePlayer(player2ActualId);
+
+        Player player1 = playerService.getPlayerById(player1ActualId);
+        Player player2 = playerService.getPlayerById(player2ActualId);
+
+        // Initial state for the player
+        player1.receiveResource(TileType.WOOD, 1);
+        player2.receiveResource(TileType.SHEEP, 1);
+
+        assertEquals(1, player1.getResources().size());
+        assertEquals(1, player1.getResources().get(TileType.WOOD));
+
+        assertEquals(1, player2.getResources().size());
+        assertEquals(1, player2.getResources().get(TileType.SHEEP));
+
+
+        // Prepare trade request from player 1 to player 2 (1 WOOD for 1 SHEEP)
+        ObjectNode tradePayload = JsonNodeFactory.instance.objectNode();
+        tradePayload.putObject("targetResources").put(TileType.WOOD.name(), 1);
+        tradePayload.putObject("offeredResources").put(TileType.SHEEP.name(), 1);
+
+        ObjectNode tradeRequestJson = JsonNodeFactory.instance.objectNode();
+        tradeRequestJson.put("sourcePlayerId", player2ActualId);
+        tradeRequestJson.put("targetPlayerId", player1ActualId);
+        tradeRequestJson.set("trade", tradePayload);
+
+        var messageDto = new MessageDTO(
+                MessageType.CREATE_PLAYER_TRADE_REQUEST,
+                player2ActualId,
+                actualLobbyId,
+                tradeRequestJson
+        );
+
+        client2WebSocketClientConnection.sendTextAndAwait(objectMapper.writeValueAsString(messageDto));
+
+        assertTrue(player1TradeOfferLatch.await(5, TimeUnit.SECONDS));
+        assertEquals(1, player1ReceivedMessages.size());
+
+        var response = player1ReceivedMessages.getFirst();
+        assertEquals(MessageType.TRADE_OFFER, response.getType());
+        assertNotNull(response.getMessage());
+
+        //Check tradeId
+        String tradeId = response.getMessageNode("tradeId").asText();
+        assertFalse(Util.isEmpty(tradeId));
+        String[] tradeIdParts = tradeId.split("#");
+        assertEquals(2, tradeIdParts.length);
+        assertEquals(actualLobbyId, tradeIdParts[0]);
+        assertDoesNotThrow(() -> UUID.fromString(tradeIdParts[1]));
+
+        JsonNode tradeRequestJsonResponse = response.getMessageNode("tradeRequest");
+        PlayerTradeRequest ptr = objectMapper.treeToValue(tradeRequestJsonResponse, PlayerTradeRequest.class);
+        assertEquals(player2ActualId, ptr.sourcePlayerId());
+        assertEquals(player1ActualId, ptr.targetPlayerId());
+
+        assertEquals(1, ptr.trade().offeredResources().size());
+        assertEquals(1, ptr.trade().targetResources().size());
+        assertEquals(1, ptr.trade().offeredResources().get(TileType.SHEEP));
+        assertEquals(1, ptr.trade().targetResources().get(TileType.WOOD));
+
+        var acceptRequestDto = new MessageDTO(
+                MessageType.REJECT_TRADE_REQUEST,
+                player1ActualId,
+                actualLobbyId,
+                JsonNodeFactory.instance.objectNode().put("tradeId", tradeId)
+        );
+        client1WebSocketClientConnection.sendTextAndAwait(objectMapper.writeValueAsString(acceptRequestDto));
+
+        assertTrue(player2NotificationLatch.await(5, TimeUnit.SECONDS));
+        assertEquals(2, player2ReceivedMessages.size());
+
+        var sendResponse = player2ReceivedMessages.getFirst();
+        assertEquals(MessageType.ALERT, sendResponse.getType());
+        assertNotNull(sendResponse.getMessage());
+        assertEquals("Sent trade request to %s".formatted(player1.getUsername()), sendResponse.getMessageNode("message").asText());
+        assertEquals("success", sendResponse.getMessageNode("severity").asText());
+
+        var acceptResponse = player2ReceivedMessages.getLast();
+        assertEquals(MessageType.ALERT, acceptResponse.getType());
+        assertNotNull(acceptResponse.getMessage());
+        assertEquals("Trade request was rejected by %s".formatted(player1.getUsername()), acceptResponse.getMessageNode("message").asText());
+        assertEquals("error", acceptResponse.getMessageNode("severity").asText());
+
+        assertEquals(1, player1.getResources().size());
+        assertEquals(1, player1.getResources().get(TileType.WOOD));
+
+        assertEquals(1, player2.getResources().size());
+        assertEquals(1, player2.getResources().get(TileType.SHEEP));
+
+        //trade request must have been removed after trade
+        assertThrows(GameException.class, () -> tradingService.getPlayerTradeRequest(tradeId));
+
+        verify(tradingService).rejectPlayerTradeRequest(player1ActualId, tradeId);
+        verify(tradingService).createPlayerTradeRequest(eq(actualLobbyId), any(PlayerTradeRequest.class));
+    }
 
 }
