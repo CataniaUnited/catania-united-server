@@ -16,6 +16,7 @@ public enum MessageType {
     DICE_RESULT,
     NEXT_TURN,
     PLAYER_RESOURCE_UPDATE,
+    TRADE_OFFER,
 
     //Client Messages
     CREATE_LOBBY,
@@ -30,6 +31,9 @@ public enum MessageType {
     END_TURN,
     SET_READY,
     TRADE_WITH_BANK,
+    CREATE_PLAYER_TRADE_REQUEST,
+    ACCEPT_TRADE_REQUEST,
+    REJECT_TRADE_REQUEST,
     CHEAT_ATTEMPT,
     REPORT_PLAYER
 
