@@ -238,7 +238,7 @@ class TradingServiceTest {
     @ParameterizedTest
     @NullSource
     @MethodSource("invalidPlayerTradeRequestSource")
-    void verifyPlayerTradeRequestShouldFailForInvalidTrad(PlayerTradeRequest request) throws GameException {
+    void verifyPlayerTradeRequestShouldFailForInvalidTrad(PlayerTradeRequest request) {
         assertFalse(tradingService.verifyPlayerTradeRequest(request));
     }
 

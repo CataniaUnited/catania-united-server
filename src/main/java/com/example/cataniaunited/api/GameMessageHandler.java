@@ -45,6 +45,7 @@ public class GameMessageHandler {
     private static final String SEVERITY = "severity";
     private static final String MESSAGE = "message";
     private static final String SUCCESS = "success";
+    private static final String TRADE_ID_FIELD = "tradeId";
 
 
     @Inject
@@ -138,7 +139,7 @@ public class GameMessageHandler {
         Player targetPlayer = playerService.getPlayerById(targetPlayerId);
 
         ObjectNode tradeRequestJson = JsonNodeFactory.instance.objectNode();
-        tradeRequestJson.put("tradeId", tradeId);
+        tradeRequestJson.put(TRADE_ID_FIELD, tradeId);
         tradeRequestJson.set("tradeRequest", message.getMessage());
 
         MessageDTO tradeResponse = new MessageDTO(
@@ -166,7 +167,7 @@ public class GameMessageHandler {
     }
 
     Uni<MessageDTO> acceptTradeRequest(MessageDTO message) throws GameException {
-        String tradeId = message.getMessageNode("tradeId").asText();
+        String tradeId = message.getMessageNode(TRADE_ID_FIELD).asText();
         PlayerTradeRequest tradeRequest = tradingService.acceptPlayerTradeRequest(message.getPlayer(), tradeId);
         MessageDTO updateResponse = new MessageDTO(
                 MessageType.PLAYER_RESOURCE_UPDATE,
@@ -196,7 +197,7 @@ public class GameMessageHandler {
     }
 
     Uni<MessageDTO> rejectTradeRequest(MessageDTO message) throws GameException {
-        String tradeId = message.getMessageNode("tradeId").asText();
+        String tradeId = message.getMessageNode(TRADE_ID_FIELD).asText();
         PlayerTradeRequest tradeRequest = tradingService.rejectPlayerTradeRequest(message.getPlayer(), tradeId);
 
         Player sourcePlayer = playerService.getPlayerById(tradeRequest.sourcePlayerId());
