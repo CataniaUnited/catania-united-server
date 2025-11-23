@@ -2,6 +2,7 @@ package com.example.cataniaunited.cleanup;
 
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.GameService;
+import com.example.cataniaunited.game.trade.TradingService;
 import com.example.cataniaunited.lobby.Lobby;
 import com.example.cataniaunited.lobby.LobbyService;
 import com.example.cataniaunited.player.Player;
@@ -26,6 +27,9 @@ public class CleanupService {
     @Inject
     PlayerService playerService;
 
+    @Inject
+    TradingService tradingService;
+
     /**
      * Job that removes all lobbies which are older than 2 days
      */
@@ -49,6 +53,7 @@ public class CleanupService {
                 Log.warnf(e, "Error while removing player %s from lobby %s during cleanup", playerId, lobbyId);
             }
         });
+        tradingService.removeAllOpenTradeRequestForLobbyId(lobbyId);
         lobbyService.removeLobby(lobbyId);
     }
 

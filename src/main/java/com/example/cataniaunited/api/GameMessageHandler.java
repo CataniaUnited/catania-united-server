@@ -4,11 +4,13 @@ import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.dto.PlayerInfo;
 import com.example.cataniaunited.exception.GameException;
+import com.example.cataniaunited.exception.ui.InvalidTurnException;
 import com.example.cataniaunited.fi.BuildingAction;
 import com.example.cataniaunited.game.GameService;
 import com.example.cataniaunited.game.ReportOutcome;
 import com.example.cataniaunited.game.board.GameBoard;
 import com.example.cataniaunited.game.board.tile_list_builder.TileType;
+import com.example.cataniaunited.game.trade.PlayerTradeRequest;
 import com.example.cataniaunited.game.trade.TradeRequest;
 import com.example.cataniaunited.game.trade.TradingService;
 import com.example.cataniaunited.lobby.Lobby;
@@ -43,6 +45,7 @@ public class GameMessageHandler {
     private static final String SEVERITY = "severity";
     private static final String MESSAGE = "message";
     private static final String SUCCESS = "success";
+    private static final String TRADE_ID_FIELD = "tradeId";
 
 
     @Inject
@@ -91,17 +94,127 @@ public class GameMessageHandler {
                 case START_GAME -> handleStartGame(message);
                 case SET_READY -> setReady(message);
                 case TRADE_WITH_BANK -> handleTradeWithBank(message);
+                case CREATE_PLAYER_TRADE_REQUEST -> createPlayerTradeRequest(message);
+                case ACCEPT_TRADE_REQUEST -> acceptTradeRequest(message);
+                case REJECT_TRADE_REQUEST -> rejectTradeRequest(message);
                 case CHEAT_ATTEMPT -> handleCheatAttempt(message);
                 case REPORT_PLAYER -> handleReportPlayer(message);
-                case ERROR, CONNECTION_SUCCESSFUL, CLIENT_DISCONNECTED, LOBBY_CREATED, LOBBY_UPDATED, PLAYER_JOINED,
-                        GAME_BOARD_JSON, GAME_WON, DICE_RESULT, NEXT_TURN, GAME_STARTED, PLAYER_RESOURCE_UPDATE, ALERT ->
-                        throw new GameException("Invalid client command");
                 case END_TURN -> endTurn(message);
+                default -> throw new GameException("Invalid client command");
             };
         } catch (GameException ge) {
             logger.errorf("Unexpected Error occurred: message = %s, error = %s", message, ge.getMessage());
             return Uni.createFrom().item(createErrorMessage(ge.getMessage()));
         }
+    }
+
+    Uni<MessageDTO> createPlayerTradeRequest(MessageDTO message) throws GameException {
+        // Check if player is active player -> else can't trade
+        String lobbyId = message.getLobbyId();
+
+        PlayerTradeRequest playerTradeRequest;
+        try {
+            // Deserialize the JSON payload into the TradeRequest record.
+            playerTradeRequest = objectMapper.treeToValue(message.getMessage(), PlayerTradeRequest.class);
+        } catch (JsonProcessingException | IllegalArgumentException e) {
+            logger.errorf("Failed to parse player trade request: %s", e.getMessage());
+            throw new GameException("Trade request format is invalid");
+        }
+
+        if (!tradingService.verifyPlayerTradeRequest(playerTradeRequest)) {
+            throw new GameException("Trade request is invalid");
+        }
+
+        String targetPlayerId = playerTradeRequest.targetPlayerId();
+
+        //It must either be the source or the target players turn
+        try {
+            lobbyService.checkPlayerTurn(lobbyId, playerTradeRequest.sourcePlayerId());
+        } catch (InvalidTurnException ite) {
+            logger.warnf("Not the players turn while trading, try the target player: %s", targetPlayerId);
+            lobbyService.checkPlayerTurn(lobbyId, targetPlayerId);
+        }
+
+        String tradeId = tradingService.createPlayerTradeRequest(lobbyId, playerTradeRequest);
+        Player targetPlayer = playerService.getPlayerById(targetPlayerId);
+
+        ObjectNode tradeRequestJson = JsonNodeFactory.instance.objectNode();
+        tradeRequestJson.put(TRADE_ID_FIELD, tradeId);
+        tradeRequestJson.set("tradeRequest", message.getMessage());
+
+        MessageDTO tradeResponse = new MessageDTO(
+                MessageType.TRADE_OFFER,
+                targetPlayer.getUniqueId(),
+                message.getLobbyId(),
+                getLobbyPlayerInformation(lobbyId),
+                tradeRequestJson
+        );
+
+        ObjectNode alertPayload = JsonNodeFactory.instance.objectNode();
+        alertPayload.put(MESSAGE, "Sent trade request to " + targetPlayer.getUsername());
+        alertPayload.put(SEVERITY, SUCCESS);
+
+        MessageDTO tradeRequestNotification = new MessageDTO(
+                MessageType.ALERT,
+                message.getPlayer(),
+                lobbyId,
+                alertPayload
+        );
+
+        // Sent trade request to the player and notify the sender about the success
+        return targetPlayer.getConnection().sendText(tradeResponse)
+                .chain(() -> Uni.createFrom().item(tradeRequestNotification));
+    }
+
+    Uni<MessageDTO> acceptTradeRequest(MessageDTO message) throws GameException {
+        String tradeId = message.getMessageNode(TRADE_ID_FIELD).asText();
+        PlayerTradeRequest tradeRequest = tradingService.acceptPlayerTradeRequest(message.getPlayer(), tradeId);
+        MessageDTO updateResponse = new MessageDTO(
+                MessageType.PLAYER_RESOURCE_UPDATE,
+                message.getPlayer(),
+                message.getLobbyId(),
+                getLobbyPlayerInformation(message.getLobbyId())
+        );
+
+        Player sourcePlayer = playerService.getPlayerById(tradeRequest.sourcePlayerId());
+        Player targetPlayer = playerService.getPlayerById(tradeRequest.targetPlayerId());
+
+        ObjectNode alertPayload = JsonNodeFactory.instance.objectNode();
+        alertPayload.put(MESSAGE, "Trade request was accepted by " + targetPlayer.getUsername());
+        alertPayload.put(SEVERITY, SUCCESS);
+
+        MessageDTO tradeRequestNotification = new MessageDTO(
+                MessageType.ALERT,
+                message.getPlayer(),
+                message.getLobbyId(),
+                alertPayload
+        );
+
+        logger.infof("Player %s accepted trade request %s (id=%s).", message.getPlayer(), tradeRequest, tradeId);
+        //Notify the source player that his trade request was accepted and then update player resources
+        return sourcePlayer.getConnection().sendText(tradeRequestNotification)
+                .chain(() -> lobbyService.notifyPlayers(message.getLobbyId(), updateResponse));
+    }
+
+    Uni<MessageDTO> rejectTradeRequest(MessageDTO message) throws GameException {
+        String tradeId = message.getMessageNode(TRADE_ID_FIELD).asText();
+        PlayerTradeRequest tradeRequest = tradingService.rejectPlayerTradeRequest(message.getPlayer(), tradeId);
+
+        Player sourcePlayer = playerService.getPlayerById(tradeRequest.sourcePlayerId());
+        Player targetPlayer = playerService.getPlayerById(tradeRequest.targetPlayerId());
+
+        ObjectNode alertPayload = JsonNodeFactory.instance.objectNode();
+        alertPayload.put(MESSAGE, "Trade request was rejected by " + targetPlayer.getUsername());
+        alertPayload.put(SEVERITY, ERROR);
+
+        MessageDTO tradeRequestNotification = new MessageDTO(
+                MessageType.ALERT,
+                message.getPlayer(),
+                message.getLobbyId(),
+                alertPayload
+        );
+
+        return sourcePlayer.getConnection().sendText(tradeRequestNotification).chain(() -> Uni.createFrom().nullItem());
     }
 
     Uni<MessageDTO> endTurn(MessageDTO message) throws GameException {
@@ -427,7 +540,7 @@ public class GameMessageHandler {
      *
      * @param message The {@link MessageDTO} containing trade details.
      * @return A Uni emitting a {@link MessageDTO} of type {@link MessageType#PLAYER_RESOURCE_UPDATE}
-     *         containing the updated player information, broadcast to all players in the lobby.
+     * containing the updated player information, broadcast to all players in the lobby.
      * @throws GameException if the trade is invalid (e.g., bad format, not player's turn,
      *                       insufficient resources, or other issues from {@link TradingService}).
      */
@@ -546,13 +659,6 @@ public class GameMessageHandler {
             return Uni.createFrom().item(createErrorMessage("Invalid player to report."));
         }
     }
-
-
-
-
-
-
-
 
 
 }
