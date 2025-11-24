@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * Implementation of the {@link LobbyService} interface.
@@ -89,6 +90,13 @@ public class LobbyServiceImpl implements LobbyService {
         List<Lobby> openLobbies = new ArrayList<>(lobbies.values());
         logger.infof("Current open lobbies: %s", openLobbies);
         return openLobbies;
+    }
+
+    @Override
+    public List<Lobby> getAvailableLobbies() {
+        return lobbies.values().stream()
+                .filter(lobby -> !lobby.isGameStarted())
+                .toList();
     }
 
     /**
