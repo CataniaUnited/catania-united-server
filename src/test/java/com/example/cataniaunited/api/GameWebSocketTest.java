@@ -2595,7 +2595,9 @@ class GameWebSocketTest {
         playerService.addPlayerWithoutConnection(lobby3HostPlayer);
 
         Lobby lobby1 = lobbyService.getLobbyById(lobbyService.createLobby(lobby1HostPlayer.getUniqueId()));
+        Thread.sleep(100);
         Lobby lobby2 = lobbyService.getLobbyById(lobbyService.createLobby(lobby2HostPlayer.getUniqueId()));
+        Thread.sleep(100);
         Lobby lobby3 = lobbyService.getLobbyById(lobbyService.createLobby(lobby3HostPlayer.getUniqueId()));
 
         lobbyService.joinLobbyByCode(lobby1.getLobbyId(), lobby2HostPlayer.getUniqueId());
