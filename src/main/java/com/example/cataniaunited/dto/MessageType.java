@@ -17,9 +17,11 @@ public enum MessageType {
     NEXT_TURN,
     PLAYER_RESOURCE_UPDATE,
     TRADE_OFFER,
+    LOBBY_LIST,
 
     //Client Messages
     CREATE_LOBBY,
+    GET_LOBBIES,
     JOIN_LOBBY,
     LEAVE_LOBBY,
     SET_USERNAME,

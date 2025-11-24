@@ -1,5 +1,6 @@
 package com.example.cataniaunited.api;
 
+import com.example.cataniaunited.dto.LobbyInfo;
 import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.dto.PlayerInfo;
@@ -15,6 +16,7 @@ import com.example.cataniaunited.game.trade.TradeRequest;
 import com.example.cataniaunited.game.trade.TradingService;
 import com.example.cataniaunited.lobby.Lobby;
 import com.example.cataniaunited.lobby.LobbyService;
+import com.example.cataniaunited.mapper.LobbyMapper;
 import com.example.cataniaunited.mapper.PlayerMapper;
 import com.example.cataniaunited.player.Player;
 import com.example.cataniaunited.player.PlayerColor;
@@ -32,9 +34,12 @@ import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
 import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
+
+import static com.example.cataniaunited.dto.MessageType.LOBBY_LIST;
 
 @ApplicationScoped
 public class GameMessageHandler {
@@ -84,6 +89,7 @@ public class GameMessageHandler {
             logger.infof("Handle message: message = %s", message);
             return switch (message.getType()) {
                 case CREATE_LOBBY -> createLobby(message);
+                case GET_LOBBIES -> getLobbies();
                 case JOIN_LOBBY -> joinLobby(message);
                 case LEAVE_LOBBY -> leaveLobby(message);
                 case SET_USERNAME -> setUsername(message);
@@ -106,6 +112,29 @@ public class GameMessageHandler {
             logger.errorf("Unexpected Error occurred: message = %s, error = %s", message, ge.getMessage());
             return Uni.createFrom().item(createErrorMessage(ge.getMessage()));
         }
+    }
+
+    Uni<MessageDTO> getLobbies() {
+        List<LobbyInfo> lobbyList = lobbyService.getAvailableLobbies()
+                .stream()
+                .sorted(Comparator.comparingLong(
+                        (Lobby lobby) -> lobby.getCreatedAt().toEpochMilli()
+                ).reversed())
+                .map(this::getLobbyInfo)
+                .filter(info -> info.hostPlayer() != null && info.playerCount() > 0)
+                .toList();
+
+        ObjectNode message = JsonNodeFactory.instance.objectNode();
+        message.set("lobbies", objectMapper.valueToTree(lobbyList));
+
+        MessageDTO messageDTO = new MessageDTO(LOBBY_LIST, message);
+        return Uni.createFrom().item(messageDTO);
+
+    }
+
+    LobbyInfo getLobbyInfo(Lobby lobby) {
+        Player hostPlayer = playerService.getPlayerById(lobby.getHostPlayer());
+        return LobbyMapper.INSTANCE.toDto(lobby, hostPlayer);
     }
 
     Uni<MessageDTO> createPlayerTradeRequest(MessageDTO message) throws GameException {

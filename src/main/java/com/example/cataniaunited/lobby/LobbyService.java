@@ -35,6 +35,12 @@ public interface LobbyService {
     List<Lobby> getOpenLobbies();
 
     /**
+     * Gets a list of all lobbies, which are have not started yet
+     * @return A list of lobbies
+     */
+    List<Lobby> getAvailableLobbies();
+
+    /**
      * Allows a player to join an existing lobby using its ID (code).
      *
      * @param lobbyId The ID of the lobby to join.

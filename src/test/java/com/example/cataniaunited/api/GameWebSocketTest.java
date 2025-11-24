@@ -1,5 +1,6 @@
 package com.example.cataniaunited.api;
 
+import com.example.cataniaunited.dto.LobbyInfo;
 import com.example.cataniaunited.dto.MessageDTO;
 import com.example.cataniaunited.dto.MessageType;
 import com.example.cataniaunited.exception.GameException;
@@ -20,6 +21,7 @@ import com.example.cataniaunited.util.Util;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.test.common.http.TestHTTPResource;
@@ -98,6 +100,7 @@ class GameWebSocketTest {
     @BeforeEach
     void setup() {
         objectMapper = new ObjectMapper();
+        lobbyService.clearLobbies();
     }
 
     @Test
@@ -2543,6 +2546,95 @@ class GameWebSocketTest {
 
         verify(tradingService).rejectPlayerTradeRequest(player1ActualId, tradeId);
         verify(tradingService).createPlayerTradeRequest(eq(actualLobbyId), any(PlayerTradeRequest.class));
+    }
+
+    @Test
+    void testGetLobbies() throws InterruptedException, GameException, JsonProcessingException {
+        final String[] client1PlayerIdHolder = new String[1];
+
+        CountDownLatch connectionLatch = new CountDownLatch(1);
+
+        List<MessageDTO> player1ReceivedMessages = new CopyOnWriteArrayList<>();
+        CountDownLatch player1LobbyListLatch = new CountDownLatch(1);
+
+        System.out.println("Setting up Client 1...");
+        BasicWebSocketConnector client1Connector = BasicWebSocketConnector.create()
+                .baseUri(serverUri).path("/game")
+                .onTextMessage((conn, msg) -> {
+                    try {
+                        MessageDTO dto = objectMapper.readValue(msg, MessageDTO.class);
+                        System.out.println("Client1 RX: " + msg);
+
+                        if (dto.getType() == MessageType.CONNECTION_SUCCESSFUL) {
+                            client1PlayerIdHolder[0] = dto.getMessageNode("playerId").asText();
+                            System.out.println("Client1 Connected with ID: " + client1PlayerIdHolder[0]);
+                            connectionLatch.countDown();
+                        } else if (dto.getType() == MessageType.LOBBY_LIST) {
+                            player1ReceivedMessages.add(dto);
+                            player1LobbyListLatch.countDown();
+                        }
+                    } catch (JsonProcessingException e) {
+                        fail("Client1: Failed to parse message: " + msg, e);
+                    }
+                });
+        var client1WebSocketClientConnection = client1Connector.connectAndAwait();
+        System.out.println("Client 1 connection object: " + client1WebSocketClientConnection);
+
+        assertTrue(connectionLatch.await(10, TimeUnit.SECONDS), "Not all clients connected and received their IDs. Latch: " + connectionLatch.getCount());
+        assertNotNull(client1PlayerIdHolder[0], "Client 1 Player ID not set");
+
+        String player1ActualId = client1PlayerIdHolder[0];
+        System.out.println("Test: player1ActualId = " + player1ActualId);
+
+        Player lobby1HostPlayer = new Player("lobby1HostPlayer");
+        Player lobby2HostPlayer = new Player("lobby2HostPlayer");
+        Player lobby3HostPlayer = new Player("lobby3HostPlayer");
+
+        playerService.addPlayerWithoutConnection(lobby1HostPlayer);
+        playerService.addPlayerWithoutConnection(lobby2HostPlayer);
+        playerService.addPlayerWithoutConnection(lobby3HostPlayer);
+
+        Lobby lobby1 = lobbyService.getLobbyById(lobbyService.createLobby(lobby1HostPlayer.getUniqueId()));
+        Lobby lobby2 = lobbyService.getLobbyById(lobbyService.createLobby(lobby2HostPlayer.getUniqueId()));
+        Lobby lobby3 = lobbyService.getLobbyById(lobbyService.createLobby(lobby3HostPlayer.getUniqueId()));
+
+        lobbyService.joinLobbyByCode(lobby1.getLobbyId(), lobby2HostPlayer.getUniqueId());
+
+        lobby2.setGameStarted(true);
+
+        var getLobbiesDto = new MessageDTO(
+                MessageType.GET_LOBBIES,
+                null
+        );
+        client1WebSocketClientConnection.sendTextAndAwait(objectMapper.writeValueAsString(getLobbiesDto));
+
+        assertTrue(player1LobbyListLatch.await(5, TimeUnit.SECONDS));
+        assertEquals(1, player1ReceivedMessages.size());
+
+        var sendResponse = player1ReceivedMessages.getFirst();
+        assertEquals(MessageType.LOBBY_LIST, sendResponse.getType());
+        assertNotNull(sendResponse.getMessage());
+        List<LobbyInfo> lobbyInfoList = new ArrayList<>();
+
+        sendResponse.getMessageNode("lobbies").forEach(node -> {
+            try {
+                lobbyInfoList.add(objectMapper.treeToValue(node, LobbyInfo.class));
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+        assertEquals(2, lobbyInfoList.size());
+        //Info for lobby1 should be last, since it is the oldest lobby
+        LobbyInfo lobbyInfo1 = lobbyInfoList.getLast();
+        assertEquals(lobby1.getLobbyId(), lobbyInfo1.id());
+        assertEquals(2, lobbyInfo1.playerCount());
+        assertEquals(lobby1HostPlayer.getUsername(), lobbyInfo1.hostPlayer());
+
+        LobbyInfo lobbyInfo2 = lobbyInfoList.getFirst();
+        assertEquals(lobby3.getLobbyId(), lobbyInfo2.id());
+        assertEquals(1, lobbyInfo2.playerCount());
+        assertEquals(lobby3HostPlayer.getUsername(), lobbyInfo2.hostPlayer());
     }
 
 }
