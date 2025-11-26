@@ -39,7 +39,13 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: ./gradlew build sonar --info
-
+      - name: Upload HTML Test Reports (PR)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: HTML-Test-Reports-PR
+          path: build/reports/tests/test
+          retention-days: 5
 
 
   build-docker-images:
@@ -51,7 +57,6 @@ jobs:
     # When a PR merges, it triggers the 'push' event on 'main'
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
-      # ... (rest of your build-docker-images steps remain the same)
       - name: Checkout main branch
         uses: actions/checkout@v4
         with:
@@ -92,3 +97,10 @@ jobs:
           JAVA_TOOL_OPTIONS: "-Djava.util.logging.manager=org.jboss.logmanager.LogManager -Dorg.jboss.logging.level=DEBUG"
         run: |
           ./gradlew build --info
+      - name: Upload HTML Test Reports (Merge)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: HTML-Test-Reports-Merge
+          path: build/reports/tests/test
+          retention-days: 5
