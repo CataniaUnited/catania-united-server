@@ -42,6 +42,14 @@ public class CleanupService {
                 .forEach(this::cleanupLobby);
     }
 
+    @Scheduled(every = "2h")
+    void cleanupFinishedGames() {
+        Log.debugf("Starting cleanup job for finished games");
+        lobbyService.getOpenLobbies().stream()
+                .filter(Lobby::isGameEnded)
+                .forEach(this::cleanupLobby);
+    }
+
     void cleanupLobby(Lobby lobby) {
         String lobbyId = lobby.getLobbyId();
         Log.debugf("Starting cleanup of lobby %s", lobbyId);

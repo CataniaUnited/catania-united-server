@@ -35,6 +35,7 @@ public class Lobby {
     private final List<PlayerColor> availableColors = new CopyOnWriteArrayList<>(); // List of colors not yet assigned
     private volatile String activePlayer; // ID of the player whose turn it is
     private volatile boolean gameStarted = false; // Flag indicating if the game has started
+    private volatile boolean gameEnded = false; // Flag indicating if the game has ended
     private int roundsPlayed = 0;
     private final Map<String, Integer> latestDiceRollOfPlayer = new ConcurrentHashMap<>();
     private final Map<String, Boolean> readyState = new ConcurrentHashMap<>();
@@ -226,6 +227,13 @@ public class Lobby {
         this.gameStarted = started;
     }
 
+    public boolean isGameEnded() {
+        return gameEnded;
+    }
+
+    public void setGameEnded(boolean gameEnded) {
+        this.gameEnded = gameEnded;
+    }
 
     /**
      * Determines if the game can be started by the requesting player.

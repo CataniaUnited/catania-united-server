@@ -36,6 +36,7 @@ public interface LobbyService {
 
     /**
      * Gets a list of all lobbies, which are have not started yet
+     *
      * @return A list of lobbies
      */
     List<Lobby> getAvailableLobbies();
@@ -75,6 +76,7 @@ public interface LobbyService {
 
     /**
      * Removes the given lobby
+     *
      * @param lobbyId
      */
     void removeLobby(String lobbyId);
@@ -117,4 +119,5 @@ public interface LobbyService {
 
     void toggleReady(String lobbyId, String playerId) throws GameException;
 
+    boolean checkForWin(String lobbyId, String playerId) throws GameException;
 }

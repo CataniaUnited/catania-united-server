@@ -18,7 +18,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 /**
  * Implementation of the {@link LobbyService} interface.
@@ -109,7 +108,7 @@ public class LobbyServiceImpl implements LobbyService {
     public boolean joinLobbyByCode(String lobbyId, String player) {
         try {
             Lobby lobby = getLobbyById(lobbyId);
-            if(lobby.isGameStarted()){
+            if (lobby.isGameStarted()) {
                 return false;
             }
             PlayerColor assignedColor = setPlayerColor(lobby, player);
@@ -288,6 +287,20 @@ public class LobbyServiceImpl implements LobbyService {
     public void toggleReady(String lobbyId, String playerId) throws GameException {
         Lobby lobby = getLobbyById(lobbyId);
         lobby.toggleReady(playerId);
+    }
+
+    @Override
+    public boolean checkForWin(String lobbyId, String playerId) throws GameException {
+        Lobby lobby = getLobbyById(lobbyId);
+        if (!lobby.getPlayers().contains(playerId)) {
+            logger.errorf("Check for win failed -> Player is not in lobby: lobbyId = %s, playerId = %s", lobbyId, playerId);
+            throw new GameException("Player %s not part of lobby %s", playerId, lobbyId);
+        }
+        if (playerService.checkForWin(playerId)) {
+            lobby.setGameEnded(true);
+            return true;
+        }
+        return false;
     }
 
 
