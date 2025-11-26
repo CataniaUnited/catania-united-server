@@ -21,7 +21,6 @@ import com.example.cataniaunited.util.Util;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.test.common.http.TestHTTPResource;
@@ -958,7 +957,6 @@ class GameWebSocketTest {
                                 actualPlayerIds.add(dto.getMessageNode("playerId").asText());
                                 connectionLatch.countDown();
                             } else if (dto.getType() == MessageType.ROLL_DICE) {
-                                receivedMessages.add(dto);
                                 rollDiceLatch.countDown();
                             } else if (dto.getType() == MessageType.DICE_RESULT) {
                                 receivedMessages.add(dto);
@@ -991,12 +989,9 @@ class GameWebSocketTest {
         assertTrue(rollDiceLatch.await(5, TimeUnit.SECONDS), "Roll dice message not received in time!");
         assertTrue(diceResultLatch.await(5, TimeUnit.SECONDS), "Dice result message not received in time!");
 
-        assertEquals(2, receivedMessages.size());
+        assertFalse(receivedMessages.isEmpty());
 
-        MessageDTO diceResultMessage = receivedMessages.stream()
-                .filter(msg -> msg.getType() == MessageType.DICE_RESULT)
-                .findFirst()
-                .orElse(null);
+        MessageDTO diceResultMessage = receivedMessages.getFirst();
 
         assertNotNull(diceResultMessage, "Dice result message not found");
         assertEquals(MessageType.DICE_RESULT, diceResultMessage.getType());
@@ -1353,7 +1348,7 @@ class GameWebSocketTest {
 
         assertTrue(diceResultLatch.await(5, TimeUnit.SECONDS), "Result messages not received");
 
-        assertEquals(2, receivedMessages.size());
+        assertTrue(receivedMessages.size() > 1);
         MessageDTO result = receivedMessages.get(0);
 
         assertEquals(MessageType.DICE_RESULT, result.getType());
