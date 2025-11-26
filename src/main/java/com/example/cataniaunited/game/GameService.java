@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -296,23 +297,20 @@ public class GameService {
             throw new GameException("You already cheated twice!");
         }
 
-        List<String> potentialVictims = lobby.getPlayers().stream()
+        List<Player> potentialVictims = lobby.getPlayerOrder().stream()
                 .filter(pid -> !pid.equals(playerId))
-                .filter(pid -> {
-                    Player p = playerService.getPlayerById(pid);
-                    return p.getResourceCount(resource) > 0;
-                })
+                .map(playerService::getPlayerById)
+                .filter(Objects::nonNull)
+                .filter(player -> player.getResourceCount(resource) > 0)
                 .toList();
 
         if (potentialVictims.isEmpty()) {
             throw new GameException("No player has that resource to steal.");
         }
 
-        String victimId = potentialVictims.stream()
-                .max(Comparator.comparingInt(pid -> playerService.getPlayerById(pid).getResourceCount(resource)))
+        Player victim = potentialVictims.stream()
+                .max(Comparator.comparingInt(player -> player.getResourceCount(resource)))
                 .orElseThrow();
-
-        Player victim = playerService.getPlayerById(victimId);
 
         victim.removeResource(resource, 1);
         cheater.receiveResource(resource, 1);

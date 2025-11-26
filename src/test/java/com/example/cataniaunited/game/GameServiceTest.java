@@ -625,11 +625,13 @@ class GameServiceTest {
     }
 
     @Test
-    void handleCheat_shouldThrowIfNoPlayerHasThatResource() {
+    void handleCheat_shouldThrowIfNoPlayerHasThatResource() throws GameException {
         String cheaterId = "cheater";
         String victimId = "victim";
         String lobbyId = lobbyService.createLobby(cheaterId);
         lobbyService.joinLobbyByCode(lobbyId, victimId);
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+        lobby.startGame();
 
         Player cheater = mock(Player.class);
         Player victim = mock(Player.class);
@@ -649,6 +651,7 @@ class GameServiceTest {
         String lobbyId = lobbyService.createLobby(cheaterId);
         lobbyService.joinLobbyByCode(lobbyId, victimId);
         Lobby lobby = lobbyService.getLobbyById(lobbyId);
+        lobby.startGame();
         lobby.recordCheat(cheaterId);
         lobby.recordCheat(cheaterId);
 
@@ -669,6 +672,8 @@ class GameServiceTest {
         String victimId = "victim";
         String lobbyId = lobbyService.createLobby(cheaterId);
         lobbyService.joinLobbyByCode(lobbyId, victimId);
+        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+        lobby.startGame();
 
         Player cheater = mock(Player.class);
         Player victim = mock(Player.class);
@@ -680,7 +685,6 @@ class GameServiceTest {
 
         verify(victim).removeResource(TileType.WOOD, 1);
         verify(cheater).receiveResource(TileType.WOOD, 1);
-        Lobby lobby = lobbyService.getLobbyById(lobbyId);
         assertEquals(1, lobby.getCheatCount(cheaterId));
     }
 

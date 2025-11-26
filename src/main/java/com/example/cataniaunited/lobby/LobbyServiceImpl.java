@@ -109,6 +109,9 @@ public class LobbyServiceImpl implements LobbyService {
     public boolean joinLobbyByCode(String lobbyId, String player) {
         try {
             Lobby lobby = getLobbyById(lobbyId);
+            if(lobby.isGameStarted()){
+                return false;
+            }
             PlayerColor assignedColor = setPlayerColor(lobby, player);
             if (assignedColor == null) {
                 return false;
