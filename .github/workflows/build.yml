@@ -91,4 +91,4 @@ jobs:
           QUARKUS_CONTAINER_IMAGE_IMAGE: "ghcr.io/${{ env.LOWERCASE_OWNER }}/${{ github.event.repository.name }}:${{ github.sha }}"
           JAVA_TOOL_OPTIONS: "-Djava.util.logging.manager=org.jboss.logmanager.LogManager -Dorg.jboss.logging.level=DEBUG"
         run: |
-          ./gradlew build sonar --info
+          ./gradlew build --info
