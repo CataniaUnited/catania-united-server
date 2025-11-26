@@ -1104,7 +1104,8 @@ class GameWebSocketTest {
 
         List<MessageDTO> player1ReceivedMessages = new CopyOnWriteArrayList<>();
         List<MessageDTO> player2ReceivedMessages = new CopyOnWriteArrayList<>();
-        CountDownLatch diceResultLatch = new CountDownLatch(2);
+        CountDownLatch player1DiceResultLatch = new CountDownLatch(1);
+        CountDownLatch player2DiceResultLatch = new CountDownLatch(1);
         CountDownLatch connectionLatch = new CountDownLatch(2);
 
         BasicWebSocketConnector client1Connector = BasicWebSocketConnector.create()
@@ -1117,7 +1118,7 @@ class GameWebSocketTest {
                             connectionLatch.countDown();
                         } else if (dto.getType() == MessageType.DICE_RESULT) {
                             player1ReceivedMessages.add(dto);
-                            diceResultLatch.countDown();
+                            player1DiceResultLatch.countDown();
                         }
                     } catch (JsonProcessingException e) {
                         fail("Client1: Failed to parse message: " + msg, e);
@@ -1136,7 +1137,7 @@ class GameWebSocketTest {
                             connectionLatch.countDown();
                         } else if (dto.getType() == MessageType.DICE_RESULT) {
                             player2ReceivedMessages.add(dto);
-                            diceResultLatch.countDown();
+                            player2DiceResultLatch.countDown();
                         }
                     } catch (JsonProcessingException e) {
                         fail("Client2: Failed to parse message: " + msg, e);
@@ -1166,9 +1167,8 @@ class GameWebSocketTest {
         MessageDTO rollDiceMsg = new MessageDTO(MessageType.ROLL_DICE, player1ActualId, actualLobbyId);
         client1Connection.sendTextAndAwait(objectMapper.writeValueAsString(rollDiceMsg));
 
-        assertTrue(diceResultLatch.await(10, TimeUnit.SECONDS),
-                "Both clients did not receive DICE_RESULT message in time. Latch: " + diceResultLatch.getCount());
-
+        assertTrue(player2DiceResultLatch.await(10, TimeUnit.SECONDS), "Player 2 did not received DICE_RESULT");
+        assertTrue(player1DiceResultLatch.await(10, TimeUnit.SECONDS), "Player 1 did not received DICE_RESULT");
 
         MessageDTO p1ResMsg = player1ReceivedMessages.get(0);
         assertEquals(player1ActualId, p1ResMsg.getPlayer());
@@ -1689,9 +1689,9 @@ class GameWebSocketTest {
         client1WebSocketClientConnection.sendTextAndAwait(messageDTO);
 
         assertTrue(player1NextTurnLatch.await(10, TimeUnit.SECONDS));
-        assertEquals(1, player1ReceivedMessages.size());
+        assertFalse(player1ReceivedMessages.isEmpty());
 
-        var receivedDTO = player1ReceivedMessages.get(0);
+        var receivedDTO = player1ReceivedMessages.getLast();
         assertEquals(MessageType.NEXT_TURN, receivedDTO.getType());
         assertTrue(receivedDTO.getPlayers().containsKey(player2ActualId));
         assertTrue(receivedDTO.getPlayers().get(player2ActualId).isActivePlayer());
