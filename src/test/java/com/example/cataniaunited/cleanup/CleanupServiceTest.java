@@ -2,6 +2,7 @@ package com.example.cataniaunited.cleanup;
 
 import com.example.cataniaunited.exception.GameException;
 import com.example.cataniaunited.game.GameService;
+import com.example.cataniaunited.game.trade.TradingService;
 import com.example.cataniaunited.lobby.Lobby;
 import com.example.cataniaunited.lobby.LobbyService;
 import com.example.cataniaunited.player.Player;
@@ -45,6 +46,9 @@ public class CleanupServiceTest {
     @InjectSpy
     PlayerService playerService;
 
+    @InjectSpy
+    TradingService tradingService;
+
     @BeforeEach
     void setUp() {
         lobbyService.clearLobbies();
@@ -75,12 +79,44 @@ public class CleanupServiceTest {
         verify(lobbyService).removePlayerFromLobby(lobbyId, player.getUniqueId());
         verify(gameService).removeGameBoardForLobby(lobbyId);
         verify(lobbyService).removeLobby(lobbyId);
+        verify(tradingService).removeAllOpenTradeRequestForLobbyId(lobbyId);
+    }
+
+    @Test
+    void testFinishedGamesCleanup() throws GameException {
+        Player player = new Player("Player1");
+        Player player2 = new Player("Player2");
+        String lobbyId = "lob001";
+        Lobby lobby = new Lobby(lobbyId, player.getUniqueId());
+        doReturn(List.of(lobby)).when(lobbyService).getOpenLobbies();
+        doReturn(lobby).when(lobbyService).getLobbyById(lobbyId);
+        lobbyService.joinLobbyByCode(lobbyId, player2.getUniqueId());
+        gameService.createGameboard(lobbyId);
+        lobby.setGameEnded(true);
+
+        assertNotNull(gameService.getGameboardByLobbyId(lobbyId));
+        assertEquals(2, lobby.getPlayers().size());
+
+        cleanupService.cleanupFinishedGames();
+
+        assertThrows(GameException.class, () -> gameService.getGameboardByLobbyId(lobbyId));
+        assertEquals(0, lobby.getPlayers().size());
+
+        verify(lobbyService).getOpenLobbies();
+        verify(lobbyService).removePlayerFromLobby(lobbyId, player.getUniqueId());
+        verify(lobbyService).removePlayerFromLobby(lobbyId, player2.getUniqueId());
+        verify(gameService).removeGameBoardForLobby(lobbyId);
+        verify(lobbyService).removeLobby(lobbyId);
+        verify(tradingService).removeAllOpenTradeRequestForLobbyId(lobbyId);
     }
 
     @Test
     void lobbyCleanupShouldWorkIfNoLobbiesExist() {
         assertDoesNotThrow(() -> cleanupService.cleanupOldLobbies());
     }
+
+    @Test
+    void finishedGamesCleanupShouldWorkIfNoLobbiesExist() {assertDoesNotThrow(() -> cleanupService.cleanupFinishedGames());}
 
     @Test
     void lobbyCleanupShouldNotRemoveNewLobby() throws GameException {
@@ -94,6 +130,25 @@ public class CleanupServiceTest {
         assertEquals(2, lobbyService.getLobbyById(lobbyId).getPlayers().size());
 
         cleanupService.cleanupOldLobbies();
+
+        assertNotNull(gameService.getGameboardByLobbyId(lobbyId));
+        assertEquals(2, lobbyService.getLobbyById(lobbyId).getPlayers().size());
+
+        verify(lobbyService, never()).removeLobby(anyString());
+    }
+
+    @Test
+    void finishedGamesCleanupShouldNotRemoveNewLobby() throws GameException {
+        Player player = new Player("Player1");
+        Player player2 = new Player("Player2");
+        String lobbyId = lobbyService.createLobby(player.getUniqueId());
+        lobbyService.joinLobbyByCode(lobbyId, player2.getUniqueId());
+        gameService.createGameboard(lobbyId);
+
+        assertNotNull(gameService.getGameboardByLobbyId(lobbyId));
+        assertEquals(2, lobbyService.getLobbyById(lobbyId).getPlayers().size());
+
+        cleanupService.cleanupFinishedGames();
 
         assertNotNull(gameService.getGameboardByLobbyId(lobbyId));
         assertEquals(2, lobbyService.getLobbyById(lobbyId).getPlayers().size());

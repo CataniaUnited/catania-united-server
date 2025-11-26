@@ -272,7 +272,7 @@ public class GameMessageHandler {
             throw new GameException("Invalid road id: id = %s", roadId.toString());
         }
 
-        if (playerService.checkForWin(message.getPlayer())) {
+        if (lobbyService.checkForWin(message.getLobbyId(), message.getPlayer())) {
             return broadcastWin(message.getLobbyId(), message.getPlayer());
         }
 
@@ -353,7 +353,7 @@ public class GameMessageHandler {
             throw new GameException("Invalid settlement position id: id = %s", settlementPosition.toString());
         }
 
-        if (playerService.checkForWin(message.getPlayer())) {
+        if (lobbyService.checkForWin(message.getLobbyId(), message.getPlayer())) {
             return broadcastWin(message.getLobbyId(), message.getPlayer());
         }
 

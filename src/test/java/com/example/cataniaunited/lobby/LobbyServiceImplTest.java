@@ -418,4 +418,15 @@ class LobbyServiceImplTest {
                 .withSubscriber(UniAssertSubscriber.create())
                 .assertItem(message);
     }
+
+    @Test
+    void checkForWinShouldThrowExceptionIfPlayerIsNotInLobby() throws GameException {
+        String lobbyId = "testLobbyId";
+        Lobby lobbyMock = mock(Lobby.class);
+        when(lobbyMock.getPlayers()).thenReturn(Collections.emptySet());
+        doReturn(lobbyMock).when(lobbyService).getLobbyById(lobbyId);
+        String playerId = "player1";
+        GameException ge = assertThrows(GameException.class, () -> lobbyService.checkForWin(lobbyId, playerId));
+        assertEquals("Player %s not part of lobby %s".formatted(playerId, lobbyId), ge.getMessage());
+    }
 }
