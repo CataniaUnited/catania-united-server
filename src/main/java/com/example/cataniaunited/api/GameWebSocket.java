@@ -48,9 +48,9 @@ public class GameWebSocket {
      * @param connection The WebSocket connection that was closed.
      */
     @OnClose
-    public void onClose(WebSocketConnection connection) {
+    public Uni<Void> onClose(WebSocketConnection connection) {
         logger.infof("Client closed connection: %s", connection.id());
-        gameMessageHandler.handleDisconnect(connection);
+        return gameMessageHandler.handleDisconnect(connection);
     }
 
     /**

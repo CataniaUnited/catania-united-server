@@ -17,7 +17,10 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * Implementation of the {@link LobbyService} interface.
@@ -126,9 +129,22 @@ public class LobbyServiceImpl implements LobbyService {
 
     @Override
     public void leaveLobby(String lobbyId, String playerId) throws GameException {
-        Lobby lobby = getLobbyById(lobbyId);
-        lobby.removePlayer(playerId);
+        removePlayerFromLobby(lobbyId, playerId);
         playerService.resetVictoryPoints(playerId);
+    }
+
+    @Override
+    public Set<Lobby> removePlayerFromLobbies(String playerId) {
+        return lobbies.values().stream()
+                .filter(Objects::nonNull)
+                .filter(lobby -> lobby.getPlayers().contains(playerId))
+                .peek(lobby -> {
+                    try {
+                        leaveLobby(lobby.getLobbyId(), playerId);
+                    } catch (GameException e) {
+                        logger.warnf(e, "Failed to remove player %s from lobby %s", playerId, lobby.getLobbyId());
+                    }
+                }).collect(Collectors.toSet());
     }
 
     /**
@@ -154,6 +170,7 @@ public class LobbyServiceImpl implements LobbyService {
      */
     @Override
     public void removePlayerFromLobby(String lobbyId, String player) throws GameException {
+        logger.infof("Removing player %s from lobby %s", player, lobbyId);
         Lobby lobby = getLobbyById(lobbyId);
         PlayerColor color = lobby.getPlayerColor(player);
         if (color != null) {

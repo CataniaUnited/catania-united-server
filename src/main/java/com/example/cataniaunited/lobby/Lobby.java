@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -107,11 +108,15 @@ public class Lobby {
      * @param player The ID of the player to remove.
      *               Note: {@code playerColors.remove(player)} does not return a boolean indicating removal success directly in this context.
      */
-    public void removePlayer(String player) {
+    public void removePlayer(String player) throws GameException {
         playerColors.remove(player);
         readyState.remove(player);
         playerOrder.remove(player);
         players.remove(player);
+
+        if(gameStarted && Objects.equals(activePlayer, player)) {
+            nextPlayerTurn();
+        }
     }
 
     /**

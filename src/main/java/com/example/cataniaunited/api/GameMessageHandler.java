@@ -33,13 +33,18 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
+import static com.example.cataniaunited.dto.MessageType.CLIENT_DISCONNECTED;
+import static com.example.cataniaunited.dto.MessageType.LOBBY_CLOSED;
 import static com.example.cataniaunited.dto.MessageType.LOBBY_LIST;
+import static com.example.cataniaunited.dto.MessageType.LOBBY_UPDATED;
 
 @ApplicationScoped
 public class GameMessageHandler {
@@ -78,10 +83,45 @@ public class GameMessageHandler {
         return Uni.createFrom().item(new MessageDTO(MessageType.CONNECTION_SUCCESSFUL, message));
     }
 
-    public void handleDisconnect(WebSocketConnection connection) {
+    public Uni<Void> handleDisconnect(WebSocketConnection connection) {
+        Player player = playerService.getPlayerByConnection(connection);
+        List<Uni<MessageDTO>> sendUnis = new ArrayList<>();
+        if (player != null) {
+            String playerId = player.getUniqueId();
+            logger.infof("Player %s disconnected from server", playerId);
+            //Remove player from lobbies
+            sendUnis = lobbyService.removePlayerFromLobbies(playerId)
+                    .stream().map(lobby -> {
+                try {
+                    return notifyLobbyAboutLeavingPlayer(lobby, playerId);
+                } catch (GameException e) {
+                    logger.warnf(e, "Could not notify lobby %s about leaving of player %s", lobby.getLobbyId(), playerId);
+                    return null;
+                }
+            })
+            .filter(Objects::nonNull).toList();
+        }
         playerService.removePlayerByConnectionId(connection);
-        ObjectNode message = JsonNodeFactory.instance.objectNode().put("playerId", connection.id());
-        connection.broadcast().sendTextAndAwait(new MessageDTO(MessageType.CLIENT_DISCONNECTED, message));
+        return Uni.join().all(sendUnis)
+                .andFailFast()
+                .onFailure()
+                .invoke(err -> logger.errorf(err, "One or more messages failed on user disconnect"))
+                .replaceWith(Uni.createFrom().voidItem());
+    }
+
+    Uni<MessageDTO> notifyLobbyAboutLeavingPlayer(Lobby lobby, String playerId) throws GameException {
+        String lobbyId = lobby.getLobbyId();
+        //Close lobby if host player leaves
+        MessageType type = Objects.equals(lobby.getHostPlayer(), playerId)
+                ? LOBBY_CLOSED
+                : LOBBY_UPDATED;
+        MessageDTO dto = new MessageDTO(
+                type,
+                playerId,
+                lobbyId,
+                getLobbyPlayerInformation(lobbyId)
+        );
+        return lobbyService.notifyPlayers(lobbyId, dto);
     }
 
     public Uni<MessageDTO> handleGameMessage(MessageDTO message) {
@@ -400,8 +440,7 @@ public class GameMessageHandler {
 
     Uni<MessageDTO> leaveLobby(MessageDTO message) throws GameException {
         lobbyService.leaveLobby(message.getLobbyId(), message.getPlayer());
-        var response = new MessageDTO(MessageType.LOBBY_UPDATED, message.getPlayer(), message.getLobbyId(), getLobbyPlayerInformation(message.getLobbyId()));
-        return lobbyService.notifyPlayers(message.getLobbyId(), response);
+        return notifyLobbyAboutLeavingPlayer(lobbyService.getLobbyById(message.getLobbyId()), message.getPlayer());
     }
 
     /**

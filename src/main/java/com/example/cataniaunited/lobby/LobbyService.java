@@ -6,6 +6,7 @@ import com.example.cataniaunited.player.PlayerColor;
 import io.smallrye.mutiny.Uni;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * Interface for lobby management services.
@@ -51,6 +52,8 @@ public interface LobbyService {
     boolean joinLobbyByCode(String lobbyId, String player);
 
     void leaveLobby(String lobbyId, String playerId) throws GameException;
+
+    Set<Lobby> removePlayerFromLobbies(String playerId);
 
     /**
      * Removes a player from a specified lobby.
