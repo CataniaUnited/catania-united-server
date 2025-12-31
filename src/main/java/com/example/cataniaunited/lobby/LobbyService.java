@@ -111,7 +111,7 @@ public interface LobbyService {
      * @param dto     The {@link MessageDTO} to send.
      * @return The {@link Uni} containing the sent message
      */
-    Uni<MessageDTO> notifyPlayers(String lobbyId, MessageDTO dto, String exclude);
+    Uni<MessageDTO> notifyPlayers(String lobbyId, MessageDTO dto, String excludePlayerId);
 
     String nextTurn(String lobbyId, String playerId) throws GameException;
 
