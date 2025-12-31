@@ -42,9 +42,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
-
 @QuarkusTest
 class LobbyServiceImplTest {
+
     private static final Logger logger = Logger.getLogger(LobbyServiceImplTest.class);
     @InjectMock
     PlayerService playerService;
@@ -175,6 +175,8 @@ class LobbyServiceImplTest {
         Lobby lobby = lobbyService.getLobbyById(lobbyId);
         lobby.setGameStarted(true);
         assertFalse(lobbyService.joinLobbyByCode(lobbyId, "Player1"));
+        //Should be called only on create
+        verify(lobbyService).setPlayerColor(any(Lobby.class), anyString());
         //Should be called only on create
         verify(lobbyService).setPlayerColor(any(Lobby.class), anyString());
     }
@@ -373,7 +375,7 @@ class LobbyServiceImplTest {
 
         MessageDTO dto = new MessageDTO(MessageType.ERROR, null);
 
-        lobbyService.notifyPlayers(lobbyId, dto);
+        lobbyService.notifyPlayers(lobbyId, dto, null);
 
         verify(playerService).sendMessageToPlayer(hostId, dto);
         verify(playerService).sendMessageToPlayer(player2, dto);
@@ -383,7 +385,7 @@ class LobbyServiceImplTest {
     @Test
     void notifyPlayersShouldReturnFailedUniOnException() {
         String invalidLobbyId = "invalidLobbyId";
-        Uni<MessageDTO> failedUni = assertDoesNotThrow(() -> lobbyService.notifyPlayers(invalidLobbyId, new MessageDTO(MessageType.JOIN_LOBBY, (ObjectNode) null)));
+        Uni<MessageDTO> failedUni = assertDoesNotThrow(() -> lobbyService.notifyPlayers(invalidLobbyId, new MessageDTO(MessageType.JOIN_LOBBY, (ObjectNode) null), null));
         failedUni.subscribe().withSubscriber(UniAssertSubscriber.create())
                 .assertFailedWith(GameException.class, "Lobby with id %s not found".formatted(invalidLobbyId))
                 .assertSubscribed()
@@ -399,7 +401,7 @@ class LobbyServiceImplTest {
         when(playerService.getPlayerById(player.getUniqueId())).thenReturn(player);
         lobbyService.joinLobbyByCode(lobbyId, player.getUniqueId());
 
-        Uni<MessageDTO> failedUni = assertDoesNotThrow(() -> lobbyService.notifyPlayers(lobbyId, new MessageDTO(MessageType.JOIN_LOBBY, null)));
+        Uni<MessageDTO> failedUni = assertDoesNotThrow(() -> lobbyService.notifyPlayers(lobbyId, new MessageDTO(MessageType.JOIN_LOBBY, null), null));
         failedUni.subscribe().withSubscriber(UniAssertSubscriber.create())
                 .assertFailedWith(RuntimeException.class, exception.getMessage())
                 .assertSubscribed()
@@ -413,7 +415,7 @@ class LobbyServiceImplTest {
         when(lobbyMock.getPlayers()).thenReturn(Collections.emptySet());
         doReturn(lobbyMock).when(lobbyService).getLobbyById(lobbyId);
         var message = new MessageDTO(MessageType.JOIN_LOBBY, null);
-        Uni<MessageDTO> notifyUni = assertDoesNotThrow(() -> lobbyService.notifyPlayers(lobbyId, message));
+        Uni<MessageDTO> notifyUni = assertDoesNotThrow(() -> lobbyService.notifyPlayers(lobbyId, message, null));
         notifyUni.subscribe()
                 .withSubscriber(UniAssertSubscriber.create())
                 .assertItem(message);
