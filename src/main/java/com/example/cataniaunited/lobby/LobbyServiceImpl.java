@@ -261,6 +261,11 @@ public class LobbyServiceImpl implements LobbyService {
                     .map(playerId -> playerService.sendMessageToPlayer(playerId, dto))
                     .toList();
 
+            if (sendUnis.isEmpty()) {
+                logger.warnf("No players to notify after applying exclude filter: lobbyId=%s, excludePlayerId=%s", lobbyId, excludePlayerId);
+                return Uni.createFrom().item(dto);
+            }
+
             return Uni.join().all(sendUnis)
                     .andFailFast()
                     .onFailure()
