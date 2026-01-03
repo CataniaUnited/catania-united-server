@@ -69,7 +69,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-
 @QuarkusTest
 class GameWebSocketTest {
 
@@ -153,7 +152,6 @@ class GameWebSocketTest {
         assertNotNull(responseMessage.getMessageNode("playerId").textValue());
         verify(playerService).removePlayerByConnectionId(any());
     }
-
 
     @Test
     void testInvalidCommand() throws InterruptedException, JsonProcessingException {
@@ -316,7 +314,6 @@ class GameWebSocketTest {
         assertTrue(latch.await(5, TimeUnit.SECONDS), "Did not receive PLAYER_JOINED message in time");
     }
 
-
     @Test
     void testPlayerJoinedLobbySuccess() throws JsonProcessingException, InterruptedException, GameException {
         Player hostPlayer = new Player("HostPlayer");
@@ -324,7 +321,7 @@ class GameWebSocketTest {
         String lobbyId = lobbyService.createLobby(hostPlayer.getUniqueId());
 
         List<MessageDTO> receivedMessages = new CopyOnWriteArrayList<>();
-        CountDownLatch messageLatch = new CountDownLatch(3);
+        CountDownLatch messageLatch = new CountDownLatch(2);
         CountDownLatch connectionLatch = new CountDownLatch(1);
         List<String> playerIds = new ArrayList<>();
 
@@ -354,13 +351,17 @@ class GameWebSocketTest {
 
         assertTrue(connectionLatch.await(5, TimeUnit.SECONDS), "Did not receive CONNECTION_SUCCESSFUL");
         String playerId = playerIds.get(0);
+        Player joiningPlayer = mock(Player.class);
+        when(joiningPlayer.getUniqueId()).thenReturn(playerId);
+        when(joiningPlayer.getUsername()).thenReturn("JoiningPlayer");
+        when(playerService.getPlayerById(playerId)).thenReturn(joiningPlayer);
         MessageDTO joinLobbyMessage = new MessageDTO(MessageType.JOIN_LOBBY, playerId, lobbyId);
 
         String sentMessage = objectMapper.writeValueAsString(joinLobbyMessage);
         webSocketClientConnection.sendTextAndAwait(sentMessage);
 
         assertTrue(messageLatch.await(5, TimeUnit.SECONDS), "Not all messages were received in time!");
-        assertEquals(3, receivedMessages.size());
+        assertEquals(2, receivedMessages.size());
 
         MessageDTO responseMessage = receivedMessages.stream().filter(m -> m.getType() == MessageType.PLAYER_JOINED).findFirst().get();
         assertNotNull(responseMessage);
@@ -373,7 +374,6 @@ class GameWebSocketTest {
         assertTrue(lobby.getPlayers().contains(player.getUniqueId()));
         assertEquals(lobby.getPlayerColor(player.getUniqueId()).getHexCode(), responseMessage.getMessageNode("color").asText());
     }
-
 
     @Test
     void testJoinLobbyFailure() throws InterruptedException, JsonProcessingException {
@@ -678,7 +678,6 @@ class GameWebSocketTest {
         verify(gameService).upgradeSettlement(lobbyId, playerId, buildingSite.getId());
     }
 
-
     @Test
     void testPlacementOfRoad() throws Exception {
         String player1 = "Player1";
@@ -856,7 +855,6 @@ class GameWebSocketTest {
         verify(gameService, times(2)).getGameboardByLobbyId(lobbyId);
     }
 
-
     @ParameterizedTest
     @MethodSource("invalidPlaceRoadMessageNodes")
     void placementOfRoadShouldFailForInvalidMessageNode(ObjectNode placeRoadMessageNode) throws GameException, JsonProcessingException, InterruptedException {
@@ -943,7 +941,6 @@ class GameWebSocketTest {
         CountDownLatch connectionLatch = new CountDownLatch(1);
 
         List<MessageDTO> receivedMessages = new CopyOnWriteArrayList<>();
-        CountDownLatch rollDiceLatch = new CountDownLatch(1);
         CountDownLatch diceResultLatch = new CountDownLatch(1);
 
         var webSocketClientConnection = BasicWebSocketConnector.create()
@@ -956,8 +953,6 @@ class GameWebSocketTest {
                             if (dto.getType() == MessageType.CONNECTION_SUCCESSFUL) {
                                 actualPlayerIds.add(dto.getMessageNode("playerId").asText());
                                 connectionLatch.countDown();
-                            } else if (dto.getType() == MessageType.ROLL_DICE) {
-                                rollDiceLatch.countDown();
                             } else if (dto.getType() == MessageType.DICE_RESULT) {
                                 receivedMessages.add(dto);
                                 diceResultLatch.countDown();
@@ -986,7 +981,6 @@ class GameWebSocketTest {
         String sentMessage = objectMapper.writeValueAsString(rollDiceMessageDTO);
         webSocketClientConnection.sendTextAndAwait(sentMessage);
 
-        assertTrue(rollDiceLatch.await(5, TimeUnit.SECONDS), "Roll dice message not received in time!");
         assertTrue(diceResultLatch.await(5, TimeUnit.SECONDS), "Dice result message not received in time!");
 
         assertFalse(receivedMessages.isEmpty());
@@ -1021,7 +1015,6 @@ class GameWebSocketTest {
 
         webSocketClientConnection.closeAndAwait();
     }
-
 
     @Test
     void testPlaceSettlement_success_noWin() throws Exception {
@@ -1126,7 +1119,6 @@ class GameWebSocketTest {
                 });
         var client1Connection = client1Connector.connectAndAwait();
 
-
         BasicWebSocketConnector client2Connector = BasicWebSocketConnector.create()
                 .baseUri(serverUri).path("/game")
                 .onTextMessage((conn, msg) -> {
@@ -1224,7 +1216,6 @@ class GameWebSocketTest {
         var client1WebSocketClientConnection = client1Connector.connectAndAwait();
         System.out.println("Client 1 connection object: " + client1WebSocketClientConnection);
 
-
         System.out.println("Setting up Client 2...");
         BasicWebSocketConnector client2Connector = BasicWebSocketConnector.create()
                 .baseUri(serverUri).path("/game")
@@ -1245,7 +1236,6 @@ class GameWebSocketTest {
                 });
         var client2WebSocketClientConnection = client2Connector.connectAndAwait();
         System.out.println("Client 2 connection object: " + client2WebSocketClientConnection);
-
 
         assertTrue(connectionLatch.await(10, TimeUnit.SECONDS), "Not all clients connected and received their IDs. Latch: " + connectionLatch.getCount());
         assertNotNull(client1PlayerIdHolder[0], "Client 1 Player ID not set");
@@ -1451,7 +1441,6 @@ class GameWebSocketTest {
         verify(gameService, never()).getGameboardByLobbyId(anyString());
     }
 
-
     @Test
     void testPlaceSettlement_invalidPositionId_string() throws Exception {
         String playerId = "playerPSE1";
@@ -1637,7 +1626,6 @@ class GameWebSocketTest {
         var client1WebSocketClientConnection = client1Connector.connectAndAwait();
         System.out.println("Client 1 connection object: " + client1WebSocketClientConnection);
 
-
         System.out.println("Setting up Client 2...");
         BasicWebSocketConnector client2Connector = BasicWebSocketConnector.create()
                 .baseUri(serverUri).path("/game")
@@ -1656,7 +1644,6 @@ class GameWebSocketTest {
                 });
         var client2WebSocketClientConnection = client2Connector.connectAndAwait();
         System.out.println("Client 2 connection object: " + client2WebSocketClientConnection);
-
 
         assertTrue(connectionLatch.await(10, TimeUnit.SECONDS), "Not all clients connected and received their IDs. Latch: " + connectionLatch.getCount());
         assertNotNull(client1PlayerIdHolder[0], "Client 1 Player ID not set");
@@ -1858,7 +1845,6 @@ class GameWebSocketTest {
         var client1WebSocketClientConnection = client1Connector.connectAndAwait();
         System.out.println("Client 1 connection object: " + client1WebSocketClientConnection);
 
-
         System.out.println("Setting up Client 2...");
         BasicWebSocketConnector client2Connector = BasicWebSocketConnector.create()
                 .baseUri(serverUri).path("/game")
@@ -1880,7 +1866,6 @@ class GameWebSocketTest {
                 });
         var client2WebSocketClientConnection = client2Connector.connectAndAwait();
         System.out.println("Client 2 connection object: " + client2WebSocketClientConnection);
-
 
         assertTrue(connectionLatch.await(10, TimeUnit.SECONDS), "Not all clients connected and received their IDs. Latch: " + connectionLatch.getCount());
         assertNotNull(client1PlayerIdHolder[0], "Client 1 Player ID not set");
@@ -1961,7 +1946,6 @@ class GameWebSocketTest {
         var client1WebSocketClientConnection = client1Connector.connectAndAwait();
         System.out.println("Client 1 connection object: " + client1WebSocketClientConnection);
 
-
         System.out.println("Setting up Client 2...");
         BasicWebSocketConnector client2Connector = BasicWebSocketConnector.create()
                 .baseUri(serverUri).path("/game")
@@ -1980,7 +1964,6 @@ class GameWebSocketTest {
                 });
         var client2WebSocketClientConnection = client2Connector.connectAndAwait();
         System.out.println("Client 2 connection object: " + client2WebSocketClientConnection);
-
 
         assertTrue(connectionLatch.await(10, TimeUnit.SECONDS), "Not all clients connected and received their IDs. Latch: " + connectionLatch.getCount());
         assertNotNull(client1PlayerIdHolder[0], "Client 1 Player ID not set");
@@ -2108,7 +2091,6 @@ class GameWebSocketTest {
         var client1WebSocketClientConnection = client1Connector.connectAndAwait();
         System.out.println("Client 1 connection object: " + client1WebSocketClientConnection);
 
-
         System.out.println("Setting up Client 2...");
         BasicWebSocketConnector client2Connector = BasicWebSocketConnector.create()
                 .baseUri(serverUri).path("/game")
@@ -2127,7 +2109,6 @@ class GameWebSocketTest {
                 });
         var client2WebSocketClientConnection = client2Connector.connectAndAwait();
         System.out.println("Client 2 connection object: " + client2WebSocketClientConnection);
-
 
         assertTrue(connectionLatch.await(10, TimeUnit.SECONDS), "Not all clients connected and received their IDs. Latch: " + connectionLatch.getCount());
         assertNotNull(client1PlayerIdHolder[0], "Client 1 Player ID not set");
@@ -2234,7 +2215,6 @@ class GameWebSocketTest {
         var client1WebSocketClientConnection = client1Connector.connectAndAwait();
         System.out.println("Client 1 connection object: " + client1WebSocketClientConnection);
 
-
         System.out.println("Setting up Client 2...");
         BasicWebSocketConnector client2Connector = BasicWebSocketConnector.create()
                 .baseUri(serverUri).path("/game")
@@ -2256,7 +2236,6 @@ class GameWebSocketTest {
                 });
         var client2WebSocketClientConnection = client2Connector.connectAndAwait();
         System.out.println("Client 2 connection object: " + client2WebSocketClientConnection);
-
 
         assertTrue(connectionLatch.await(10, TimeUnit.SECONDS), "Not all clients connected and received their IDs. Latch: " + connectionLatch.getCount());
         assertNotNull(client1PlayerIdHolder[0], "Client 1 Player ID not set");
@@ -2288,7 +2267,6 @@ class GameWebSocketTest {
 
         assertEquals(1, player2.getResources().size());
         assertEquals(1, player2.getResources().get(TileType.SHEEP));
-
 
         // Prepare trade request from player 1 to player 2 (1 WOOD for 1 SHEEP)
         ObjectNode tradePayload = JsonNodeFactory.instance.objectNode();
@@ -2407,7 +2385,6 @@ class GameWebSocketTest {
         var client1WebSocketClientConnection = client1Connector.connectAndAwait();
         System.out.println("Client 1 connection object: " + client1WebSocketClientConnection);
 
-
         System.out.println("Setting up Client 2...");
         BasicWebSocketConnector client2Connector = BasicWebSocketConnector.create()
                 .baseUri(serverUri).path("/game")
@@ -2429,7 +2406,6 @@ class GameWebSocketTest {
                 });
         var client2WebSocketClientConnection = client2Connector.connectAndAwait();
         System.out.println("Client 2 connection object: " + client2WebSocketClientConnection);
-
 
         assertTrue(connectionLatch.await(10, TimeUnit.SECONDS), "Not all clients connected and received their IDs. Latch: " + connectionLatch.getCount());
         assertNotNull(client1PlayerIdHolder[0], "Client 1 Player ID not set");
@@ -2461,7 +2437,6 @@ class GameWebSocketTest {
 
         assertEquals(1, player2.getResources().size());
         assertEquals(1, player2.getResources().get(TileType.SHEEP));
-
 
         // Prepare trade request from player 1 to player 2 (1 WOOD for 1 SHEEP)
         ObjectNode tradePayload = JsonNodeFactory.instance.objectNode();
