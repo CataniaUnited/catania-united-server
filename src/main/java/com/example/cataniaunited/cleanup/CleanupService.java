@@ -11,6 +11,7 @@ import io.quarkus.logging.Log;
 import io.quarkus.scheduler.Scheduled;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -30,15 +31,18 @@ public class CleanupService {
     @Inject
     TradingService tradingService;
 
+    @ConfigProperty(name = "qatania.cleanup.threshold-hours")
+    Integer cleanupThresholdHours;
+
     /**
      * Job that removes all lobbies which are older than 2 days
      */
     @Scheduled(every = "24h")
     void cleanupOldLobbies() {
         Log.debugf("Starting cleanup job for old lobbies");
-        Instant twoDaysOld = Instant.now().minus(2, ChronoUnit.DAYS);
+        Instant cleanupThreshold = Instant.now().minus(cleanupThresholdHours, ChronoUnit.HOURS);
         lobbyService.getOpenLobbies().stream()
-                .filter(lobby -> lobby.getCreatedAt().isBefore(twoDaysOld))
+                .filter(lobby -> lobby.getCreatedAt().isBefore(cleanupThreshold))
                 .forEach(this::cleanupLobby);
     }
 

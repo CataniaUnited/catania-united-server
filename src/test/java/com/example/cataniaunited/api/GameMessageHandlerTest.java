@@ -47,7 +47,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-
 @QuarkusTest
 class GameMessageHandlerTest {
 
@@ -68,7 +67,6 @@ class GameMessageHandlerTest {
 
     @InjectSpy
     GameService gameService;
-
 
     @Test
     void getLobbyPlayerInfoShouldNotMapNullValues() throws GameException {
@@ -133,7 +131,6 @@ class GameMessageHandlerTest {
         assertFalse(player2Info.isHost());
     }
 
-
     @Test
     void handleTradeWithBankInvocedFromMainSwitchCaseSuccess() throws GameException {
         WebSocketConnection connection = mock(WebSocketConnection.class);
@@ -150,7 +147,6 @@ class GameMessageHandlerTest {
         player.getResources().clear();
         player.getResources().put(TileType.WOOD, 4);
         player.getResources().put(TileType.SHEEP, 0);
-
 
         // Prepare trade request: 4 WOOD for 1 SHEEP
         ObjectNode tradePayload = JsonNodeFactory.instance.objectNode();
@@ -198,7 +194,7 @@ class GameMessageHandlerTest {
         assertEquals(new InvalidTurnException().getMessage(), resultDto.getMessageNode("error").asText());
 
         verify(tradingService, never()).handleBankTradeRequest(any(String.class), any(TradeRequest.class));
-        verify(lobbyService, never()).notifyPlayers(anyString(), any(MessageDTO.class));
+        verify(lobbyService, never()).notifyPlayers(anyString(), any(MessageDTO.class), anyString());
     }
 
     @Test
@@ -214,7 +210,6 @@ class GameMessageHandlerTest {
         player.getResources().clear();
         player.getResources().put(TileType.WOOD, 1); // Not enough for a 4:1 trade
         player.getResources().put(TileType.SHEEP, 0);
-
 
         // Prepare invalid trade request (1 WOOD for 1 SHEEP)
         ObjectNode tradePayload = JsonNodeFactory.instance.objectNode();
@@ -233,9 +228,8 @@ class GameMessageHandlerTest {
         assertEquals(MessageType.ERROR, resultDto.getType());
         assertEquals("Trade ratio is invalid", resultDto.getMessageNode("error").asText());
 
-        verify(lobbyService, never()).notifyPlayers(anyString(), any(MessageDTO.class));
+        verify(lobbyService, never()).notifyPlayers(anyString(), any(MessageDTO.class), anyString());
     }
-
 
     @Test
     void handleTradeWithBankWhenPayloadIsMalformedReturnsErrorDto() throws GameException {
@@ -245,7 +239,6 @@ class GameMessageHandlerTest {
         String playerId = player.getUniqueId();
         String lobbyId = lobbyService.createLobby(playerId);
         lobbyService.getLobbyById(lobbyId).setActivePlayer(playerId);
-
 
         ObjectNode malformedPayload = JsonNodeFactory.instance.objectNode();
         malformedPayload.put("offeredResources", "this-is-not-a-map"); // Invalid type
@@ -262,7 +255,7 @@ class GameMessageHandlerTest {
         assertEquals("Invalid trade request format.", resultDto.getMessageNode("error").asText());
 
         verify(tradingService, never()).handleBankTradeRequest(anyString(), any(TradeRequest.class));
-        verify(lobbyService, never()).notifyPlayers(anyString(), any(MessageDTO.class));
+        verify(lobbyService, never()).notifyPlayers(anyString(), any(MessageDTO.class), anyString());
     }
 
     @Test
@@ -286,7 +279,7 @@ class GameMessageHandlerTest {
         when(playerMapper.toDto(player, lobby)).thenReturn(playerInfo);
 
         MessageDTO expected = new MessageDTO(MessageType.PLAYER_RESOURCE_UPDATE, playerId, lobbyId, Map.of(playerId, playerInfo));
-        when(lobbyService.notifyPlayers(eq(lobbyId), any(MessageDTO.class)))
+        when(lobbyService.notifyPlayers(eq(lobbyId), any(MessageDTO.class), anyString()))
                 .thenReturn(Uni.createFrom().item(expected));
 
         MessageDTO result = gameMessageHandler.handleCheatAttempt(inputMessage).await().indefinitely();
@@ -295,9 +288,8 @@ class GameMessageHandlerTest {
         assertEquals(MessageType.PLAYER_RESOURCE_UPDATE, result.getType());
         assertEquals(playerId, result.getPlayer());
         verify(gameService, times(1)).handleCheat(lobbyId, playerId, resource);
-        verify(lobbyService, times(1)).notifyPlayers(eq(lobbyId), any(MessageDTO.class));
+        verify(lobbyService, times(1)).notifyPlayers(eq(lobbyId), any(MessageDTO.class), anyString());
     }
-
 
     @Test
     void handleCheatAttempt_gameException_shouldReturnErrorDto() throws GameException {
@@ -318,7 +310,7 @@ class GameMessageHandlerTest {
         assertEquals(MessageType.ERROR, result.getType());
         assertEquals("cheating not allowed", result.getMessageNode("error").asText());
         verify(gameService, times(1)).handleCheat(lobbyId, playerId, resource);
-        verify(lobbyService, never()).notifyPlayers(any(), any());
+        verify(lobbyService, never()).notifyPlayers(any(), any(), any());
     }
 
     @Test
@@ -337,7 +329,7 @@ class GameMessageHandlerTest {
         assertEquals(MessageType.ERROR, result.getType());
         assertEquals("Invalid resource type", result.getMessageNode("error").asText());
         verify(gameService, never()).handleCheat(any(), any(), any());
-        verify(lobbyService, never()).notifyPlayers(any(), any());
+        verify(lobbyService, never()).notifyPlayers(any(), any(), any());
     }
 
     @Test
@@ -359,7 +351,7 @@ class GameMessageHandlerTest {
         assertEquals(MessageType.ERROR, result.getType());
         assertEquals("reporting not allowed", result.getMessageNode("error").asText());
         verify(gameService, times(1)).handleReportPlayer(lobbyId, reporterId, reportedId);
-        verify(lobbyService, never()).notifyPlayers(any(), any());
+        verify(lobbyService, never()).notifyPlayers(any(), any(), any());
     }
 
     @Test
@@ -381,7 +373,7 @@ class GameMessageHandlerTest {
         assertEquals(MessageType.ERROR, result.getType());
         assertEquals("Invalid player to report.", result.getMessageNode("error").asText());
         verify(gameService, times(1)).handleReportPlayer(lobbyId, reporterId, invalidReportedId);
-        verify(lobbyService, never()).notifyPlayers(any(), any());
+        verify(lobbyService, never()).notifyPlayers(any(), any(), any());
     }
 
     @Test
@@ -410,15 +402,15 @@ class GameMessageHandlerTest {
                 .thenReturn(Uni.createFrom().voidItem());
 
         MessageDTO updateMessage = new MessageDTO(MessageType.PLAYER_RESOURCE_UPDATE, reporterId, lobbyId, Map.of());
-        when(lobbyService.notifyPlayers(eq(lobbyId), any()))
+        when(lobbyService.notifyPlayers(eq(lobbyId), any(), anyString()))
                 .thenReturn(Uni.createFrom().item(updateMessage));
 
         MessageDTO result = gameMessageHandler.handleReportPlayer(inputMessage).await().indefinitely();
 
         assertEquals(MessageType.PLAYER_RESOURCE_UPDATE, result.getType());
-        verify(playerService).sendMessageToPlayer(eq(reporterId), argThat(alert ->
-                alert.getMessageNode("message").asText().contains("cheater got caught cheating!") &&
-                        alert.getMessageNode("severity").asText().equals("success")
+        verify(playerService).sendMessageToPlayer(eq(reporterId), argThat(alert
+                -> alert.getMessageNode("message").asText().contains("cheater got caught cheating!")
+                && alert.getMessageNode("severity").asText().equals("success")
         ));
     }
 
@@ -446,14 +438,14 @@ class GameMessageHandlerTest {
         when(playerService.sendMessageToPlayer(eq(reporterId), any())).thenReturn(Uni.createFrom().voidItem());
 
         MessageDTO updateMessage = new MessageDTO(MessageType.PLAYER_RESOURCE_UPDATE, reporterId, lobbyId, Map.of());
-        when(lobbyService.notifyPlayers(eq(lobbyId), any())).thenReturn(Uni.createFrom().item(updateMessage));
+        when(lobbyService.notifyPlayers(eq(lobbyId), any(), anyString())).thenReturn(Uni.createFrom().item(updateMessage));
 
         MessageDTO result = gameMessageHandler.handleReportPlayer(inputMessage).await().indefinitely();
 
         assertEquals(MessageType.PLAYER_RESOURCE_UPDATE, result.getType());
-        verify(playerService).sendMessageToPlayer(eq(reporterId), argThat(alert ->
-                alert.getMessageNode("message").asText().contains("was already caught cheating") &&
-                        alert.getMessageNode("severity").asText().equals("error")
+        verify(playerService).sendMessageToPlayer(eq(reporterId), argThat(alert
+                -> alert.getMessageNode("message").asText().contains("was already caught cheating")
+                && alert.getMessageNode("severity").asText().equals("error")
         ));
     }
 
@@ -481,17 +473,16 @@ class GameMessageHandlerTest {
         when(playerService.sendMessageToPlayer(eq(reporterId), any())).thenReturn(Uni.createFrom().voidItem());
 
         MessageDTO updateMessage = new MessageDTO(MessageType.PLAYER_RESOURCE_UPDATE, reporterId, lobbyId, Map.of());
-        when(lobbyService.notifyPlayers(eq(lobbyId), any())).thenReturn(Uni.createFrom().item(updateMessage));
+        when(lobbyService.notifyPlayers(eq(lobbyId), any(), anyString())).thenReturn(Uni.createFrom().item(updateMessage));
 
         MessageDTO result = gameMessageHandler.handleReportPlayer(inputMessage).await().indefinitely();
 
         assertEquals(MessageType.PLAYER_RESOURCE_UPDATE, result.getType());
-        verify(playerService).sendMessageToPlayer(eq(reporterId), argThat(alert ->
-                alert.getMessageNode("message").asText().contains("falsely accused") &&
-                        alert.getMessageNode("severity").asText().equals("error")
+        verify(playerService).sendMessageToPlayer(eq(reporterId), argThat(alert
+                -> alert.getMessageNode("message").asText().contains("falsely accused")
+                && alert.getMessageNode("severity").asText().equals("error")
         ));
     }
-
 
     @Test
     void handleReportPlayer_getLobbyPlayerInformationFails_shouldReturnErrorDto() throws GameException {
@@ -540,13 +531,12 @@ class GameMessageHandlerTest {
         PlayerInfo mockInfo = mock(PlayerInfo.class);
         when(playerMapper.toDto(eq(player), any())).thenReturn(mockInfo);
         MessageDTO expectedUpdate = new MessageDTO(MessageType.PLAYER_RESOURCE_UPDATE, playerId, lobbyId, Map.of(playerId, mockInfo));
-        when(lobbyService.notifyPlayers(eq(lobbyId), any())).thenReturn(Uni.createFrom().item(expectedUpdate));
+        when(lobbyService.notifyPlayers(eq(lobbyId), any(), anyString())).thenReturn(Uni.createFrom().item(expectedUpdate));
 
         MessageDTO result = gameMessageHandler.handleGameMessage(input).await().indefinitely();
 
         assertEquals(MessageType.PLAYER_RESOURCE_UPDATE, result.getType());
     }
-
 
     @Test
     void handleGameMessage_reportPlayer_shouldTriggerHandler() throws GameException {
@@ -570,13 +560,12 @@ class GameMessageHandlerTest {
         when(gameService.handleReportPlayer(lobbyId, reporterId, reportedId)).thenReturn(ReportOutcome.FALSE_REPORT);
         when(playerService.getPlayerById(reportedId)).thenReturn(reported);
         when(playerService.sendMessageToPlayer(eq(reporterId), any())).thenReturn(Uni.createFrom().voidItem());
-        when(lobbyService.notifyPlayers(eq(lobbyId), any())).thenReturn(Uni.createFrom().item(new MessageDTO()));
+        when(lobbyService.notifyPlayers(eq(lobbyId), any(), anyString())).thenReturn(Uni.createFrom().item(new MessageDTO()));
 
         MessageDTO result = gameMessageHandler.handleGameMessage(inputMessage).await().indefinitely();
 
         assertEquals(MessageType.PLAYER_RESOURCE_UPDATE, result.getType());
     }
-
 
     @Test
     void createPlayerTradeRequestShouldFailOnMalformedRequestMessage() {
@@ -591,6 +580,5 @@ class GameMessageHandlerTest {
         MessageDTO result = gameMessageHandler.handleGameMessage(messageDto).await().indefinitely();
         assertEquals("Trade request is invalid", result.getMessageNode("error").asText());
     }
-
 
 }
