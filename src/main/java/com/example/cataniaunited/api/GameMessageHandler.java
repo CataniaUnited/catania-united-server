@@ -88,8 +88,7 @@ public class GameMessageHandler {
             String playerId = player.getUniqueId();
             logger.infof("Player %s disconnected from server", playerId);
             //Remove player from lobbies
-            sendUnis = lobbyService.removePlayerFromLobbies(playerId)
-                    .stream().map(lobby -> {
+            sendUnis = lobbyService.removePlayerFromLobbies(playerId).stream().map(lobby -> {
                 try {
                     return notifyLobbyAboutLeavingPlayer(lobby, playerId);
                 } catch (GameException e) {
