@@ -123,7 +123,7 @@ class GameWebSocketTest {
     }
 
     @Test
-    void onCloseShouldSendLobbyClosedMessageIfHostPlayerLeaves() throws InterruptedException, JsonProcessingException {
+    void onCloseShouldSendLobbyClosedMessageIfHostPlayerLeaves() throws InterruptedException {
         final String[] client1PlayerIdHolder = new String[1];
         final String[] client2PlayerIdHolder = new String[1];
 
@@ -205,7 +205,7 @@ class GameWebSocketTest {
     }
 
     @Test
-    void onCloseShouldSendLobbyUpdatedMessageIfPlayerLeaves() throws InterruptedException, JsonProcessingException {
+    void onCloseShouldSendLobbyUpdatedMessageIfPlayerLeaves() throws InterruptedException {
         final String[] client1PlayerIdHolder = new String[1];
         final String[] client2PlayerIdHolder = new String[1];
 

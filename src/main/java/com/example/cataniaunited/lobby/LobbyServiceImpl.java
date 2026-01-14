@@ -141,20 +141,23 @@ public class LobbyServiceImpl implements LobbyService {
      */
     @Override
     public Set<Lobby> removePlayerFromLobbies(String playerId) {
-        return lobbies.values().stream()
+        Set<Lobby> affectedLobbies = lobbies.values().stream()
                 .filter(Objects::nonNull)
                 .filter(lobby -> lobby.getPlayers().contains(playerId))
-                .peek(lobby -> {
-                    try {
-                        leaveLobby(lobby.getLobbyId(), playerId);
-                        boolean isHostPlayer = lobby.getHostPlayer().equals(playerId);
-                        if (isHostPlayer) {
-                            removeLobby(lobby.getLobbyId());
-                        }
-                    } catch (GameException e) {
-                        logger.warnf(e, "Failed to remove player %s from lobby %s", playerId, lobby.getLobbyId());
-                    }
-                }).collect(Collectors.toSet());
+                .collect(Collectors.toSet());
+
+        affectedLobbies.forEach(lobby -> {
+            try {
+                leaveLobby(lobby.getLobbyId(), playerId);
+                if (lobby.getHostPlayer().equals(playerId)) {
+                    removeLobby(lobby.getLobbyId());
+                }
+            } catch (GameException e) {
+                logger.warnf(e, "Failed to remove player %s from lobby %s", playerId, lobby.getLobbyId());
+            }
+        });
+
+        return affectedLobbies;
     }
 
     /**

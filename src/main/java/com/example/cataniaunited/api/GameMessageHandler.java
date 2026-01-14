@@ -612,7 +612,7 @@ public class GameMessageHandler {
         return getLobbyPlayerInformation(lobbyService.getLobbyById(lobbyId));
     }
 
-    Map<String, PlayerInfo> getLobbyPlayerInformation(Lobby lobby) throws GameException {
+    Map<String, PlayerInfo> getLobbyPlayerInformation(Lobby lobby) {
         return lobby.getPlayers().stream()
                 .map(pid -> playerService.getPlayerById(pid))
                 .filter(Objects::nonNull)
