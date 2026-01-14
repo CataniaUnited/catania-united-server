@@ -37,8 +37,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.net.URI;
-import java.time.Duration;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
@@ -202,6 +200,8 @@ class GameWebSocketTest {
         assertEquals(player1ActualId, sendResponse.getPlayer());
         assertEquals(actualLobbyId, sendResponse.getLobbyId());
         assertEquals(1, sendResponse.getPlayers().size());
+
+        verify(lobbyService).removeLobby(actualLobbyId);
     }
 
     @Test

@@ -310,7 +310,7 @@ class GameMessageHandlerTest {
         assertEquals(MessageType.ERROR, result.getType());
         assertEquals("cheating not allowed", result.getMessageNode("error").asText());
         verify(gameService, times(1)).handleCheat(lobbyId, playerId, resource);
-        verify(lobbyService, never()).notifyPlayers(any(), any(), any());
+        verify(lobbyService, never()).notifyPlayers(anyString(), any(), any());
     }
 
     @Test
@@ -329,7 +329,7 @@ class GameMessageHandlerTest {
         assertEquals(MessageType.ERROR, result.getType());
         assertEquals("Invalid resource type", result.getMessageNode("error").asText());
         verify(gameService, never()).handleCheat(any(), any(), any());
-        verify(lobbyService, never()).notifyPlayers(any(), any(), any());
+        verify(lobbyService, never()).notifyPlayers(anyString(), any(), any());
     }
 
     @Test
@@ -351,7 +351,7 @@ class GameMessageHandlerTest {
         assertEquals(MessageType.ERROR, result.getType());
         assertEquals("reporting not allowed", result.getMessageNode("error").asText());
         verify(gameService, times(1)).handleReportPlayer(lobbyId, reporterId, reportedId);
-        verify(lobbyService, never()).notifyPlayers(any(), any(), any());
+        verify(lobbyService, never()).notifyPlayers(anyString(), any(), any());
     }
 
     @Test
@@ -373,7 +373,7 @@ class GameMessageHandlerTest {
         assertEquals(MessageType.ERROR, result.getType());
         assertEquals("Invalid player to report.", result.getMessageNode("error").asText());
         verify(gameService, times(1)).handleReportPlayer(lobbyId, reporterId, invalidReportedId);
-        verify(lobbyService, never()).notifyPlayers(any(), any(), any());
+        verify(lobbyService, never()).notifyPlayers(anyString(), any(), any());
     }
 
     @Test

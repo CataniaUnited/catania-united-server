@@ -73,7 +73,7 @@ public class LobbyServiceImpl implements LobbyService {
      * characters.
      *
      * @param characters The string of characters to choose from.
-     * @param length The desired length of the random string.
+     * @param length     The desired length of the random string.
      * @return A randomly generated string.
      */
     private String getRandomCharacters(String characters, int length) {
@@ -134,6 +134,11 @@ public class LobbyServiceImpl implements LobbyService {
         playerService.resetVictoryPoints(playerId);
     }
 
+    /**
+     * Removes the player with the given ID from all their lobbies.
+     * If the player is the host of a lobby, the lobby gets closed and removed
+     * @return A set of lobbies the player was part of
+     */
     @Override
     public Set<Lobby> removePlayerFromLobbies(String playerId) {
         return lobbies.values().stream()
@@ -142,6 +147,10 @@ public class LobbyServiceImpl implements LobbyService {
                 .peek(lobby -> {
                     try {
                         leaveLobby(lobby.getLobbyId(), playerId);
+                        boolean isHostPlayer = lobby.getHostPlayer().equals(playerId);
+                        if (isHostPlayer) {
+                            removeLobby(lobby.getLobbyId());
+                        }
                     } catch (GameException e) {
                         logger.warnf(e, "Failed to remove player %s from lobby %s", playerId, lobby.getLobbyId());
                     }
@@ -151,7 +160,7 @@ public class LobbyServiceImpl implements LobbyService {
     /**
      * Assigns an available color to a player within a specific lobby.
      *
-     * @param lobby The {@link Lobby} where the player is.
+     * @param lobby  The {@link Lobby} where the player is.
      * @param player The ID of the player to assign a color to.
      * @return The assigned {@link PlayerColor}, or null if no colors are
      * available.
@@ -211,7 +220,7 @@ public class LobbyServiceImpl implements LobbyService {
      * {@inheritDoc}
      *
      * @throws GameException if the lobby is not found or it is not the players
-     * turn.
+     *                       turn.
      */
     @Override
     public void checkPlayerTurn(String lobbyId, String playerId) throws GameException {
@@ -245,7 +254,7 @@ public class LobbyServiceImpl implements LobbyService {
      * {@inheritDoc}
      *
      * @throws GameException if the lobby is not found or the player has no
-     * assigned color.
+     *                       assigned color.
      */
     @Override
     public PlayerColor getPlayerColor(String lobbyId, String playerId) throws GameException {
@@ -263,35 +272,40 @@ public class LobbyServiceImpl implements LobbyService {
      */
     @Override
     public Uni<MessageDTO> notifyPlayers(String lobbyId, MessageDTO dto, String excludePlayerId) {
+        logger.debugf("Notifying players in lobby: lobbyId=%s, message=%s", lobbyId, dto);
         try {
-            logger.debugf("Notifying players in lobby: lobbyId=%s, message=%s", lobbyId, dto);
             Lobby lobby = getLobbyById(lobbyId);
-
-            if (Util.isEmpty(lobby.getPlayers())) {
-                logger.warnf("No players in lobby - dropped message: lobbyId=%s", lobbyId);
-                return Uni.createFrom().item(dto);
-            }
-
-            List<Uni<Void>> sendUnis = lobby.getPlayers()
-                    .stream()
-                    .filter(playerId -> !playerId.equals(excludePlayerId))
-                    .map(playerId -> playerService.sendMessageToPlayer(playerId, dto))
-                    .toList();
-
-            if (sendUnis.isEmpty()) {
-                logger.warnf("No players to notify after applying exclude filter: lobbyId=%s, excludePlayerId=%s", lobbyId, excludePlayerId);
-                return Uni.createFrom().item(dto);
-            }
-
-            return Uni.join().all(sendUnis)
-                    .andFailFast()
-                    .onFailure()
-                    .invoke(err -> logger.errorf(err, "One or more messages failed to send in lobby: lobbyId = %s, error = %s", lobbyId, err.getMessage()))
-                    .replaceWith(dto);
+            return notifyPlayers(lobby, dto, excludePlayerId);
         } catch (GameException ge) {
             logger.errorf(ge, "Error notifying players: lobbyId = %s, error = %s", lobbyId, ge.getMessage());
             return Uni.createFrom().failure(ge);
         }
+    }
+
+    @Override
+    public Uni<MessageDTO> notifyPlayers(Lobby lobby, MessageDTO dto, String excludePlayerId) {
+        String lobbyId = lobby.getLobbyId();
+        if (Util.isEmpty(lobby.getPlayers())) {
+            logger.warnf("No players in lobby - dropped message: lobbyId=%s", lobbyId);
+            return Uni.createFrom().item(dto);
+        }
+
+        List<Uni<Void>> sendUnis = lobby.getPlayers()
+                .stream()
+                .filter(playerId -> !playerId.equals(excludePlayerId))
+                .map(playerId -> playerService.sendMessageToPlayer(playerId, dto))
+                .toList();
+
+        if (sendUnis.isEmpty()) {
+            logger.warnf("No players to notify after applying exclude filter: lobbyId=%s, excludePlayerId=%s", lobbyId, excludePlayerId);
+            return Uni.createFrom().item(dto);
+        }
+
+        return Uni.join().all(sendUnis)
+                .andFailFast()
+                .onFailure()
+                .invoke(err -> logger.errorf(err, "One or more messages failed to send in lobby: lobbyId = %s, error = %s", lobbyId, err.getMessage()))
+                .replaceWith(dto);
     }
 
     @Override
