@@ -11,6 +11,7 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.mockito.InjectSpy;
 import io.quarkus.websockets.next.WebSocketConnection;
 import jakarta.inject.Inject;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -49,6 +50,9 @@ public class CleanupServiceTest {
     @InjectSpy
     TradingService tradingService;
 
+    @ConfigProperty(name = "qatania.cleanup.threshold-hours")
+    Integer cleanupThresholdHours;
+
     @BeforeEach
     void setUp() {
         lobbyService.clearLobbies();
@@ -61,7 +65,7 @@ public class CleanupServiceTest {
         Player player2 = new Player("Player2");
         String lobbyId = "lob001";
         Lobby lobby = spy(new Lobby(lobbyId, player.getUniqueId()));
-        doReturn(Instant.now().minus(49, ChronoUnit.HOURS)).when(lobby).getCreatedAt();
+        doReturn(Instant.now().minus(cleanupThresholdHours + 1, ChronoUnit.HOURS)).when(lobby).getCreatedAt();
         doReturn(List.of(lobby)).when(lobbyService).getOpenLobbies();
         doReturn(lobby).when(lobbyService).getLobbyById(lobbyId);
         lobbyService.joinLobbyByCode(lobbyId, player2.getUniqueId());
