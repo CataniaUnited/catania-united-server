@@ -33,13 +33,16 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import static com.example.cataniaunited.dto.MessageType.LOBBY_CLOSED;
 import static com.example.cataniaunited.dto.MessageType.LOBBY_LIST;
+import static com.example.cataniaunited.dto.MessageType.LOBBY_UPDATED;
 
 @ApplicationScoped
 public class GameMessageHandler {
@@ -76,54 +79,69 @@ public class GameMessageHandler {
         return Uni.createFrom().item(new MessageDTO(MessageType.CONNECTION_SUCCESSFUL, message));
     }
 
-    public void handleDisconnect(WebSocketConnection connection) {
+    public Uni<Void> handleDisconnect(WebSocketConnection connection) {
+        Player player = playerService.getPlayerByConnection(connection);
+        List<Uni<MessageDTO>> sendUnis = new ArrayList<>();
+        if (player != null) {
+            String playerId = player.getUniqueId();
+            logger.infof("Player %s disconnected from server", playerId);
+            //Remove player from lobbies
+            sendUnis = lobbyService.removePlayerFromLobbies(playerId).stream().map(lobby -> {
+                        try {
+                            return notifyLobbyAboutLeavingPlayer(lobby, playerId);
+                        } catch (GameException e) {
+                            logger.warnf(e, "Could not notify lobby %s about leaving of player %s", lobby.getLobbyId(), playerId);
+                            return null;
+                        }
+                    })
+                    .filter(Objects::nonNull).toList();
+        }
         playerService.removePlayerByConnectionId(connection);
-        ObjectNode message = JsonNodeFactory.instance.objectNode().put("playerId", connection.id());
-        connection.broadcast().sendTextAndAwait(new MessageDTO(MessageType.CLIENT_DISCONNECTED, message));
+        return Uni.join().all(sendUnis)
+                .andFailFast()
+                .onFailure()
+                .invoke(err -> logger.errorf(err, "One or more messages failed on user disconnect"))
+                .replaceWith(Uni.createFrom().voidItem());
+    }
+
+    Uni<MessageDTO> notifyLobbyAboutLeavingPlayer(Lobby lobby, String playerId) throws GameException {
+        String lobbyId = lobby.getLobbyId();
+        //Close lobby if host player leaves
+        MessageType type = Objects.equals(lobby.getHostPlayer(), playerId)
+                ? LOBBY_CLOSED
+                : LOBBY_UPDATED;
+        MessageDTO dto = new MessageDTO(
+                type,
+                playerId,
+                lobbyId,
+                getLobbyPlayerInformation(lobby)
+        );
+        return lobbyService.notifyPlayers(lobby, dto, playerId);
     }
 
     public Uni<MessageDTO> handleGameMessage(MessageDTO message) {
         try {
             logger.infof("Handle message: message = %s", message);
             return switch (message.getType()) {
-                case CREATE_LOBBY ->
-                    createLobby(message);
-                case GET_LOBBIES ->
-                    getLobbies();
-                case JOIN_LOBBY ->
-                    joinLobby(message);
-                case LEAVE_LOBBY ->
-                    leaveLobby(message);
-                case SET_USERNAME ->
-                    setUsername(message);
-                case PLACE_SETTLEMENT ->
-                    placeSettlement(message);
-                case UPGRADE_SETTLEMENT ->
-                    upgradeSettlement(message);
-                case PLACE_ROAD ->
-                    placeRoad(message);
-                case ROLL_DICE ->
-                    handleDiceRoll(message);
-                case START_GAME ->
-                    handleStartGame(message);
-                case SET_READY ->
-                    setReady(message);
-                case TRADE_WITH_BANK ->
-                    handleTradeWithBank(message);
-                case CREATE_PLAYER_TRADE_REQUEST ->
-                    createPlayerTradeRequest(message);
-                case ACCEPT_TRADE_REQUEST ->
-                    acceptTradeRequest(message);
-                case REJECT_TRADE_REQUEST ->
-                    rejectTradeRequest(message);
-                case CHEAT_ATTEMPT ->
-                    handleCheatAttempt(message);
-                case REPORT_PLAYER ->
-                    handleReportPlayer(message);
-                case END_TURN ->
-                    endTurn(message);
-                default ->
-                    throw new GameException("Invalid client command");
+                case CREATE_LOBBY -> createLobby(message);
+                case GET_LOBBIES -> getLobbies();
+                case JOIN_LOBBY -> joinLobby(message);
+                case LEAVE_LOBBY -> leaveLobby(message);
+                case SET_USERNAME -> setUsername(message);
+                case PLACE_SETTLEMENT -> placeSettlement(message);
+                case UPGRADE_SETTLEMENT -> upgradeSettlement(message);
+                case PLACE_ROAD -> placeRoad(message);
+                case ROLL_DICE -> handleDiceRoll(message);
+                case START_GAME -> handleStartGame(message);
+                case SET_READY -> setReady(message);
+                case TRADE_WITH_BANK -> handleTradeWithBank(message);
+                case CREATE_PLAYER_TRADE_REQUEST -> createPlayerTradeRequest(message);
+                case ACCEPT_TRADE_REQUEST -> acceptTradeRequest(message);
+                case REJECT_TRADE_REQUEST -> rejectTradeRequest(message);
+                case CHEAT_ATTEMPT -> handleCheatAttempt(message);
+                case REPORT_PLAYER -> handleReportPlayer(message);
+                case END_TURN -> endTurn(message);
+                default -> throw new GameException("Invalid client command");
             };
         } catch (GameException ge) {
             logger.errorf("Unexpected Error occurred: message = %s, error = %s", message, ge.getMessage());
@@ -277,12 +295,12 @@ public class GameMessageHandler {
      * Handles a request to place a road on the game board.
      *
      * @param message The {@link MessageDTO} containing the lobby ID, player ID,
-     * and road ID.
+     *                and road ID.
      * @return A Uni emitting a {@link MessageDTO} with the updated game board
      * and player resources, which is also broadcast to other players in the
      * lobby.
      * @throws GameException if the road ID is invalid or if the game service
-     * encounters an error.
+     *                       encounters an error.
      */
     Uni<MessageDTO> placeRoad(MessageDTO message) throws GameException {
         JsonNode roadId = message.getMessageNode("roadId");
@@ -317,12 +335,12 @@ public class GameMessageHandler {
      * username, victory points, and assigned color.
      *
      * @param lobbyId The ID of the lobby for which to retrieve the game board
-     * and player data.
+     *                and player data.
      * @return An {@link ObjectNode} containing the "gameboard" (JSON
      * representation of the game board) and a "players" object mapping player
      * IDs to their details.
      * @throws GameException if the lobby or game board cannot be found, or if a
-     * player in the lobby cannot be retrieved.
+     *                       player in the lobby cannot be retrieved.
      */
     ObjectNode getGameBoardInformation(String lobbyId) throws GameException {
         GameBoard gameboard = gameService.getGameboardByLobbyId(lobbyId);
@@ -337,12 +355,12 @@ public class GameMessageHandler {
      * process the request.
      *
      * @param message The {@link MessageDTO} containing the lobby ID, player ID,
-     * and building site ID.
+     *                and building site ID.
      * @return A Uni emitting a {@link MessageDTO} with the updated game state
      * (or win message), which is also broadcast to other players in the lobby.
      * @throws GameException if the building site ID is invalid or if the game
-     * service encounters an error during settlement placement (e.g., rules
-     * violation, insufficient resources).
+     *                       service encounters an error during settlement placement (e.g., rules
+     *                       violation, insufficient resources).
      */
     Uni<MessageDTO> placeSettlement(MessageDTO message) throws GameException {
         BuildingAction placeAction = positionId -> gameService.placeSettlement(message.getLobbyId(), message.getPlayer(), positionId);
@@ -353,11 +371,11 @@ public class GameMessageHandler {
      * Handles a request to upgrade a settlement to a city on the game board.
      *
      * @param message The {@link MessageDTO} containing the lobby ID, player ID,
-     * and building site ID.
+     *                and building site ID.
      * @return A Uni emitting a {@link MessageDTO} with the updated game state,
      * which is also broadcast to other players in the lobby.
      * @throws GameException if the game service encounters an error during
-     * settlement upgrade.
+     *                       settlement upgrade.
      */
     Uni<MessageDTO> upgradeSettlement(MessageDTO message) throws GameException {
         BuildingAction upgradeAction = positionId -> gameService.upgradeSettlement(message.getLobbyId(), message.getPlayer(), positionId);
@@ -370,12 +388,12 @@ public class GameMessageHandler {
      * and then broadcasts the updated game state.
      *
      * @param message The {@link MessageDTO} containing action details.
-     * @param action The {@link BuildingAction} to execute (e.g., place or
-     * upgrade).
+     * @param action  The {@link BuildingAction} to execute (e.g., place or
+     *                upgrade).
      * @return A Uni emitting a {@link MessageDTO} with the updated game state
      * or a win message.
      * @throws GameException if the building site ID is invalid or the action
-     * fails.
+     *                       fails.
      */
     Uni<MessageDTO> handleSettlementAction(MessageDTO message, BuildingAction action) throws GameException {
         JsonNode settlementPosition = message.getMessageNode("settlementPositionId");
@@ -407,12 +425,12 @@ public class GameMessageHandler {
      * Handles a request for a player to join an existing lobby.
      *
      * @param message The {@link MessageDTO} containing the lobby ID (code) and
-     * player ID.
+     *                player ID.
      * @return A Uni emitting a {@link MessageDTO} confirming the player joined
      * and their assigned color, which is also broadcast to other players in the
      * lobby.
      * @throws GameException if the lobby is not found or the player cannot
-     * join.
+     *                       join.
      */
     Uni<MessageDTO> joinLobby(MessageDTO message) throws GameException {
         boolean joined = lobbyService.joinLobbyByCode(message.getLobbyId(), message.getPlayer());
@@ -436,8 +454,7 @@ public class GameMessageHandler {
 
     Uni<MessageDTO> leaveLobby(MessageDTO message) throws GameException {
         lobbyService.leaveLobby(message.getLobbyId(), message.getPlayer());
-        var response = new MessageDTO(MessageType.LOBBY_UPDATED, message.getPlayer(), message.getLobbyId(), getLobbyPlayerInformation(message.getLobbyId()));
-        return lobbyService.notifyPlayers(message.getLobbyId(), response, message.getPlayer());
+        return notifyLobbyAboutLeavingPlayer(lobbyService.getLobbyById(message.getLobbyId()), message.getPlayer());
     }
 
     /**
@@ -458,7 +475,7 @@ public class GameMessageHandler {
      * Handles a request to set or update a player's username.
      *
      * @param message The {@link MessageDTO} containing the new username. The
-     * player ID is inferred from the connection.
+     *                player ID is inferred from the connection.
      * @return A Uni emitting a {@link MessageDTO} confirming the username
      * update, which is also broadcast to other players.
      * @throws GameException if the player session is not found.
@@ -488,12 +505,12 @@ public class GameMessageHandler {
      * updated resource information individually to each player in that lobby.
      *
      * @param message The {@link MessageDTO} containing the player ID and lobby
-     * ID.
+     *                ID.
      * @return A Uni emitting the {@link MessageDTO} containing the dice roll
      * result. This DTO is the one that was broadcast. The primary purpose of
      * the returned Uni is to chain asynchronous operations.
      * @throws GameException if an error occurs during dice rolling or
-     * retrieving lobby/player information.
+     *                       retrieving lobby/player information.
      */
     public Uni<MessageDTO> handleDiceRoll(MessageDTO message) throws GameException {
         Player rollingPlayer = playerService.getPlayerById(message.getPlayer());
@@ -542,7 +559,7 @@ public class GameMessageHandler {
      * @param message The {@link MessageDTO} containing the lobby ID.
      * @return A Uni emitting the {@link MessageDTO} confirming the game start.
      * @throws GameException if the game cannot be started (e.g., not enough
-     * players, game already started).
+     *                       players, game already started).
      */
     private Uni<MessageDTO> handleStartGame(MessageDTO message) throws GameException {
         gameService.startGame(message.getLobbyId(), message.getPlayer());
@@ -561,7 +578,7 @@ public class GameMessageHandler {
      * Broadcasts a game win message to all players in the lobby. The message
      * includes the winner's username and a leaderboard.
      *
-     * @param lobbyId The ID of the lobby where the game was won.
+     * @param lobbyId        The ID of the lobby where the game was won.
      * @param winnerPlayerId The ID of the player who won the game.
      * @return A Uni emitting a {@link MessageDTO} of type GAME_WON.
      */
@@ -592,7 +609,10 @@ public class GameMessageHandler {
     }
 
     Map<String, PlayerInfo> getLobbyPlayerInformation(String lobbyId) throws GameException {
-        Lobby lobby = lobbyService.getLobbyById(lobbyId);
+        return getLobbyPlayerInformation(lobbyService.getLobbyById(lobbyId));
+    }
+
+    Map<String, PlayerInfo> getLobbyPlayerInformation(Lobby lobby) throws GameException {
         return lobby.getPlayers().stream()
                 .map(pid -> playerService.getPlayerById(pid))
                 .filter(Objects::nonNull)
@@ -615,8 +635,8 @@ public class GameMessageHandler {
      * {@link MessageType#PLAYER_RESOURCE_UPDATE} containing the updated player
      * information, broadcast to all players in the lobby.
      * @throws GameException if the trade is invalid (e.g., bad format, not
-     * player's turn, insufficient resources, or other issues from
-     * {@link TradingService}).
+     *                       player's turn, insufficient resources, or other issues from
+     *                       {@link TradingService}).
      */
     Uni<MessageDTO> handleTradeWithBank(MessageDTO message) throws GameException {
         // Check if player is active player -> else can't trade

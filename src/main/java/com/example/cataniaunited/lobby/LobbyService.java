@@ -6,6 +6,7 @@ import com.example.cataniaunited.player.PlayerColor;
 import io.smallrye.mutiny.Uni;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * Interface for lobby management services. Defines operations for creating,
@@ -46,7 +47,7 @@ public interface LobbyService {
      * Allows a player to join an existing lobby using its ID (code).
      *
      * @param lobbyId The ID of the lobby to join.
-     * @param player The ID of the player wishing to join.
+     * @param player  The ID of the player wishing to join.
      * @return true if the player successfully joined the lobby, false
      * otherwise.
      */
@@ -54,11 +55,13 @@ public interface LobbyService {
 
     void leaveLobby(String lobbyId, String playerId) throws GameException;
 
+    Set<Lobby> removePlayerFromLobbies(String playerId);
+
     /**
      * Removes a player from a specified lobby.
      *
      * @param lobbyId The ID of the lobby.
-     * @param player The ID of the player to remove.
+     * @param player  The ID of the player to remove.
      */
     void removePlayerFromLobby(String lobbyId, String player) throws GameException;
 
@@ -86,10 +89,10 @@ public interface LobbyService {
     /**
      * Checks if it is currently the specified player's turn in the given lobby.
      *
-     * @param lobbyId The ID of the lobby.
+     * @param lobbyId  The ID of the lobby.
      * @param playerId The ID of the player.
      * @throws GameException if it is not the player's turn or if the
-     * lobby/player is not found.
+     *                       lobby/player is not found.
      */
     void checkPlayerTurn(String lobbyId, String playerId) throws GameException;
 
@@ -100,11 +103,11 @@ public interface LobbyService {
     /**
      * Gets the color assigned to a specific player in a given lobby.
      *
-     * @param lobbyId The ID of the lobby.
+     * @param lobbyId  The ID of the lobby.
      * @param playerId The ID of the player.
      * @return The {@link PlayerColor} assigned to the player.
      * @throws GameException if the lobby, player, or color assignment is not
-     * found.
+     *                       found.
      */
     PlayerColor getPlayerColor(String lobbyId, String playerId) throws GameException;
 
@@ -113,10 +116,12 @@ public interface LobbyService {
      * {@link MessageDTO}.
      *
      * @param lobbyId The ID of the lobby whose players should be notified.
-     * @param dto The {@link MessageDTO} to send.
+     * @param dto     The {@link MessageDTO} to send.
      * @return The {@link Uni} containing the sent message
      */
     Uni<MessageDTO> notifyPlayers(String lobbyId, MessageDTO dto, String excludePlayerId);
+
+    Uni<MessageDTO> notifyPlayers(Lobby lobby, MessageDTO dto, String excludePlayerId);
 
     String nextTurn(String lobbyId, String playerId) throws GameException;
 

@@ -237,7 +237,7 @@ class LobbyTest {
     }
 
     @Test
-    void canStartGame_doesRequireTwoPlayers() {
+    void canStartGame_doesRequireTwoPlayers() throws GameException {
         testLobby.removePlayer("p2");
         testLobby.removePlayer("p3");
         testLobby.toggleReady("host");

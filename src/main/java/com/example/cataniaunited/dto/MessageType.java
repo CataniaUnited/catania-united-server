@@ -8,6 +8,7 @@ public enum MessageType {
     ERROR,
     ALERT,
     LOBBY_UPDATED,
+    LOBBY_CLOSED,
     PLAYER_JOINED,
     LOBBY_CREATED,
     GAME_WON,
